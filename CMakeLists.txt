@@ -35,7 +35,7 @@ link_directories(${GLIB_LIBRARY_DIRS}
 				 ${MCABBER_LIBRARY_DIRS})
 
 ## Target definitions
-add_library(jingle MODULE jingle.c)
+add_library(jingle MODULE jingle.c parse.c)
 
 ## Compiler setup
 configure_file(config.h.in config.h)

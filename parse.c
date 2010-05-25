@@ -2,100 +2,108 @@
 #include <string.h>
 
 #include "parse.h"
+#include "jingle.h"
 
-int parse_jingle(LmMessageNode *node, struct info_jingle *ij)
+const gchar *jingle_actions[] = {
+  "content-accept",
+  "content-add",
+  "content-modify",
+  "content-reject",
+  "content-remove",
+  "description-info",
+  "security-info",
+  "session-accept",
+  "session-info",
+  "session-initiate",
+  "session-terminate",
+  "transport-accept",
+  "transport-info",
+  "transport-reject",
+  "transport-replace",
+  NULL
+};
+
+const gchar *jingle_content_creator[] = {
+  "initiator",
+  "responder",
+  NULL
+};
+
+const gchar *jingle_content_senders[] = {
+  "both",
+  "initiator",
+  "none",
+  "responder",
+  NULL
+};
+
+/**
+ * Populate a jingle_data struct from a <jingle> element.
+ * Check if the element is in compliance with the XEP.
+ */
+int check_jingle(LmMessageNode *node, struct jingle_data *ij)
 {
   int nb_reason = 0;
   LmMessageNode *child = NULL;
-  
-  if (!strcmp(ij->name, "jingle"))
-    return PARSE_ERROR_NAME;
 
-  ij->action    = g_strdup(lm_message_node_get_attribute(node, "action"));
-  ij->initiator = g_strdup(lm_message_node_get_attribute(node, "initiator"));
-  ij->responder = g_strdup(lm_message_node_get_attribute(node, "responder"));
-  ij->sid       = g_strdup(lm_message_node_get_attribute(node, "sid"));
-   
-  // check required
+  ij->action    = lm_message_node_get_attribute(node, "action");
+  ij->initiator = lm_message_node_get_attribute(node, "initiator");
+  ij->responder = lm_message_node_get_attribute(node, "responder");
+  ij->sid       = lm_message_node_get_attribute(node, "sid");
+
   if (ij->action == NULL || ij->sid == NULL)
-    return PARSE_ERROR_REQUIRED;
-    
-  // check restrictions
-  if (!check_restriction(ij->action, {"content-accept", "content-add",
-  "content-modify", "content-reject", "content-remove", "description-info",
-  "security-info", "session-accept", "session-info", "session-initiate",
-  "session-terminate", "transport-accept", "transport-info", "transport-reject",
-  "transport-replace", NULL}))
+    return PARSE_ERROR_REQUIRED; // those elements are required
+
+  if (!str_in_array(ij->action, jingle_actions))
    return PARSE_ERROR_RESTRICTION;
-  
+
   // check childs
   for (child = node->children; child; child = child->next) {
     if (!strcmp(child->name, "reason"))
       nb_reason++;
   }
-  
-  if (reason > 1)
+
+  if (nb_reason > 1)
     return PARSE_ERROR_TOO_MANY_CHILDS;
-    
+
   return PARSE_OK;
 }
 
-
-void free_jingle(struct info_jingle *ij)
-{
-  g_free(ij->action);
-  g_free(ij->initiator);
-  g_free(ij->responder);
-  g_free(ij->sid);
-}
-
-
-int parse_content(LmMessageNode* node, struct info_content* ic)
+int parse_content(LmMessageNode* node, struct content_data* ic)
 {
   if (!strcmp(ic->name, "content"))
     return PARSE_ERROR_NAME;
 
-  ic->creator     = g_strdup(lm_message_node_get_attribute(node, "creator"));
-  ic->disposition = g_strdup(lm_message_node_get_attribute(node, "disposition"));
-  ic->name        = g_strdup(lm_message_node_get_attribute(node, "name"));
-  ic->senders     = g_strdup(lm_message_node_get_attribute(node, "senders"));
+  ic->creator     = lm_message_node_get_attribute(node, "creator");
+  ic->disposition = lm_message_node_get_attribute(node, "disposition");
+  ic->name        = lm_message_node_get_attribute(node, "name");
+  ic->senders     = lm_message_node_get_attribute(node, "senders");
 
-  // Put default if none
   if (ic->disposition == NULL)
-    ic->disposition = g_strdup("session");
+    ic->disposition = "session";
 
-  // check required
   if (ic->creator == NULL || ic->name == NULL)
     return PARSE_ERROR_REQUIRED;
 
-  // check restrictions
-  if (!check_restriction(ic->creator, {"initiator", "responder", NULL}))
+  if (!str_in_array(ic->creator, jingle_content_creator))
     return PARSE_ERROR_RESTRICTION;
-  if (!check_restriction(ic->senders, {"both", "initiator", "none", "responder", NULL}))
-    ic->senders = NULL; // because it's optional
-    
+  if (!str_in_array(ic->senders, jingle_content_senders))
+    ic->senders = NULL;
+
   return PARSE_OK;
 }
 
-
-void free_content(struct info_content *ic)
+/**
+ * Check if needle exists in haystack.
+ * The last element of haystack must be NULL.
+ */
+gint str_in_array(const gchar* needle, const gchar** haystack)
 {
-  g_free(ic->creator);
-  g_free(ic->disposition);
-  g_free(ic->name);
-  g_free(ic->senders);
-}
-
-
-int check_restriction(const gchar* name, const gchar** values)
-{
-  const char* value;
-  int found = 0;
-  value = values[0];
-  while (value && !found) {
-    if (!strcmp(name, value))
+  const gchar* value;
+  gint found = 0;
+  for (value = haystack[0]; value && !found; value++)
+    if (!g_strcmp0(needle, value))
       found = 1;
-    value++;
-  }
+
   return found;
 }

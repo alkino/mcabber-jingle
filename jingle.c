@@ -27,77 +27,131 @@
 #include <mcabber/hooks.h>
 #include <mcabber/modules.h>
 #include <mcabber/logprint.h>
+#include <mcabber/xmpp_helper.h>
+#include <mcabber/xmpp_defines.h>
 
 #include "jingle.h"
 #include "parse.h"
 
 
-static void mcjingle_init  (void);
-static void mcjingle_uninit(void);
+static void jingle_init  (void);
+static void jingle_uninit(void);
 
 
 LmMessageHandler* jingle_iq_handler = NULL;
 
 
 module_info_t info_jingle = {
-	.branch          = MCABBER_BRANCH,
-	.api             = MCABBER_API_VERSION,
-	.version         = MCABBER_VERSION,
-	.description     = "Main Jingle module\n"
-		" required for file transport, voip...\n",
-	.requires        = NULL,
-	.init            = mcjingle_init,
-	.uninit          = mcjingle_uninit,
-	.next            = NULL,
+  .branch          = MCABBER_BRANCH,
+  .api             = MCABBER_API_VERSION,
+  .version         = MCABBER_VERSION,
+  .description     = "Main Jingle module,"
+                     " required for file transport, voip...\n",
+  .requires        = NULL,
+  .init            = jingle_init,
+  .uninit          = jingle_uninit,
+  .next            = NULL,
 };
 
 
-LmHandlerResult jingle_iq_event_handler(LmMessageHandler *handler,
-		LmConnection *connection,
-		LmMessage *message,
-		gpointer user_data)
+LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
+                                 LmConnection *connection,
+                                 LmMessage *message,
+                                 gpointer user_data)
 {
-	LmMessageNode *test = lm_message_get_node(message)->children;
-	struct info_iq ii;
-	struct info_jingle ij;
+  //struct iq_data ii;
+  struct jingle_data ij;
+  LmMessageNode *root = lm_message_get_node(message)->children;
+  LmMessageNode *node = lm_message_node_get_child(root, "jingle");
 
-	parse_iq(lm_message_get_node(message), &ii);
+  if (!node)
+    return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS; // no <jingle> element found
+  
+  if (g_strcmp0(lm_message_node_get_attribute(node, "xmlns"), NS_JINGLE)) {
+    scr_log_print(LPRINT_DEBUG, "jingle: Received a jingle IQ with an invalid namespace");
+    return LM_HANDLER_RESULT_REMOVE_MESSAGE;
+  }
 
-	if (parse_jingle(test, &ij) == PARSE_ERROR_NAME)
-		return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
+  //parse_iq(lm_message_get_node(message), &ii);
 
-	if (strcmp(lm_message_node_get_attribute(test, "xmlns"), NS_JINGLE)) {
-		scr_log_print(LPRINT_NORMAL, "jingle : Namespace inconnu (%s)", lm_message_node_get_attribute(test, "xmlns"));
-		return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
-	}
+  if (parse_jingle(node, &ij) != PARSE_OK)
+    return LM_HANDLER_RESULT_REMOVE_MESSAGE;
+    
+  scr_log_print(LPRINT_DEBUG, "jingle: Received a jingle IQ");
 
-	if (!strcmp(ij.action, "content-accept")) {
-	} else if (!strcmp(ij.action, "content-add")) {
-	} else if (!strcmp(ij.action, "content-modify")) {
-	} else if (!strcmp(ij.action, "content-reject")) {
-	} else if (!strcmp(ij.action, "content-remove")) {
-	} else if (!strcmp(ij.action, "description-info")) {
-	} else if (!strcmp(ij.action, "security-info")) {
-	} else if (!strcmp(ij.action, "session-accept")) {
-	} else if (!strcmp(ij.action, "session-info")) {
-	} else if (!strcmp(ij.action, "session-initiate")) {
-	} else if (!strcmp(ij.action, "session-terminate")) {
-	} else if (!strcmp(ij.action, "transport-accept")) {
-	} else if (!strcmp(ij.action, "transport-info")) {
-	} else if (!strcmp(ij.action, "transport-reject")) {
-	} else if (!strcmp(ij.action, "transport-replace")) {
-	}
+  jingle_error_iq(message, "cancel", "feature-not-implemented", "unsupported-info");
+
+  /*if (!strcmp(ij.action, "content-accept")) {
+  } else if (!strcmp(ij.action, "content-add")) {
+  } else if (!strcmp(ij.action, "content-modify")) {
+  } else if (!strcmp(ij.action, "content-reject")) {
+  } else if (!strcmp(ij.action, "content-remove")) {
+  } else if (!strcmp(ij.action, "description-info")) {
+  } else if (!strcmp(ij.action, "security-info")) {
+  } else if (!strcmp(ij.action, "session-accept")) {
+  } else if (!strcmp(ij.action, "session-info")) {
+  } else if (!strcmp(ij.action, "session-initiate")) {
+  } else if (!strcmp(ij.action, "session-terminate")) {
+  } else if (!strcmp(ij.action, "transport-accept")) {
+  } else if (!strcmp(ij.action, "transport-info")) {
+  } else if (!strcmp(ij.action, "transport-reject")) {
+  } else if (!strcmp(ij.action, "transport-replace")) {
+  }*/
+
+  return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 }
 
-static void mcjingle_init(void)
-{
-	jingle_iq_handler = lm_message_handler_new(jingle_iq_event_handler, NULL, NULL);
-	lm_connection_register_message_handler(lconnection, jingle_iq_handler, LM_MESSAGE_TYPE_IQ, LM_HANDLER_PRIORITY_FIRST);
+/**
+ * According to the specifications:
+ * "An entity that receives an IQ request of type "get" or "set" MUST
+ * reply with an IQ response of type "result" or "error"."
+ * For Jingle's IQ, we have to reply with an empty "result" IQ to acknowledge
+ * receipt.
+ */
+void jingle_ack_iq(LmMessage *m) {
+  LmMessage *r;
+
+  r = lm_message_new_iq_from_query(m, LM_MESSAGE_SUB_TYPE_RESULT);
+  lm_connection_send(lconnection, r, NULL);
+  lm_message_unref(r);
 }
 
-static void mcjingle_uninit(void)
+/**
+ * Reply to a Jingle IQ with an error.
+ */
+void jingle_error_iq(LmMessage *m, const gchar *errtype,
+                     const gchar *cond, const gchar *jinglecond)
 {
-	lm_connection_unregister_message_handler(lconnection, jingle_iq_handler, LM_MESSAGE_TYPE_IQ);
-	lm_message_handler_invalidate(jingle_iq_handler);
-	lm_message_handler_unref(jingle_iq_handler);
+  LmMessage *r;
+  LmMessageNode *err, *tmpnode;
+
+  r = lm_message_new_iq_from_query(m, LM_MESSAGE_SUB_TYPE_ERROR);
+  err = lm_message_node_add_child(r->node, "error", NULL);
+  lm_message_node_set_attribute(err, "type", errtype);
+  
+  // error condition as defined by RFC 3920bis section 8.3.3
+  tmpnode = lm_message_node_add_child(err, cond, NULL);
+  lm_message_node_set_attribute(tmpnode, "xmlns", NS_XMPP_STANZAS);
+  
+  // jingle error condition as defined by XEP-0166 section 10
+  tmpnode = lm_message_node_add_child(err, jinglecond, NULL);
+  lm_message_node_set_attribute(tmpnode, "xmlns", NS_JINGLE_ERRORS);
+  
+  lm_connection_send(lconnection, r, NULL);
+  lm_message_unref(r);
+}
+
+static void jingle_init(void)
+{
+  jingle_iq_handler = lm_message_handler_new(jingle_handle_iq, NULL, NULL);
+  lm_connection_register_message_handler(lconnection, jingle_iq_handler, LM_MESSAGE_TYPE_IQ, LM_HANDLER_PRIORITY_FIRST);
+  xmpp_add_feature(NS_JINGLE);
+  xmpp_add_feature("urn:xmpp:jingle:apps:file-transfer:info:1"); // for debugging puposes only...
+}
+
+static void jingle_uninit(void)
+{
+  lm_connection_unregister_message_handler(lconnection, jingle_iq_handler, LM_MESSAGE_TYPE_IQ);
+  lm_message_handler_invalidate(jingle_iq_handler);
+  lm_message_handler_unref(jingle_iq_handler);
 }

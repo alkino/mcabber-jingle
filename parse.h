@@ -10,36 +10,32 @@
 #define PARSE_ERROR_RESTRICTION     3
 #define PARSE_ERROR_TOO_MANY_CHILDS 4
 
-struct info_iq {
-  gchar* from;
-  gchar* id;
-  gchar* to;
-  gchar* set;
+
+struct iq_data {
+  const gchar *from;
+  const gchar *id;
+  const gchar *to;
+  const gchar *set;
 };
 
-struct info_jingle {
-  gchar* action;      // required (content-accept, content-add,
-  // content-modify, content-reject, content-remove, description-info
-  // security-info, session-accept, session-info, session-initiate,
-  // session-terminate, transport-accept, transport-info, transport-reject,
-  // transport-replace)
-  gchar* initiator;   // optional
-  gchar* responder;   // optional
-  gchar* sid;         // required
+struct jingle_data {
+  const gchar* action;    // see jingle_action in jingle.h
+  const gchar* initiator; // optional
+  const gchar* responder;  // optional
+  const gchar* sid;        // required
 };
 
-struct info_content {
-  gchar* creator;     // required (initiator, responder)
-  gchar* disposition; // optional, default=session
-  gchar* name;        // required
-  gchar* senders;     // optional (both, initiator, none, responder)
+struct content_data {
+  const gchar* creator;     // required (initiator, responder)
+  const gchar* disposition; // optional, default=session
+  const gchar* name;        // required
+  const gchar* senders;     // optional (both, initiator, none, responder)
 };
 
-int parse_jingle(LmMessageNode* node, struct info_jingle* ij);
-void free_jingle(struct info_jingle* ij);
-int parse_content(LmMessageNode* node, struct info_content* ic);
-void free_content(struct info_content* ic);
 
-int check_restriction(const char* name, const char** values);
+int parse_jingle(LmMessageNode* node, struct jingle_data* ij);
+int parse_content(LmMessageNode* node, struct content_data* ic);
+
+gint str_in_array(const gchar* needle, const gchar** haystack);
 
 #endif
