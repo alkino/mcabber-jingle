@@ -11,10 +11,10 @@ int parse_jingle(LmMessageNode *node, struct info_jingle *ij)
   if (!strcmp(ij->name, "jingle"))
     return PARSE_ERROR_NAME;
 
-  ij->action    = attrcpy(lm_message_node_get_attribute(node, "action"));
-  ij->initiator = attrcpy(lm_message_node_get_attribute(node, "initiator"));
-  ij->responder = attrcpy(lm_message_node_get_attribute(node, "responder"));
-  ij->sid       = attrcpy(lm_message_node_get_attribute(node, "sid"));
+  ij->action    = g_strdup(lm_message_node_get_attribute(node, "action"));
+  ij->initiator = g_strdup(lm_message_node_get_attribute(node, "initiator"));
+  ij->responder = g_strdup(lm_message_node_get_attribute(node, "responder"));
+  ij->sid       = g_strdup(lm_message_node_get_attribute(node, "sid"));
    
   // check required
   if (ij->action == NULL || ij->sid == NULL)
@@ -43,10 +43,10 @@ int parse_jingle(LmMessageNode *node, struct info_jingle *ij)
 
 void free_jingle(struct info_jingle *ij)
 {
-  free(ij->action);
-  free(ij->initiator);
-  free(ij->responder);
-  free(ij->sid);
+  g_free(ij->action);
+  g_free(ij->initiator);
+  g_free(ij->responder);
+  g_free(ij->sid);
 }
 
 
@@ -55,14 +55,14 @@ int parse_content(LmMessageNode* node, struct info_content* ic)
   if (!strcmp(ic->name, "content"))
     return PARSE_ERROR_NAME;
 
-  ic->creator     = attrcpy(lm_message_node_get_attribute(node, "creator"));
-  ic->disposition = attrcpy(lm_message_node_get_attribute(node, "disposition"));
-  ic->name        = attrcpy(lm_message_node_get_attribute(node, "name"));
-  ic->senders     = attrcpy(lm_message_node_get_attribute(node, "senders"));
+  ic->creator     = g_strdup(lm_message_node_get_attribute(node, "creator"));
+  ic->disposition = g_strdup(lm_message_node_get_attribute(node, "disposition"));
+  ic->name        = g_strdup(lm_message_node_get_attribute(node, "name"));
+  ic->senders     = g_strdup(lm_message_node_get_attribute(node, "senders"));
 
   // Put default if none
   if (ic->disposition == NULL)
-    ic->disposition = attrcpy("session");
+    ic->disposition = g_strdup("session");
 
   // check required
   if (ic->creator == NULL || ic->name == NULL)
@@ -80,14 +80,14 @@ int parse_content(LmMessageNode* node, struct info_content* ic)
 
 void free_content(struct info_content *ic)
 {
-  free(ic->creator);
-  free(ic->disposition);
-  free(ic->name);
-  free(ic->senders);
+  g_free(ic->creator);
+  g_free(ic->disposition);
+  g_free(ic->name);
+  g_free(ic->senders);
 }
 
 
-int check_restriction(const char* name, const char** values)
+int check_restriction(const gchar* name, const gchar** values)
 {
   const char* value;
   int found = 0;
@@ -98,15 +98,4 @@ int check_restriction(const char* name, const char** values)
     value++;
   }
   return found;
-}
-
-
-char* attrcpy(const char* attr)
-{
-  char *tmp = NULL;
-  if (attr != NULL) {
-    tmp = (char*) malloc((strlen(attr)+1) * sizeof(char));
-    strcpy(tmp, attr);
-  }
-  return tmp;
 }

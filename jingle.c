@@ -36,10 +36,6 @@ static void mcjingle_init  (void);
 static void mcjingle_uninit(void);
 
 
-struct info_iq {
-	const gchar *from, *to, *type, *id;
-};
-
 LmMessageHandler* jingle_iq_handler = NULL;
 
 
@@ -55,19 +51,6 @@ module_info_t info_jingle = {
 	.next            = NULL,
 };
 
-
-void parse_iq(LmMessageNode *iq, struct info_iq *ii)
-{
-	if (!strcmp(iq->name, "iq")) {
-		ii->to = ii->from = ii->type = ii->id = NULL;
-		return;
-	}
-
-	ii->from = lm_message_node_get_attribute(iq, "from");
-	ii->to   = lm_message_node_get_attribute(iq, "to");
-	ii->type = lm_message_node_get_attribute(iq, "type");
-	ii->id   = lm_message_node_get_attribute(iq, "id");
-}
 
 LmHandlerResult jingle_iq_event_handler(LmMessageHandler *handler,
 		LmConnection *connection,
