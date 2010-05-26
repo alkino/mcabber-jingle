@@ -33,12 +33,17 @@
 #include "jingle.h"
 #include "parse.h"
 
+static void  jingle_register_lm_handlers(void);
+static void  jingle_unregister_lm_handlers(void);
+static guint jingle_connect_hh(const gchar *hname, hk_arg_t *args, gpointer ignore);
+static guint jingle_disconn_hh(const gchar *hname, hk_arg_t *args, gpointer ignore);
+static void  jingle_init(void);
+static void  jingle_uninit(void);
 
-static void jingle_init  (void);
-static void jingle_uninit(void);
 
-
-LmMessageHandler* jingle_iq_handler = NULL;
+static LmMessageHandler* jingle_iq_handler = NULL;
+static guint connect_hid = 0;
+static guint disconn_hid = 0;
 
 
 module_info_t info_jingle = {
@@ -141,17 +146,59 @@ void jingle_error_iq(LmMessage *m, const gchar *errtype,
   lm_message_unref(r);
 }
 
+static void jingle_unregister_lm_handlers(void)
+{
+  if (lconnection) {
+    lm_connection_unregister_message_handler(lconnection, jingle_iq_handler,
+                                             LM_MESSAGE_TYPE_IQ);
+  }
+}
+
+static void jingle_register_lm_handlers(void)
+{
+  jingle_unregister_lm_handlers();
+  if (lconnection) {
+    lm_connection_register_message_handler(lconnection, jingle_iq_handler,
+                                           LM_MESSAGE_TYPE_IQ,
+                                           LM_HANDLER_PRIORITY_FIRST);
+  }
+}
+
+static guint jingle_connect_hh(const gchar *hname, hk_arg_t *args, gpointer ignore)
+{
+  jingle_register_lm_handlers();
+  return HOOK_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
+}
+
+static guint jingle_disconn_hh(const gchar *hname, hk_arg_t *args, gpointer ignore)
+{
+  jingle_unregister_lm_handlers();
+  return HOOK_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
+}
+
 static void jingle_init(void)
 {
   jingle_iq_handler = lm_message_handler_new(jingle_handle_iq, NULL, NULL);
-  lm_connection_register_message_handler(lconnection, jingle_iq_handler, LM_MESSAGE_TYPE_IQ, LM_HANDLER_PRIORITY_FIRST);
   xmpp_add_feature(NS_JINGLE);
-  xmpp_add_feature("urn:xmpp:jingle:apps:file-transfer:info:1"); // for debugging puposes only...
+  xmpp_add_feature("urn:xmpp:jingle:apps:file-transfer:info:1"); // for debugging
+
+  connect_hid = hk_add_handler(jingle_connect_hh, HOOK_POST_CONNECT,
+                               G_PRIORITY_DEFAULT_IDLE, NULL);
+  disconn_hid = hk_add_handler(jingle_disconn_hh, HOOK_PRE_DISCONNECT,
+                               G_PRIORITY_DEFAULT_IDLE, NULL);
+  jingle_register_lm_handlers();
 }
 
 static void jingle_uninit(void)
 {
-  lm_connection_unregister_message_handler(lconnection, jingle_iq_handler, LM_MESSAGE_TYPE_IQ);
+  xmpp_del_feature(NS_JINGLE);
+  xmpp_del_feature("urn:xmpp:jingle:apps:file-transfer:info:1");
+  
+
+  hk_del_handler(HOOK_POST_CONNECT, connect_hid);
+  hk_del_handler(HOOK_PRE_DISCONNECT, disconn_hid);
+  jingle_unregister_lm_handlers();
+
   lm_message_handler_invalidate(jingle_iq_handler);
   lm_message_handler_unref(jingle_iq_handler);
 }
