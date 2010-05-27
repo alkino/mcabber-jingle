@@ -11,18 +11,11 @@
 #define PARSE_ERROR_TOO_MANY_CHILDS 4
 
 
-struct iq_data {
-  const gchar *from;
-  const gchar *id;
-  const gchar *to;
-  const gchar *set;
-};
-
 struct jingle_data {
-  const gchar* action;    // see jingle_action in jingle.h
+  JingleAction action;
   const gchar* initiator; // optional
-  const gchar* responder;  // optional
-  const gchar* sid;        // required
+  const gchar* responder; // optional
+  const gchar* sid;       // required
 };
 
 struct content_data {

@@ -64,14 +64,17 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
                                  LmMessage *message,
                                  gpointer user_data)
 {
-  //struct iq_data ii;
+  LmMessageSubType iqtype = lm_message_get_sub_type(message);
+  if (iqtype != LM_MESSAGE_SUB_TYPE_SET)
+    return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
+
   struct jingle_data ij;
   LmMessageNode *root = lm_message_get_node(message)->children;
   LmMessageNode *node = lm_message_node_get_child(root, "jingle");
 
-  if (!node)
-    return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS; // no <jingle> element found
-  
+  if (!node) // no <jingle> element found
+    return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
+
   if (g_strcmp0(lm_message_node_get_attribute(node, "xmlns"), NS_JINGLE)) {
     scr_log_print(LPRINT_DEBUG, "jingle: Received a jingle IQ with an invalid namespace");
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
@@ -86,23 +89,6 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
 
   jingle_error_iq(message, "cancel", "feature-not-implemented", "unsupported-info");
 
-  /*if (!strcmp(ij.action, "content-accept")) {
-  } else if (!strcmp(ij.action, "content-add")) {
-  } else if (!strcmp(ij.action, "content-modify")) {
-  } else if (!strcmp(ij.action, "content-reject")) {
-  } else if (!strcmp(ij.action, "content-remove")) {
-  } else if (!strcmp(ij.action, "description-info")) {
-  } else if (!strcmp(ij.action, "security-info")) {
-  } else if (!strcmp(ij.action, "session-accept")) {
-  } else if (!strcmp(ij.action, "session-info")) {
-  } else if (!strcmp(ij.action, "session-initiate")) {
-  } else if (!strcmp(ij.action, "session-terminate")) {
-  } else if (!strcmp(ij.action, "transport-accept")) {
-  } else if (!strcmp(ij.action, "transport-info")) {
-  } else if (!strcmp(ij.action, "transport-reject")) {
-  } else if (!strcmp(ij.action, "transport-replace")) {
-  }*/
-
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 }
 
@@ -113,7 +99,8 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
  * For Jingle's IQ, we have to reply with an empty "result" IQ to acknowledge
  * receipt.
  */
-void jingle_ack_iq(LmMessage *m) {
+void jingle_ack_iq(LmMessage *m)
+{
   LmMessage *r;
 
   r = lm_message_new_iq_from_query(m, LM_MESSAGE_SUB_TYPE_RESULT);
@@ -180,7 +167,6 @@ static void jingle_init(void)
 {
   jingle_iq_handler = lm_message_handler_new(jingle_handle_iq, NULL, NULL);
   xmpp_add_feature(NS_JINGLE);
-  xmpp_add_feature("urn:xmpp:jingle:apps:file-transfer:info:1"); // for debugging
 
   connect_hid = hk_add_handler(jingle_connect_hh, HOOK_POST_CONNECT,
                                G_PRIORITY_DEFAULT_IDLE, NULL);
@@ -192,8 +178,6 @@ static void jingle_init(void)
 static void jingle_uninit(void)
 {
   xmpp_del_feature(NS_JINGLE);
-  xmpp_del_feature("urn:xmpp:jingle:apps:file-transfer:info:1");
-  
 
   hk_del_handler(HOOK_POST_CONNECT, connect_hid);
   hk_del_handler(HOOK_PRE_DISCONNECT, disconn_hid);

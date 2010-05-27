@@ -4,23 +4,29 @@
 #include "parse.h"
 #include "jingle.h"
 
-const gchar *jingle_actions[] = {
-  "content-accept",
-  "content-add",
-  "content-modify",
-  "content-reject",
-  "content-remove",
-  "description-info",
-  "security-info",
-  "session-accept",
-  "session-info",
-  "session-initiate",
-  "session-terminate",
-  "transport-accept",
-  "transport-info",
-  "transport-reject",
-  "transport-replace",
-  NULL
+
+static JingleAction action_from_str(const gchar* string);
+
+
+struct JingleActionStr {
+	JingleAction  act;
+	const gchar  *name;
+} jingle_actions_str[] = {
+  { JINGLE_CONTENT_ACCEPT,    "content-accept" },
+  { JINGLE_CONTENT_ADD,       "content-add" },
+  { JINGLE_CONTENT_MODIFY,    "content-modify" },
+  { JINGLE_CONTENT_REJECT,    "content-reject" },
+  { JINGLE_CONTENT_REMOVE,    "content-remove" },
+  { JINGLE_DESCRIPTION_INFO,  "description-info" },
+  { JINGLE_SECURITY_INFO,     "security-info" },
+  { JINGLE_SESSION_ACCEPT,    "session-accept" },
+  { JINGLE_SESSION_INFO,      "session-info" },
+  { JINGLE_SESSION_INITIATE,  "session-initiate" },
+  { JINGLE_SESSION_TERMINATE, "session-terminate" },
+  { JINGLE_TRANSPORT_ACCEPT,  "transport-accept" },
+  { JINGLE_TRANSPORT_INFO,    "transport-info" },
+  { JINGLE_TRANSPORT_REJECT,  "transport-reject" },
+  { JINGLE_TRANSPORT_REPLACE, "transport-replace" },
 };
 
 const gchar *jingle_content_creator[] = {
@@ -37,25 +43,28 @@ const gchar *jingle_content_senders[] = {
   NULL
 };
 
+
 /**
  * Populate a jingle_data struct from a <jingle> element.
  * Check if the element is in compliance with the XEP.
  */
-int check_jingle(LmMessageNode *node, struct jingle_data *ij)
+gint check_jingle(LmMessageNode *node, struct jingle_data *ij)
 {
   int nb_reason = 0;
   LmMessageNode *child = NULL;
+  gchar *actionstr;
 
-  ij->action    = lm_message_node_get_attribute(node, "action");
+  actionstr     = lm_message_node_get_attribute(node, "action");
   ij->initiator = lm_message_node_get_attribute(node, "initiator");
   ij->responder = lm_message_node_get_attribute(node, "responder");
   ij->sid       = lm_message_node_get_attribute(node, "sid");
 
-  if (ij->action == NULL || ij->sid == NULL)
+  if (action == NULL || ij->sid == NULL)
     return PARSE_ERROR_REQUIRED; // those elements are required
 
-  if (!str_in_array(ij->action, jingle_actions))
-   return PARSE_ERROR_RESTRICTION;
+  ij->action = action_from_str(actionstr);
+  if (ij->action == JINGLE_UNKNOWN)
+    return PARSE_ERROR_RESTRICTION;
 
   // check childs
   for (child = node->children; child; child = child->next) {
@@ -69,7 +78,7 @@ int check_jingle(LmMessageNode *node, struct jingle_data *ij)
   return PARSE_OK;
 }
 
-int parse_content(LmMessageNode* node, struct content_data* ic)
+gint check_content(LmMessageNode* node, struct content_data* ic)
 {
   if (!strcmp(ic->name, "content"))
     return PARSE_ERROR_NAME;
@@ -94,16 +103,14 @@ int parse_content(LmMessageNode* node, struct content_data* ic)
 }
 
 /**
- * Check if needle exists in haystack.
- * The last element of haystack must be NULL.
+ * Find the jingle_action corresponding to a string
  */
-gint str_in_array(const gchar* needle, const gchar** haystack)
+static JingleAction action_from_str(const gchar* string)
 {
-  const gchar* value;
-  gint found = 0;
-  for (value = haystack[0]; value && !found; value++)
-    if (!g_strcmp0(needle, value))
-      found = 1;
+  guint i, actstrlen = sizeof(jingle_actions_str)/sizeof(struct JingleActionStr);
+  for (i = 0; i < actstrlen; i++)
+    if (!g_strcmp0(jingle_actions_str[i].name, string))
+      return jingle_actions_str[i].act;
 
-  return found;
+  return JINGLE_UNKNOWN;
 }
