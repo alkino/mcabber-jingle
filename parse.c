@@ -102,6 +102,7 @@ gint check_content(LmMessageNode* node, struct content_data* ic)
   return PARSE_OK;
 }
 
+
 /**
  * Find the jingle_action corresponding to a string
  */

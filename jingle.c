@@ -31,6 +31,7 @@
 #include <mcabber/xmpp_defines.h>
 
 #include "jingle.h"
+#include "jingle_register.h"
 #include "parse.h"
 
 static void  jingle_register_lm_handlers(void);
@@ -51,7 +52,7 @@ module_info_t info_jingle = {
   .api             = MCABBER_API_VERSION,
   .version         = MCABBER_VERSION,
   .description     = "Main Jingle module,"
-                     " required for file transport, voip...\n",
+    " required for file transport, voip...\n",
   .requires        = NULL,
   .init            = jingle_init,
   .uninit          = jingle_uninit,
@@ -60,9 +61,9 @@ module_info_t info_jingle = {
 
 
 LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
-                                 LmConnection *connection,
-                                 LmMessage *message,
-                                 gpointer user_data)
+    LmConnection *connection,
+    LmMessage *message,
+    gpointer user_data)
 {
   LmMessageSubType iqtype = lm_message_get_sub_type(message);
   if (iqtype != LM_MESSAGE_SUB_TYPE_SET)
@@ -82,9 +83,14 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
 
   //parse_iq(lm_message_get_node(message), &ii);
 
-  if (parse_jingle(node, &ij) != PARSE_OK)
+  // On traitre les erreurs
+  if (parse_jingle(node, &ij) != PARSE_OK) {
+   
+   
+   
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
-    
+  }
+
   scr_log_print(LPRINT_DEBUG, "jingle: Received a jingle IQ");
 
   jingle_error_iq(message, "cancel", "feature-not-implemented", "unsupported-info");
@@ -112,7 +118,7 @@ void jingle_ack_iq(LmMessage *m)
  * Reply to a Jingle IQ with an error.
  */
 void jingle_error_iq(LmMessage *m, const gchar *errtype,
-                     const gchar *cond, const gchar *jinglecond)
+    const gchar *cond, const gchar *jinglecond)
 {
   LmMessage *r;
   LmMessageNode *err, *tmpnode;
@@ -120,15 +126,15 @@ void jingle_error_iq(LmMessage *m, const gchar *errtype,
   r = lm_message_new_iq_from_query(m, LM_MESSAGE_SUB_TYPE_ERROR);
   err = lm_message_node_add_child(r->node, "error", NULL);
   lm_message_node_set_attribute(err, "type", errtype);
-  
+
   // error condition as defined by RFC 3920bis section 8.3.3
   tmpnode = lm_message_node_add_child(err, cond, NULL);
   lm_message_node_set_attribute(tmpnode, "xmlns", NS_XMPP_STANZAS);
-  
+
   // jingle error condition as defined by XEP-0166 section 10
   tmpnode = lm_message_node_add_child(err, jinglecond, NULL);
   lm_message_node_set_attribute(tmpnode, "xmlns", NS_JINGLE_ERRORS);
-  
+
   lm_connection_send(lconnection, r, NULL);
   lm_message_unref(r);
 }
@@ -137,7 +143,7 @@ static void jingle_unregister_lm_handlers(void)
 {
   if (lconnection) {
     lm_connection_unregister_message_handler(lconnection, jingle_iq_handler,
-                                             LM_MESSAGE_TYPE_IQ);
+        LM_MESSAGE_TYPE_IQ);
   }
 }
 
@@ -146,8 +152,8 @@ static void jingle_register_lm_handlers(void)
   jingle_unregister_lm_handlers();
   if (lconnection) {
     lm_connection_register_message_handler(lconnection, jingle_iq_handler,
-                                           LM_MESSAGE_TYPE_IQ,
-                                           LM_HANDLER_PRIORITY_FIRST);
+        LM_MESSAGE_TYPE_IQ,
+        LM_HANDLER_PRIORITY_FIRST);
   }
 }
 
@@ -169,9 +175,9 @@ static void jingle_init(void)
   xmpp_add_feature(NS_JINGLE);
 
   connect_hid = hk_add_handler(jingle_connect_hh, HOOK_POST_CONNECT,
-                               G_PRIORITY_DEFAULT_IDLE, NULL);
+      G_PRIORITY_DEFAULT_IDLE, NULL);
   disconn_hid = hk_add_handler(jingle_disconn_hh, HOOK_PRE_DISCONNECT,
-                               G_PRIORITY_DEFAULT_IDLE, NULL);
+      G_PRIORITY_DEFAULT_IDLE, NULL);
   jingle_register_lm_handlers();
 }
 
