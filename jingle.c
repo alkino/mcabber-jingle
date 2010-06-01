@@ -28,11 +28,12 @@
 #include <mcabber/modules.h>
 #include <mcabber/logprint.h>
 #include <mcabber/xmpp_helper.h>
-#include <mcabber/xmpp_defines.h>
+#include <mcabber/xmpp_defines.h> 
 
 #include "jingle.h"
 #include "jingle_register.h"
 #include "parse.h"
+#include "error.h"
 
 static void  jingle_register_lm_handlers(void);
 static void  jingle_unregister_lm_handlers(void);
@@ -81,13 +82,8 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
 
-  //parse_iq(lm_message_get_node(message), &ii);
-
-  // On traitre les erreurs
   if (parse_jingle(node, &ij) != PARSE_OK) {
-   
-   
-   
+    jingle_error_bad_request(message); 
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
 
@@ -110,31 +106,6 @@ void jingle_ack_iq(LmMessage *m)
   LmMessage *r;
 
   r = lm_message_new_iq_from_query(m, LM_MESSAGE_SUB_TYPE_RESULT);
-  lm_connection_send(lconnection, r, NULL);
-  lm_message_unref(r);
-}
-
-/**
- * Reply to a Jingle IQ with an error.
- */
-void jingle_error_iq(LmMessage *m, const gchar *errtype,
-    const gchar *cond, const gchar *jinglecond)
-{
-  LmMessage *r;
-  LmMessageNode *err, *tmpnode;
-
-  r = lm_message_new_iq_from_query(m, LM_MESSAGE_SUB_TYPE_ERROR);
-  err = lm_message_node_add_child(r->node, "error", NULL);
-  lm_message_node_set_attribute(err, "type", errtype);
-
-  // error condition as defined by RFC 3920bis section 8.3.3
-  tmpnode = lm_message_node_add_child(err, cond, NULL);
-  lm_message_node_set_attribute(tmpnode, "xmlns", NS_XMPP_STANZAS);
-
-  // jingle error condition as defined by XEP-0166 section 10
-  tmpnode = lm_message_node_add_child(err, jinglecond, NULL);
-  lm_message_node_set_attribute(tmpnode, "xmlns", NS_JINGLE_ERRORS);
-
   lm_connection_send(lconnection, r, NULL);
   lm_message_unref(r);
 }
