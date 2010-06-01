@@ -1,7 +1,7 @@
 /*
- *  jingle.c -- Base jingle functions
+ * jingle.c
  *
- * Copyrigth (C) 2010    Nicolas Cornu <nicolas.cornu@ensi-bourges.fr>
+ * Copyrigth (C) 2010 Nicolas Cornu <nicolas.cornu@ensi-bourges.fr>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 
 #include <glib.h>
 #include <loudmouth/loudmouth.h>
-#include <string.h>
 
 #include <mcabber/xmpp.h>
 #include <mcabber/hooks.h>
@@ -31,9 +30,9 @@
 #include <mcabber/xmpp_defines.h> 
 
 #include "jingle.h"
-#include "jingle_register.h"
-#include "parse.h"
-#include "error.h"
+#include "check.h"
+#include "register.h"
+
 
 static void  jingle_register_lm_handlers(void);
 static void  jingle_unregister_lm_handlers(void);
@@ -47,6 +46,28 @@ static LmMessageHandler* jingle_iq_handler = NULL;
 static guint connect_hid = 0;
 static guint disconn_hid = 0;
 
+/**
+ * Must be aligned with the values in JingleAction
+ * for easy acces.
+ */
+struct JingleActionList jingle_action_list[] = {
+  { NULL,                NULL }, // for JINGLE_UNKNOWN_ACTION
+  { "content-accept",    NULL },
+  { "content-add",       NULL },
+  { "content-modify",    NULL },
+  { "content-reject",    NULL },
+  { "content-remove",    NULL },
+  { "description-info",  NULL },
+  { "security-info",     NULL },
+  { "session-accept",    NULL },
+  { "session-info",      NULL },
+  { "session-initiate",  NULL },
+  { "session-terminate", NULL },
+  { "transport-accept",  NULL },
+  { "transport-info",    NULL },
+  { "transport-reject",  NULL },
+  { "transport-replace", NULL },
+};
 
 module_info_t info_jingle = {
   .branch          = MCABBER_BRANCH,
@@ -70,7 +91,8 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
   if (iqtype != LM_MESSAGE_SUB_TYPE_SET)
     return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
 
-  struct jingle_data ij;
+  JingleData jd;
+  GError *error;
   LmMessageNode *root = lm_message_get_node(message)->children;
   LmMessageNode *node = lm_message_node_get_child(root, "jingle");
 
@@ -82,14 +104,21 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
 
-  if (parse_jingle(node, &ij) != PARSE_OK) {
-    jingle_error_bad_request(message); 
+  check_jingle(node, &jd, &error);
+  if (error != NULL) {
+    if (error->code == JINGLE_CHECK_ERROR) {
+      // request malformed, we reply with a bad-request
+      jingle_error_iq(message, "cancel", "bad-request", NULL);
+    }
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
-
-  scr_log_print(LPRINT_DEBUG, "jingle: Received a jingle IQ");
-
-  jingle_error_iq(message, "cancel", "feature-not-implemented", "unsupported-info");
+  
+  scr_log_print(LPRINT_DEBUG, "jingle: Received a valid jingle IQ");
+  
+  if (jingle_action_list[jd.action].handler != NULL)
+    jingle_action_list[jd.action].handler(NULL);
+  else
+    jingle_error_iq(message, "cancel", "feature-not-implemented", "unsupported-info");
 
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 }
@@ -108,6 +137,48 @@ void jingle_ack_iq(LmMessage *m)
   r = lm_message_new_iq_from_query(m, LM_MESSAGE_SUB_TYPE_RESULT);
   lm_connection_send(lconnection, r, NULL);
   lm_message_unref(r);
+}
+
+/**
+ * Reply to a Jingle IQ with an error.
+ */
+void jingle_error_iq(LmMessage *m, const gchar *errtype,
+                     const gchar *cond, const gchar *jinglecond)
+{
+  LmMessage *r;
+  LmMessageNode *err, *tmpnode;
+
+  r = lm_message_new_iq_from_query(m, LM_MESSAGE_SUB_TYPE_ERROR);
+  err = lm_message_node_add_child(r->node, "error", NULL);
+  lm_message_node_set_attribute(err, "type", errtype);
+  
+  // error condition as defined by RFC 3920bis section 8.3.3
+  if (cond != NULL) {
+    tmpnode = lm_message_node_add_child(err, cond, NULL);
+    lm_message_node_set_attribute(tmpnode, "xmlns", NS_XMPP_STANZAS);
+  }
+  
+  // jingle error condition as defined by XEP-0166 section 10
+  if (jinglecond != NULL) {
+    tmpnode = lm_message_node_add_child(err, jinglecond, NULL);
+    lm_message_node_set_attribute(tmpnode, "xmlns", NS_JINGLE_ERRORS);
+  }
+  
+  lm_connection_send(lconnection, r, NULL);
+  lm_message_unref(r);
+}
+
+/**
+ * Find the jingle_action corresponding to a string
+ */
+JingleAction jingle_action_from_str(const gchar* string)
+{
+  guint i, actstrlen = sizeof(jingle_action_list)/sizeof(struct JingleActionList);
+  for (i = 0; i < actstrlen; i++)
+    if (!g_strcmp0(jingle_action_list[i].name, string))
+      return (JingleAction) i;
+
+  return JINGLE_UNKNOWN_ACTION;
 }
 
 static void jingle_unregister_lm_handlers(void)
