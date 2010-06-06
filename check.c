@@ -26,6 +26,11 @@
 #include "jingle.h"
 
 
+JingleContentNode *check_content(LmMessageNode *node, GError **err);
+gint index_in_array(const gchar *str, const gchar **array);
+
+
+
 const gchar *jingle_content_creator[] = {
   "initiator",
   "responder",
@@ -45,32 +50,32 @@ const gchar *jingle_content_senders[] = {
  * Populate a jingle_data struct from a <jingle> element.
  * Check if the element is in compliance with the XEP.
  */
-gboolean check_jingle(LmMessageNode *node, JingleData *jd, GError **err)
+gboolean check_jingle(LmMessageNode *node, JingleNode *jn, GError **err)
 {
-  gint nb_reason = 0;
+  //gint nb_reason = 0;
   LmMessageNode *child = NULL;
   const gchar *actionstr;
+  JingleContentNode *cn;
 
   actionstr     = lm_message_node_get_attribute(node, "action");
-  jd->initiator = lm_message_node_get_attribute(node, "initiator");
-  jd->responder = lm_message_node_get_attribute(node, "responder");
-  jd->sid       = lm_message_node_get_attribute(node, "sid");
+  jn->initiator = lm_message_node_get_attribute(node, "initiator");
+  jn->responder = lm_message_node_get_attribute(node, "responder");
+  jn->sid       = lm_message_node_get_attribute(node, "sid");
 
-  if (actionstr == NULL || jd->sid == NULL) {
+  if (actionstr == NULL || jn->sid == NULL) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
                 "an attribute of the jingle element is missing");
     return FALSE;
   }
 
-  jd->action = jingle_action_from_str(actionstr);
-  if (jd->action == JINGLE_UNKNOWN_ACTION) {
+  jn->action = jingle_action_from_str(actionstr);
+  if (jn->action == JINGLE_UNKNOWN_ACTION) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
                 "the action attribute is invalid");
     return FALSE;
   }
 
-  // check childs
-  for (child = node->children; child; child = child->next) {
+  /*for (child = node->children; child; child = child->next) {
     if (!g_strcmp0(child->name, "reason"))
       nb_reason++;
   }
@@ -79,9 +84,73 @@ gboolean check_jingle(LmMessageNode *node, JingleData *jd, GError **err)
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADELEM,
                 "too many reason elements");
     return FALSE;
+  }*/
+  
+  for (child = node->children; child; child = child->next) {
+    if (!g_strcmp0(child->name, "content")) {
+      cn = check_content(node, err);
+      if(cn == NULL) {
+        g_assert (*err != NULL);
+        return FALSE;
+	  }
+	  jn->content = g_list_append(jn->content, cn);
+    }
   }
 
   return TRUE;
+}
+
+JingleContentNode *check_content(LmMessageNode *node, GError **err)
+{
+  JingleContentNode *cn = g_new0(JingleContentNode, 1);
+  const gchar *creatorstr, *sendersstr;
+  gint tmp, tmp2;
+
+  creatorstr      = lm_message_node_get_attribute(node, "action");
+  cn->disposition = lm_message_node_get_attribute(node, "disposition");
+  cn->name        = lm_message_node_get_attribute(node, "name");
+  sendersstr      = lm_message_node_get_attribute(node, "senders");
+
+  if (creatorstr == NULL || cn->name == NULL) {
+    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
+                "an attribute of the content element is missing");
+    g_free(cn);
+    return NULL;
+  }
+  
+  tmp = index_in_array(creatorstr, jingle_content_creator);
+  tmp2 = index_in_array(sendersstr, jingle_content_senders);
+  if (tmp < 0 || tmp2 < 0) {
+    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
+                "the attribute creator or sender is invalid");
+    g_free(cn);
+    return NULL;
+  }
+  cn->creator = (JingleCreator)tmp;
+  cn->senders = (JingleSenders)tmp2;
+  
+
+  cn->description = lm_message_node_get_child(node, "description");
+  cn->transport   = lm_message_node_get_child(node, "transport");
+  if (cn->description == NULL || cn->transport == NULL) {
+    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
+                "a child element of content is missing");
+    g_free(cn);
+    return NULL;
+  }
+  
+  return cn;
+}
+
+gint index_in_array(const gchar *str, const gchar **array)
+{
+  gint i;
+  for (i = 0; array[i]; i++) {
+    if (!g_strcmp0(array[i], str)) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 GQuark jingle_check_error_quark()

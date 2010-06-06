@@ -74,7 +74,7 @@ module_info_t info_jingle = {
   .api             = MCABBER_API_VERSION,
   .version         = MCABBER_VERSION,
   .description     = "Main Jingle module,"
-    " required for file transport, voip...\n",
+                     " required for file transport, voip...\n",
   .requires        = NULL,
   .init            = jingle_init,
   .uninit          = jingle_uninit,
@@ -83,15 +83,15 @@ module_info_t info_jingle = {
 
 
 LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
-    LmConnection *connection,
-    LmMessage *message,
-    gpointer user_data)
+                                 LmConnection *connection,
+                                 LmMessage *message,
+                                 gpointer user_data)
 {
   LmMessageSubType iqtype = lm_message_get_sub_type(message);
   if (iqtype != LM_MESSAGE_SUB_TYPE_SET)
     return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
 
-  JingleData jd;
+  JingleNode *jn = g_new0(JingleNode, 1);
   GError *error;
   LmMessageNode *root = lm_message_get_node(message)->children;
   LmMessageNode *node = lm_message_node_get_child(root, "jingle");
@@ -104,21 +104,22 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
 
-  check_jingle(node, &jd, &error);
+  check_jingle(node, jn, &error);
   if (error != NULL) {
     if (error->code == JINGLE_CHECK_ERROR) {
       // request malformed, we reply with a bad-request
-      jingle_error_iq(message, "cancel", "bad-request", NULL);
+      jingle_send_iq_error(message, "cancel", "bad-request", NULL);
     }
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
   
   scr_log_print(LPRINT_DEBUG, "jingle: Received a valid jingle IQ");
   
-  if (jingle_action_list[jd.action].handler != NULL)
-    jingle_action_list[jd.action].handler(NULL);
+  if (jingle_action_list[jn->action].handler != NULL)
+    jingle_action_list[jn->action].handler(message, jn, &error);
   else
-    jingle_error_iq(message, "cancel", "feature-not-implemented", "unsupported-info");
+    jingle_send_iq_error(message, "cancel", "feature-not-implemented",
+                         "unsupported-info");
 
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 }
@@ -142,8 +143,8 @@ void jingle_ack_iq(LmMessage *m)
 /**
  * Reply to a Jingle IQ with an error.
  */
-void jingle_error_iq(LmMessage *m, const gchar *errtype,
-                     const gchar *cond, const gchar *jinglecond)
+LmMessage *jingle_new_iq_error(LmMessage *m, const gchar *errtype,
+                               const gchar *cond, const gchar *jinglecond)
 {
   LmMessage *r;
   LmMessageNode *err, *tmpnode;
@@ -151,21 +152,30 @@ void jingle_error_iq(LmMessage *m, const gchar *errtype,
   r = lm_message_new_iq_from_query(m, LM_MESSAGE_SUB_TYPE_ERROR);
   err = lm_message_node_add_child(r->node, "error", NULL);
   lm_message_node_set_attribute(err, "type", errtype);
-  
+
   // error condition as defined by RFC 3920bis section 8.3.3
   if (cond != NULL) {
     tmpnode = lm_message_node_add_child(err, cond, NULL);
     lm_message_node_set_attribute(tmpnode, "xmlns", NS_XMPP_STANZAS);
   }
-  
+
   // jingle error condition as defined by XEP-0166 section 10
   if (jinglecond != NULL) {
     tmpnode = lm_message_node_add_child(err, jinglecond, NULL);
     lm_message_node_set_attribute(tmpnode, "xmlns", NS_JINGLE_ERRORS);
   }
-  
-  lm_connection_send(lconnection, r, NULL);
-  lm_message_unref(r);
+
+  return r;
+}
+
+void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
+                          const gchar *cond, const gchar *jinglecond)
+{
+  LmMessage *r = jingle_new_iq_error(m, errtype, cond, jinglecond);
+  if (r) {
+	  lm_connection_send(lconnection, r, NULL);
+	  lm_message_unref(r);
+  }
 }
 
 /**
@@ -173,7 +183,7 @@ void jingle_error_iq(LmMessage *m, const gchar *errtype,
  */
 JingleAction jingle_action_from_str(const gchar* string)
 {
-  guint i, actstrlen = sizeof(jingle_action_list)/sizeof(struct JingleActionList);
+  guint i, actstrlen = sizeof(jingle_action_list)/sizeof(jingle_action_list[0]);
   for (i = 0; i < actstrlen; i++)
     if (!g_strcmp0(jingle_action_list[i].name, string))
       return (JingleAction) i;
