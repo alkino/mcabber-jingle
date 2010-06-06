@@ -30,24 +30,15 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 pkg_check_modules(LM REQUIRED loudmouth-1.0)
 pkg_check_modules(MCABBER REQUIRED mcabber)
-link_directories(${GLIB_LIBRARY_DIRS}
-				 ${LM_LIBRARY_DIRS}
-				 ${MCABBER_LIBRARY_DIRS})
-
-## Target definitions
-add_library(jingle MODULE jingle.c check.c register.c)
+link_directories(${GLIB_LIBRARY_DIRS} ${MCABBER_LIBRARY_DIRS})
 
 ## Compiler setup
 configure_file(config.h.in config.h)
-include_directories(SYSTEM ${GLIB_INCLUDE_DIRS}
-                    ${LM_INCLUDE_DIRS}
-					${MCABBER_INCLUDE_DIRS})
-target_link_libraries(jingle ${GLIB_LIBRARIES}
-					  ${LM_LIBRARIES}
-					  ${MCABBER_LIBRARIES})
-include_directories(${autoaway_SOURCE_DIR}
-                    ${autoaway_BINARY_DIR})
-set_target_properties(jingle PROPERTIES COMPILE_FLAGS "-Wall")
+include_directories(SYSTEM ${GLIB_INCLUDE_DIRS} ${MCABBER_INCLUDE_DIRS})
+
+## Target definitions
+add_subdirectory(jingle)
+add_subdirectory(jingle-filetransfert)
 
 ## Packaging information
 set(CPACK_PACKAGE_NAME mcabber-jingle)
@@ -60,6 +51,3 @@ set(CPACK_GENERATOR DEB CACHE TEXT "Binary package generator, eg DEB, RPM, TGZ, 
 set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}_${CPACK_PACKAGE_VERSION}_${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
 set(CPACK_SOURCE_IGNORE_FILES "/\\\\..*;\\\\.swp;~$;/build/;\\\\.tar\\\\.;\\\\.deb;\\\\.so")
 include(CPack)
-
-## Installation
-install(TARGETS jingle DESTINATION lib/mcabber)

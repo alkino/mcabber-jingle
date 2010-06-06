@@ -1,1 +1,2 @@
 //#cmakedefine USE_LIBNAME
+#define PROJECT_VERSION "@PROJECT_VERSION@"
