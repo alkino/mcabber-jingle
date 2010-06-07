@@ -1,4 +1,4 @@
-add_library(jingle MODULE jingle.c check.c register.c)
+add_library(jingle MODULE jingle.c check.c action-handlers.c register.c)
 set_target_properties(jingle PROPERTIES COMPILE_FLAGS "-Wall")
 include_directories(${LM_INCLUDE_DIRS} ..)
 target_link_libraries(jingle ${LM_LIBRARIES})

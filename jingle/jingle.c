@@ -96,18 +96,18 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
 
   JingleNode *jn = g_new0(JingleNode, 1);
   GError *error = NULL;
-  LmMessageNode *root = lm_message_get_node(message)->children;
-  LmMessageNode *node = lm_message_node_get_child(root, "jingle");
+  LmMessageNode *root = lm_message_get_node(message);
+  LmMessageNode *jnode = lm_message_node_get_child(root, "jingle");
 
-  if (!node) // no <jingle> element found
+  if (!jnode) // no <jingle> element found
     return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
 
-  if (g_strcmp0(lm_message_node_get_attribute(node, "xmlns"), NS_JINGLE)) {
+  if (g_strcmp0(lm_message_node_get_attribute(jnode, "xmlns"), NS_JINGLE)) {
     scr_log_print(LPRINT_DEBUG, "jingle: Received a jingle IQ with an invalid namespace");
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
 
-  check_jingle(node, jn, &error);
+  check_jingle(jnode, jn, &error);
   if (error != NULL) {
     if (error->domain == JINGLE_CHECK_ERROR) {
       // request malformed, we reply with a bad-request

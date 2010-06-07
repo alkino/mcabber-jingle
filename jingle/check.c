@@ -88,7 +88,7 @@ gboolean check_jingle(LmMessageNode *node, JingleNode *jn, GError **err)
   
   for (child = node->children; child; child = child->next) {
     if (!g_strcmp0(child->name, "content")) {
-      cn = check_content(node, err);
+      cn = check_content(child, err);
       if(cn == NULL) {
         g_assert (*err != NULL);
         return FALSE;
@@ -106,7 +106,7 @@ JingleContentNode *check_content(LmMessageNode *node, GError **err)
   const gchar *creatorstr, *sendersstr;
   gint tmp, tmp2;
 
-  creatorstr      = lm_message_node_get_attribute(node, "action");
+  creatorstr      = lm_message_node_get_attribute(node, "creator");
   cn->disposition = lm_message_node_get_attribute(node, "disposition");
   cn->name        = lm_message_node_get_attribute(node, "name");
   sendersstr      = lm_message_node_get_attribute(node, "senders");
