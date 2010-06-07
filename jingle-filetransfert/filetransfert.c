@@ -19,11 +19,16 @@
  * USA
  */
 
+#include "config.h"
+
 #include <glib.h>
 
 #include <mcabber/modules.h>
+#include <mcabber/xmpp_helper.h>
 
 #include <jingle.h>
+
+#include "filetransfert.h"
 
 
 static void jingleft_init(void);
@@ -35,7 +40,7 @@ const gchar *deps[] = { "jingle", NULL };
 module_info_t info_jingle_filetransfert = {
   .branch          = MCABBER_BRANCH,
   .api             = MCABBER_API_VERSION,
-  .version         = MCABBER_VERSION,
+  .version         = PROJECT_VERSION,
   .description     = "Jingle File Transfert (XEP-0234)\n",
   .requires        = deps,
   .init            = jingleft_init,
@@ -46,10 +51,10 @@ module_info_t info_jingle_filetransfert = {
 
 static void jingleft_init(void)
 {
-  
+  xmpp_add_feature(NS_JINGLE_APP_FT);
 }
 
 static void jingleft_uninit(void)
 {
-  
+  xmpp_del_feature(NS_JINGLE_APP_FT);
 }

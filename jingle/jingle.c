@@ -19,6 +19,8 @@
  * USA
  */
 
+#include "config.h"
+
 #include <glib.h>
 #include <loudmouth/loudmouth.h>
 
@@ -31,6 +33,7 @@
 
 #include "jingle.h"
 #include "check.h"
+#include "action-handlers.h"
 #include "register.h"
 
 
@@ -61,7 +64,7 @@ struct JingleActionList jingle_action_list[] = {
   { "security-info",     NULL },
   { "session-accept",    NULL },
   { "session-info",      NULL },
-  { "session-initiate",  NULL },
+  { "session-initiate",  handle_session_initiate },
   { "session-terminate", NULL },
   { "transport-accept",  NULL },
   { "transport-info",    NULL },
@@ -72,7 +75,7 @@ struct JingleActionList jingle_action_list[] = {
 module_info_t info_jingle = {
   .branch          = MCABBER_BRANCH,
   .api             = MCABBER_API_VERSION,
-  .version         = MCABBER_VERSION,
+  .version         = PROJECT_VERSION,
   .description     = "Main Jingle module,"
                      " required for file transport, voip...\n",
   .requires        = NULL,
@@ -92,7 +95,7 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
     return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
 
   JingleNode *jn = g_new0(JingleNode, 1);
-  GError *error;
+  GError *error = NULL;
   LmMessageNode *root = lm_message_get_node(message)->children;
   LmMessageNode *node = lm_message_node_get_child(root, "jingle");
 
@@ -106,20 +109,23 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
 
   check_jingle(node, jn, &error);
   if (error != NULL) {
-    if (error->code == JINGLE_CHECK_ERROR) {
+    if (error->domain == JINGLE_CHECK_ERROR) {
       // request malformed, we reply with a bad-request
       jingle_send_iq_error(message, "cancel", "bad-request", NULL);
     }
+    g_clear_error(&error);
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
-  
+
   scr_log_print(LPRINT_DEBUG, "jingle: Received a valid jingle IQ");
-  
-  if (jingle_action_list[jn->action].handler != NULL)
-    jingle_action_list[jn->action].handler(message, jn, &error);
-  else
+
+  if (jingle_action_list[jn->action].handler == NULL) {
     jingle_send_iq_error(message, "cancel", "feature-not-implemented",
                          "unsupported-info");
+    return LM_HANDLER_RESULT_REMOVE_MESSAGE;
+  }
+
+  jingle_action_list[jn->action].handler(message, jn);
 
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 }

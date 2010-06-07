@@ -5,6 +5,6 @@
 #include <loudmouth/loudmouth.h>
 
 
-void handle_session_initiate(LmMessage *m, LmMessageNode *j);
+void handle_session_initiate(LmMessage *m, JingleNode *jn);
 
 #endif

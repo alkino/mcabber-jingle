@@ -24,8 +24,12 @@
 #include "jingle.h"
 #include "check.h"
 
-void handle_session_initiate(LmMessage *m, JingleNode *jn, GError *err)
+
+void handle_session_initiate(LmMessage *m, JingleNode *jn)
 {
-  // do stuff here
+  // a session-initiate message must contains at least one <content> element
+  if (g_list_length(jn->content) < 1) {
+    jingle_send_iq_error(message, "cancel", "bad-request", NULL);
+  }
   
 }

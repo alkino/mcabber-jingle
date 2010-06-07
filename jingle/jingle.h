@@ -96,7 +96,7 @@ typedef struct {
 
 struct JingleActionList {
   const gchar  *name;
-  void (*handler)(LmMessage *, JingleNode *, GError **);
+  void (*handler)(LmMessage *, JingleNode *);
 };
 
 
