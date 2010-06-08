@@ -30,7 +30,6 @@ JingleContentNode *check_content(LmMessageNode *node, GError **err);
 gint index_in_array(const gchar *str, const gchar **array);
 
 
-
 const gchar *jingle_content_creator[] = {
   "initiator",
   "responder",

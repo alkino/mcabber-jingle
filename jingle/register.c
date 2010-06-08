@@ -23,44 +23,113 @@
 
 #include <mcabber/logprint.h>
 
+#include "register.h"
 #include "jingle.h"
 
-GHashTable *hk_jingle_apps_handler_hash = NULL;
-GHashTable *hk_jingle_transports_handler_hash = NULL;
 
-gchar* jingle_register_apps(const gchar* namespace)
+typedef struct {
+	gchar *xmlns;
+	JingleAppHandler handler;
+	gpointer data;
+} AppHandlerEntry;
+
+typedef struct {
+	gchar *xmlns;
+	JingleTransportHandler handler;
+	gpointer data;
+} TransportHandlerEntry;
+
+
+GSList *jingle_app_handlers = NULL;
+GSList *jingle_transport_handlers = NULL;
+
+
+gboolean jingle_register_app(const gchar *xmlns,
+                             JingleAppHandler func,
+                             gpointer data)
 {
-  gchar* hookname = NULL;
+  if (!g_str_has_prefix(xmlns, NS_JINGLE_APP_PREFIX)) return FALSE;
 
-  if (!hk_jingle_apps_handler_hash) {
-    hk_jingle_apps_handler_hash = g_hash_table_new_full(&g_str_hash, &g_str_equal, &g_free, &g_free);
-    if (!hk_jingle_apps_handler_hash) {
-      scr_log_print(LPRINT_LOGNORM, "Couldn't create hook hash table for jingle apps!");
-      return NULL;
-    }
-  }
+  AppHandlerEntry *h = g_new(AppHandlerEntry, 1);
 
-  hookname = g_strdup_printf("%s%s", "hook_jingle_apps_", namespace);
+  h->xmlns   = g_strdup(xmlns);
+  h->handler = func;
+  h->data    = data;
 
-  g_hash_table_insert(hk_jingle_apps_handler_hash, g_strdup(namespace), hookname);
+  jingle_app_handlers = g_slist_append(jingle_app_handlers, h);
 
-  return hookname;
+  return TRUE;
 }
 
-gchar* jingle_register_transports(const gchar* namespace) {
-  gchar* hookname = NULL;
+gboolean jingle_register_transport(const gchar *xmlns,
+                                   JingleTransportHandler func,
+                                   gpointer data)
+{
+  if (!g_str_has_prefix(xmlns, NS_JINGLE_TRANSPORT_PREFIX)) return FALSE;
 
-  if (!hk_jingle_transports_handler_hash) {
-    hk_jingle_transports_handler_hash = g_hash_table_new_full(&g_str_hash, &g_str_equal, &g_free, &g_free);
-    if (!hk_jingle_transports_handler_hash) {
-      scr_log_print(LPRINT_LOGNORM, "Couldn't create hook hash table for jingle transports!");
-      return NULL;
-    }
+  TransportHandlerEntry *h = g_new(TransportHandlerEntry, 1);
+
+  h->xmlns   = g_strdup(xmlns);
+  h->handler = func;
+  h->data    = data;
+
+  jingle_transport_handlers = g_slist_append(jingle_transport_handlers, h);
+
+  return TRUE;
+}
+
+static AppHandlerEntry *jingle_find_app(const gchar *xmlns)
+{
+  GSList *tmpl;
+  AppHandlerEntry *entry;
+  
+  for (tmpl = jingle_app_handlers; tmpl; tmpl = tmpl->next) {
+    entry = (AppHandlerEntry *)tmpl->data;
+    if (!g_strcmp0(entry->xmlns, xmlns))
+      return entry;
   }
+  return NULL;
+}
 
-  hookname = g_strdup_printf("%s%s", "hook_jingle_transports_", namespace);
+static TransportHandlerEntry *jingle_find_transport(const gchar *xmlns)
+{
+  GSList *tmpl;
+  TransportHandlerEntry *entry;
+  
+  for (tmpl = jingle_transport_handlers; tmpl; tmpl = tmpl->next) {
+    entry = (TransportHandlerEntry *)tmpl->data;
+    if (!g_strcmp0(entry->xmlns, xmlns))
+      return entry;
+  }
+  return NULL;
+}
 
-  g_hash_table_insert(hk_jingle_transports_handler_hash, g_strdup(namespace), hookname);
+static void jingle_free_app(AppHandlerEntry *entry)
+{
+  g_free(entry->xmlns);
+  g_free(entry);
+}
 
-  return hookname;
+static void jingle_free_transport(TransportHandlerEntry *entry)
+{
+  g_free(entry->xmlns);
+  g_free(entry);
+}
+
+void jingle_unregister_app(const gchar *xmlns)
+{
+  AppHandlerEntry *entry = jingle_find_app(xmlns);
+  if (entry) {
+    jingle_free_app(entry);
+    jingle_app_handlers = g_slist_remove(jingle_app_handlers, entry);
+  }
+}
+
+void jingle_unregister_transport(const gchar *xmlns)
+{
+  TransportHandlerEntry *entry = jingle_find_transport(xmlns);
+  if (entry) {
+    jingle_free_transport(entry);
+    jingle_transport_handlers = g_slist_remove(jingle_app_handlers, entry);
+  }
 }

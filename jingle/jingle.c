@@ -65,7 +65,7 @@ struct JingleActionList jingle_action_list[] = {
   { "session-accept",    NULL },
   { "session-info",      NULL },
   { "session-initiate",  handle_session_initiate },
-  { "session-terminate", NULL },
+  { "session-terminate", handle_session_terminate },
   { "transport-accept",  NULL },
   { "transport-info",    NULL },
   { "transport-reject",  NULL },
@@ -120,8 +120,7 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
   scr_log_print(LPRINT_DEBUG, "jingle: Received a valid jingle IQ");
 
   if (jingle_action_list[jn->action].handler == NULL) {
-    jingle_send_iq_error(message, "cancel", "feature-not-implemented",
-                         "unsupported-info");
+    jingle_send_iq_error(message, "cancel", "feature-not-implemented", NULL);
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
 

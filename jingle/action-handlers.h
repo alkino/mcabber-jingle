@@ -6,5 +6,6 @@
 
 
 void handle_session_initiate(LmMessage *m, JingleNode *jn);
+void handle_session_terminate(LmMessage *m, JingleNode *jn);
 
 #endif
