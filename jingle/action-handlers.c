@@ -21,19 +21,19 @@
 
 #include <glib.h>
 
-#include "jingle.h"
-#include "check.h"
+#include <jingle/jingle.h>
+#include <jingle/check.h>
 
 
 void handle_session_initiate(LmMessage *m, JingleNode *jn)
 {
   // a session-initiate message must contains at least one <content> element
-  if (g_list_length(jn->content) < 1) {
+  if (g_slist_length(jn->content) < 1) {
     jingle_send_iq_error(m, "cancel", "bad-request", NULL);
     return;
   }
 
-  /*// if a session with the same jid already exists
+  /*// if a session with the same sid already exists
   if (session_find(jn) != NULL) {
     jingle_send_iq_error(m, "cancel", "unexpected-request", "out-of-order");
     return;

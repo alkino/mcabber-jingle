@@ -4,7 +4,7 @@
 #include <glib.h>
 #include <loudmouth/loudmouth.h>
 
-#include "jingle.h"
+#include <jingle/jingle.h>
 
 #define JINGLE_CHECK_ERROR jingle_check_error_quark()
 
@@ -16,7 +16,9 @@ typedef enum {
 } JingleCheckError;
 
 
-int check_jingle(LmMessageNode* node, JingleNode *jd, GError **err);
+gboolean check_jingle(LmMessage *message, LmMessageNode *node,
+                      JingleNode *jn, GError **err);
+gboolean check_contents(JingleNode *jn, GError **err);
 GQuark jingle_check_error_quark();
 
 #endif

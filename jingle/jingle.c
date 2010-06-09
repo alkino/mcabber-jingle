@@ -31,10 +31,10 @@
 #include <mcabber/xmpp_helper.h>
 #include <mcabber/xmpp_defines.h> 
 
-#include "jingle.h"
-#include "check.h"
-#include "action-handlers.h"
-#include "register.h"
+#include <jingle/jingle.h>
+#include <jingle/check.h>
+#include <jingle/action-handlers.h>
+#include <jingle/register.h>
 
 
 static void  jingle_register_lm_handlers(void);
@@ -107,7 +107,7 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
 
-  check_jingle(jnode, jn, &error);
+  check_jingle(message, jnode, jn, &error);
   if (error != NULL) {
     if (error->domain == JINGLE_CHECK_ERROR) {
       // request malformed, we reply with a bad-request
@@ -146,7 +146,7 @@ void jingle_ack_iq(LmMessage *m)
 }
 
 /**
- * Reply to a Jingle IQ with an error.
+ * Create an error IQ.
  */
 LmMessage *jingle_new_iq_error(LmMessage *m, const gchar *errtype,
                                const gchar *cond, const gchar *jinglecond)
@@ -173,6 +173,9 @@ LmMessage *jingle_new_iq_error(LmMessage *m, const gchar *errtype,
   return r;
 }
 
+/**
+ * Reply to a Jingle IQ with an error.
+ */
 void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
                           const gchar *cond, const gchar *jinglecond)
 {
@@ -194,6 +197,18 @@ JingleAction jingle_action_from_str(const gchar* string)
       return (JingleAction) i;
 
   return JINGLE_UNKNOWN_ACTION;
+}
+
+void jingle_free_jinglenode(JingleNode *jn)
+{
+  GSList *entry = NULL;
+  for (entry = jn->content; entry; entry = entry->next) {
+    if (entry->data != NULL)
+      g_free((JingleContentNode*) entry->data);
+  }
+  g_slist_free(jn->content);
+  lm_message_unref(jn->message);
+  g_free(jn);
 }
 
 static void jingle_unregister_lm_handlers(void)

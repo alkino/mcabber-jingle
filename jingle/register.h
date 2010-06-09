@@ -1,7 +1,7 @@
 #ifndef __JINGLE_REGISTER_H__
 #define __JINGLE_REGISTER_H__
 
-#include "jingle.h"
+#include <jingle/jingle.h>
 
 
 #define NS_JINGLE_APP_PREFIX       "urn:xmpp:jingle:app:"

@@ -22,11 +22,11 @@
 #include <glib.h>
 #include <loudmouth/loudmouth.h>
 
-#include "check.h"
-#include "jingle.h"
+#include <jingle/check.h>
+#include <jingle/jingle.h>
 
 
-JingleContentNode *check_content(LmMessageNode *node, GError **err);
+static JingleContentNode *check_content(LmMessageNode *node, GError **err);
 gint index_in_array(const gchar *str, const gchar **array);
 
 
@@ -49,12 +49,11 @@ const gchar *jingle_content_senders[] = {
  * Populate a jingle_data struct from a <jingle> element.
  * Check if the element is in compliance with the XEP.
  */
-gboolean check_jingle(LmMessageNode *node, JingleNode *jn, GError **err)
+gboolean check_jingle(LmMessage *message, LmMessageNode *node,
+                      JingleNode *jn, GError **err)
 {
   //gint nb_reason = 0;
-  LmMessageNode *child = NULL;
   const gchar *actionstr;
-  JingleContentNode *cn;
 
   actionstr     = lm_message_node_get_attribute(node, "action");
   jn->initiator = lm_message_node_get_attribute(node, "initiator");
@@ -84,22 +83,14 @@ gboolean check_jingle(LmMessageNode *node, JingleNode *jn, GError **err)
                 "too many reason elements");
     return FALSE;
   }*/
-  
-  for (child = node->children; child; child = child->next) {
-    if (!g_strcmp0(child->name, "content")) {
-      cn = check_content(child, err);
-      if(cn == NULL) {
-        g_assert (*err != NULL);
-        return FALSE;
-	  }
-	  jn->content = g_list_append(jn->content, cn);
-    }
-  }
+
+  jn->message = lm_message_ref(message);
+  jn->node    = node;
 
   return TRUE;
 }
 
-JingleContentNode *check_content(LmMessageNode *node, GError **err)
+static JingleContentNode *check_content(LmMessageNode *node, GError **err)
 {
   JingleContentNode *cn = g_new0(JingleContentNode, 1);
   const gchar *creatorstr, *sendersstr;
@@ -139,6 +130,28 @@ JingleContentNode *check_content(LmMessageNode *node, GError **err)
   }
   
   return cn;
+}
+
+/**
+ * Check <content> elements if there is any.
+ * Add them to the JingleNode struct.
+ */
+gboolean check_contents(JingleNode *jn, GError **err)
+{
+  LmMessageNode *child = NULL;
+  JingleContentNode *cn;
+
+  for (child = jn->node->children; child; child = child->next) {
+    if (!g_strcmp0(child->name, "content")) {
+      cn = check_content(child, err);
+      if(cn == NULL) {
+        g_assert (*err != NULL);
+        return FALSE;
+	  }
+	  jn->content = g_slist_append(jn->content, cn);
+    }
+  }
+  return TRUE;
 }
 
 gint index_in_array(const gchar *str, const gchar **array)

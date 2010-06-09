@@ -26,7 +26,7 @@
 #include <mcabber/modules.h>
 #include <mcabber/xmpp_helper.h>
 
-#include <jingle.h>
+#include <jingle/jingle.h>
 
 #include "filetransfert.h"
 

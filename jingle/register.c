@@ -23,8 +23,8 @@
 
 #include <mcabber/logprint.h>
 
-#include "register.h"
-#include "jingle.h"
+#include <jingle/register.h>
+#include <jingle/jingle.h>
 
 
 typedef struct {

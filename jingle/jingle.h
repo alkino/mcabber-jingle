@@ -40,6 +40,12 @@ typedef enum {
 } JingleSenders;
 
 typedef struct {
+  /* pointer to the original LmMessage */
+  LmMessage *message;
+
+  /* poiter to the <jingle> element */
+  LmMessageNode *node;
+
   /* action attribute */
   JingleAction action;
 
@@ -58,7 +64,7 @@ typedef struct {
   const gchar *sid;
 
   /* Doubly-linked list of JingleContentNode. */
-  GList *content;
+  GSList *content;
 
 } JingleNode;
 
