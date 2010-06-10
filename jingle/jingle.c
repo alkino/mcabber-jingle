@@ -201,11 +201,7 @@ JingleAction jingle_action_from_str(const gchar* string)
 
 void jingle_free_jinglenode(JingleNode *jn)
 {
-  GSList *entry = NULL;
-  for (entry = jn->content; entry; entry = entry->next) {
-    if (entry->data != NULL)
-      g_free((JingleContentNode*) entry->data);
-  }
+  g_slist_foreach(jn->content, (GFunc)g_free, NULL);
   g_slist_free(jn->content);
   lm_message_unref(jn->message);
   g_free(jn);

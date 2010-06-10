@@ -8,15 +8,39 @@
 #define NS_JINGLE_TRANSPORT_PREFIX "urn:xmpp:jingle:transport:"
 
 
-typedef void (*JingleAppHandler) (JingleNode *jn, JingleContentNode *cn, gpointer *data);
-typedef void (*JingleTransportHandler) (JingleNode *jn, JingleContentNode *cn, gpointer *data);
+typedef void (*JingleAppCheck) (JingleContentNode *cn, GError **err, gpointer *data);
+typedef void (*JingleAppHandle) (JingleNode *jn, JingleContentNode *cn, gpointer *data);
+typedef void (*JingleTransportCheck) (JingleContentNode *cn, GError **err, gpointer *data);
+typedef void (*JingleTransportHandle) (JingleNode *jn, JingleContentNode *cn, gpointer *data);
+
+typedef struct {
+  /* check if the description of a JingleContentNode is correct */
+  JingleAppCheck  check;
+
+  /* */
+  JingleAppHandle handle;
+
+} JingleAppFuncs;
+
+typedef struct {
+  /* check if the transport of a JingleContentNode is correct */
+  JingleAppCheck  check;
+
+  /* */
+  JingleAppHandle handle;
+  
+} JingleTransportFuncs;
 
 
-gboolean jingle_register_app(const gchar *xmlns,
-                             JingleAppHandler func,
-                             gpointer data);
-gboolean jingle_register_transport(const gchar *xmlns,
-                                   JingleTransportHandler func,
-                                   gpointer data);
+void jingle_register_app(const gchar *xmlns,
+                         JingleAppFuncs *funcs,
+                         gpointer data);
+void jingle_register_transport(const gchar *xmlns,
+                               JingleTransportFuncs *funcs,
+                               gpointer data);
+JingleAppFuncs *jingle_get_appfuncs(const gchar *xmlns);
+JingleTransportFuncs *jingle_get_transportfuncs(const gchar *xmlns);
+void jingle_unregister_app(const gchar *xmlns);
+void jingle_unregister_transport(const gchar *xmlns);
 
 #endif

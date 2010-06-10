@@ -21,17 +21,30 @@
 
 #include <glib.h>
 
+#include <mcabber/logprint.h>
+
 #include <jingle/jingle.h>
 #include <jingle/check.h>
 
 
 void handle_session_initiate(LmMessage *m, JingleNode *jn)
 {
+  GError *err = NULL;
+
+  if (!check_contents(jn, &err)) {
+    scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
+                  err->message);
+    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    return;
+  }
+
   // a session-initiate message must contains at least one <content> element
   if (g_slist_length(jn->content) < 1) {
     jingle_send_iq_error(m, "cancel", "bad-request", NULL);
     return;
   }
+
+
 
   /*// if a session with the same sid already exists
   if (session_find(jn) != NULL) {

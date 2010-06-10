@@ -28,80 +28,89 @@
 
 
 typedef struct {
-	gchar *xmlns;
-	JingleAppHandler handler;
-	gpointer data;
+  gchar *xmlns;
+  JingleAppFuncs *funcs;
+  gpointer data;
 } AppHandlerEntry;
 
 typedef struct {
-	gchar *xmlns;
-	JingleTransportHandler handler;
-	gpointer data;
+  gchar *xmlns;
+  JingleTransportFuncs *funcs;
+  gpointer data;
 } TransportHandlerEntry;
+
+
+static AppHandlerEntry *jingle_find_app(const gchar *xmlns);
+static TransportHandlerEntry *jingle_find_transport(const gchar *xmlns);
 
 
 GSList *jingle_app_handlers = NULL;
 GSList *jingle_transport_handlers = NULL;
 
 
-gboolean jingle_register_app(const gchar *xmlns,
-                             JingleAppHandler func,
+void jingle_register_app(const gchar *xmlns,
+                             JingleAppFuncs *funcs,
                              gpointer data)
 {
-  if (!g_str_has_prefix(xmlns, NS_JINGLE_APP_PREFIX)) return FALSE;
+  if (!g_str_has_prefix(xmlns, NS_JINGLE_APP_PREFIX)) return;
 
   AppHandlerEntry *h = g_new(AppHandlerEntry, 1);
 
-  h->xmlns   = g_strdup(xmlns);
-  h->handler = func;
-  h->data    = data;
+  h->xmlns  = g_strdup(xmlns);
+  h->funcs  = funcs;
+  h->data   = data;
 
   jingle_app_handlers = g_slist_append(jingle_app_handlers, h);
-
-  return TRUE;
 }
 
-gboolean jingle_register_transport(const gchar *xmlns,
-                                   JingleTransportHandler func,
+void jingle_register_transport(const gchar *xmlns,
+                                   JingleTransportFuncs *funcs,
                                    gpointer data)
 {
-  if (!g_str_has_prefix(xmlns, NS_JINGLE_TRANSPORT_PREFIX)) return FALSE;
+  if (!g_str_has_prefix(xmlns, NS_JINGLE_TRANSPORT_PREFIX)) return;
 
   TransportHandlerEntry *h = g_new(TransportHandlerEntry, 1);
 
-  h->xmlns   = g_strdup(xmlns);
-  h->handler = func;
-  h->data    = data;
+  h->xmlns  = g_strdup(xmlns);
+  h->funcs  = funcs;
+  h->data   = data;
 
   jingle_transport_handlers = g_slist_append(jingle_transport_handlers, h);
+}
 
-  return TRUE;
+JingleAppFuncs *jingle_get_appfuncs(const gchar *xmlns)
+{
+  AppHandlerEntry *entry;
+  return (entry = jingle_find_app(xmlns)) != NULL ? entry->funcs : NULL;
+}
+
+JingleTransportFuncs *jingle_get_transportfuncs(const gchar *xmlns)
+{
+  TransportHandlerEntry *entry;
+  return (entry = jingle_find_transport(xmlns)) != NULL ? entry->funcs : NULL;
+}
+
+/**
+ * This function should work with AppHandlerEntry and
+ * TransportHandlerEntry as long as both start with xmlns.
+ */
+static gint jingle_entry_cmp(gconstpointer a, gconstpointer b)
+{
+  return g_strcmp0(((AppHandlerEntry *) a)->xmlns, (const gchar*) b);
 }
 
 static AppHandlerEntry *jingle_find_app(const gchar *xmlns)
 {
-  GSList *tmpl;
-  AppHandlerEntry *entry;
-  
-  for (tmpl = jingle_app_handlers; tmpl; tmpl = tmpl->next) {
-    entry = (AppHandlerEntry *)tmpl->data;
-    if (!g_strcmp0(entry->xmlns, xmlns))
-      return entry;
-  }
-  return NULL;
+  GSList *entry = g_slist_find_custom(jingle_app_handlers, xmlns,
+                                      jingle_entry_cmp);
+  return (AppHandlerEntry *) entry;
 }
 
 static TransportHandlerEntry *jingle_find_transport(const gchar *xmlns)
 {
-  GSList *tmpl;
-  TransportHandlerEntry *entry;
-  
-  for (tmpl = jingle_transport_handlers; tmpl; tmpl = tmpl->next) {
-    entry = (TransportHandlerEntry *)tmpl->data;
-    if (!g_strcmp0(entry->xmlns, xmlns))
-      return entry;
-  }
-  return NULL;
+  GSList *entry = g_slist_find_custom(jingle_transport_handlers, xmlns,
+                                      jingle_entry_cmp);
+  return (TransportHandlerEntry *) entry;
 }
 
 static void jingle_free_app(AppHandlerEntry *entry)

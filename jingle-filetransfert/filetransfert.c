@@ -27,15 +27,20 @@
 #include <mcabber/xmpp_helper.h>
 
 #include <jingle/jingle.h>
+#include <jingle/check.h>
+#include <jingle/register.h>
 
 #include "filetransfert.h"
 
 
-static void jingleft_init(void);
-static void jingleft_uninit(void);
+void jingle_ft_check();
+static void jingle_ft_init(void);
+static void jingle_ft_uninit(void);
 
 
 const gchar *deps[] = { "jingle", NULL };
+
+JingleAppFuncs funcs = {jingle_ft_check, NULL};
 
 module_info_t info_jingle_filetransfert = {
   .branch          = MCABBER_BRANCH,
@@ -43,18 +48,25 @@ module_info_t info_jingle_filetransfert = {
   .version         = PROJECT_VERSION,
   .description     = "Jingle File Transfert (XEP-0234)\n",
   .requires        = deps,
-  .init            = jingleft_init,
-  .uninit          = jingleft_uninit,
+  .init            = jingle_ft_init,
+  .uninit          = jingle_ft_uninit,
   .next            = NULL,
 };
 
 
-static void jingleft_init(void)
+void jingle_ft_check(JingleContentNode *cn, GError **err, gpointer *data)
 {
+  return;
+}
+
+static void jingle_ft_init(void)
+{
+  jingle_register_app(NS_JINGLE_APP_FT, &funcs, NULL);
   xmpp_add_feature(NS_JINGLE_APP_FT);
 }
 
-static void jingleft_uninit(void)
+static void jingle_ft_uninit(void)
 {
   xmpp_del_feature(NS_JINGLE_APP_FT);
+  jingle_unregister_app(NS_JINGLE_APP_FT);
 }

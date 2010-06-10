@@ -19,6 +19,6 @@ typedef enum {
 gboolean check_jingle(LmMessage *message, LmMessageNode *node,
                       JingleNode *jn, GError **err);
 gboolean check_contents(JingleNode *jn, GError **err);
-GQuark jingle_check_error_quark();
+GQuark jingle_check_error_quark(void);
 
 #endif

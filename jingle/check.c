@@ -145,10 +145,13 @@ gboolean check_contents(JingleNode *jn, GError **err)
     if (!g_strcmp0(child->name, "content")) {
       cn = check_content(child, err);
       if(cn == NULL) {
-        g_assert (*err != NULL);
+        if(jn->content != NULL) {
+          g_slist_foreach(jn->content, (GFunc)g_free, NULL);
+          g_slist_free(jn->content);
+        }
         return FALSE;
-	  }
-	  jn->content = g_slist_append(jn->content, cn);
+      }
+      jn->content = g_slist_append(jn->content, cn);
     }
   }
   return TRUE;
@@ -165,7 +168,7 @@ gint index_in_array(const gchar *str, const gchar **array)
   return -1;
 }
 
-GQuark jingle_check_error_quark()
+GQuark jingle_check_error_quark(void)
 {
   return g_quark_from_string("JINGLE_CHECK_ERROR");
 }
