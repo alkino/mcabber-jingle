@@ -8,13 +8,13 @@
 #define NS_JINGLE_TRANSPORT_PREFIX "urn:xmpp:jingle:transport:"
 
 
-typedef void (*JingleAppCheck) (JingleContentNode *cn, GError **err, gpointer *data);
-typedef void (*JingleAppHandle) (JingleNode *jn, JingleContentNode *cn, gpointer *data);
-typedef void (*JingleTransportCheck) (JingleContentNode *cn, GError **err, gpointer *data);
-typedef void (*JingleTransportHandle) (JingleNode *jn, JingleContentNode *cn, gpointer *data);
+typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err, gpointer *data);
+typedef void (*JingleAppHandle) (JingleNode *jn, JingleContent *cn, gpointer *data);
+typedef gconstpointer (*JingleTransportCheck) (JingleContent *cn, GError **err, gpointer *data);
+typedef void (*JingleTransportHandle) (JingleNode *jn, JingleContent *cn, gpointer *data);
 
 typedef struct {
-  /* check if the description of a JingleContentNode is correct */
+  /* check if the description of a JingleContent is correct */
   JingleAppCheck  check;
 
   /* */
@@ -23,7 +23,7 @@ typedef struct {
 } JingleAppFuncs;
 
 typedef struct {
-  /* check if the transport of a JingleContentNode is correct */
+  /* check if the transport of a JingleContent is correct */
   JingleAppCheck  check;
 
   /* */

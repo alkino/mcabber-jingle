@@ -24,6 +24,7 @@
 #include <glib.h>
 
 #include <mcabber/modules.h>
+#include <mcabber/utils.h>
 #include <mcabber/xmpp_helper.h>
 
 #include <jingle/jingle.h>
@@ -33,7 +34,7 @@
 #include "filetransfert.h"
 
 
-void jingle_ft_check();
+gconstpointer jingle_ft_check(JingleContent *cn, GError **err, gpointer *data);
 static void jingle_ft_init(void);
 static void jingle_ft_uninit(void);
 
@@ -54,9 +55,57 @@ module_info_t info_jingle_filetransfert = {
 };
 
 
-void jingle_ft_check(JingleContentNode *cn, GError **err, gpointer *data)
+gconstpointer jingle_ft_check(JingleContent *cn, GError **err, gpointer *data)
 {
-  return;
+  JingleFT *ft = NULL;
+  LmMessageNode *node;
+  const gchar *datestr, *sizestr;
+
+  node = lm_message_node_get_child(cn->description, "offer");
+  if (!node) {
+    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
+                "the offer element is missing");
+    return NULL;
+  }
+
+  node = lm_message_node_get_child(cn->description, "file");
+  if (!node) {
+    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
+                "the file element is missing");
+    return NULL;
+  }
+
+  if (g_strcmp0(lm_message_node_get_attribute(node, "xmlns"), NS_SI_FT)) {
+    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
+                "the file transfert offer has an invalid/unsupported namespace");
+    return NULL;
+  }
+
+  ft = g_new0(JingleFT, 1);
+  datestr  = lm_message_node_get_attribute(node, "date");
+  ft->hash = lm_message_node_get_attribute(node, "hash");
+  ft->name = lm_message_node_get_attribute(node, "name");
+  sizestr  = lm_message_node_get_attribute(node, "size");
+  
+  if (!ft->name || !sizestr) {
+    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
+                "an attribute of the file element is missing");
+    g_free(ft);
+    return NULL;
+  }
+  
+  ft->date = from_iso8601(datestr, 1);
+  ft->size = g_ascii_strtoll(sizestr, NULL, 10);
+
+  // the size attribute is a xs:integer an therefore can be negative.
+  if (ft->size < 0) {
+    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
+                "the offered file has a negative size");
+    g_free(ft);
+    return NULL;
+  }
+
+  return (gconstpointer) ft;
 }
 
 static void jingle_ft_init(void)

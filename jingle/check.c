@@ -26,7 +26,7 @@
 #include <jingle/jingle.h>
 
 
-static JingleContentNode *check_content(LmMessageNode *node, GError **err);
+static JingleContent *check_content(LmMessageNode *node, GError **err);
 gint index_in_array(const gchar *str, const gchar **array);
 
 
@@ -90,9 +90,9 @@ gboolean check_jingle(LmMessage *message, LmMessageNode *node,
   return TRUE;
 }
 
-static JingleContentNode *check_content(LmMessageNode *node, GError **err)
+static JingleContent *check_content(LmMessageNode *node, GError **err)
 {
-  JingleContentNode *cn = g_new0(JingleContentNode, 1);
+  JingleContent *cn = g_new0(JingleContent, 1);
   const gchar *creatorstr, *sendersstr;
   gint tmp, tmp2;
 
@@ -139,7 +139,7 @@ static JingleContentNode *check_content(LmMessageNode *node, GError **err)
 gboolean check_contents(JingleNode *jn, GError **err)
 {
   LmMessageNode *child = NULL;
-  JingleContentNode *cn;
+  JingleContent *cn;
 
   for (child = jn->node->children; child; child = child->next) {
     if (!g_strcmp0(child->name, "content")) {
