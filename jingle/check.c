@@ -20,7 +20,10 @@
  */
 
 #include <glib.h>
+
 #include <loudmouth/loudmouth.h>
+
+#include <mcabber/utils.h>
 
 #include <jingle/check.h>
 #include <jingle/jingle.h>
@@ -63,6 +66,12 @@ gboolean check_jingle(LmMessage *message, LmMessageNode *node,
   if (actionstr == NULL || jn->sid == NULL) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
                 "an attribute of the jingle element is missing");
+    return FALSE;
+  }
+
+  if (!check_jid_syntax(jn->initiator)) {
+    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
+                "the initiator attribute in invalid (not a jid)");
     return FALSE;
   }
 

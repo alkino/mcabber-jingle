@@ -1,5 +1,5 @@
 /*
- * filetransfert.c
+ * filetransfer.c
  *
  * Copyrigth (C) 2010 Nicolas Cornu <nicolas.cornu@ensi-bourges.fr>
  *
@@ -31,7 +31,7 @@
 #include <jingle/check.h>
 #include <jingle/register.h>
 
-#include "filetransfert.h"
+#include "filetransfer.h"
 
 
 gconstpointer jingle_ft_check(JingleContent *cn, GError **err, gpointer *data);
@@ -43,11 +43,11 @@ const gchar *deps[] = { "jingle", NULL };
 
 JingleAppFuncs funcs = {jingle_ft_check, NULL};
 
-module_info_t info_jingle_filetransfert = {
+module_info_t info_jingle_filetransfer = {
   .branch          = MCABBER_BRANCH,
   .api             = MCABBER_API_VERSION,
   .version         = PROJECT_VERSION,
-  .description     = "Jingle File Transfert (XEP-0234)\n",
+  .description     = "Jingle File Transfer (XEP-0234)\n",
   .requires        = deps,
   .init            = jingle_ft_init,
   .uninit          = jingle_ft_uninit,
@@ -77,7 +77,7 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err, gpointer *data)
 
   if (g_strcmp0(lm_message_node_get_attribute(node, "xmlns"), NS_SI_FT)) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
-                "the file transfert offer has an invalid/unsupported namespace");
+                "the file transfer offer has an invalid/unsupported namespace");
     return NULL;
   }
 

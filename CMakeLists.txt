@@ -38,7 +38,7 @@ include_directories(SYSTEM ${GLIB_INCLUDE_DIRS} ${MCABBER_INCLUDE_DIRS})
 
 ## Target definitions
 add_subdirectory(jingle)
-add_subdirectory(jingle-filetransfert)
+add_subdirectory(jingle-filetransfer)
 
 ## Packaging information
 set(CPACK_PACKAGE_NAME mcabber-jingle)
