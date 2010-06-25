@@ -260,3 +260,55 @@ static void jingle_uninit(void)
   lm_message_handler_invalidate(jingle_iq_handler);
   lm_message_handler_unref(jingle_iq_handler);
 }
+
+LmMessageNode* get_lm_from_jingle_struct(const JingleNode* elem)
+{
+  LmMessageNode* node = g_new(JingleNode, 1);
+  lm_message_node_set_value(node, "jingle");
+  if (jingle_action_list[elem->action][0])
+    lm_message_node_set_attribute(node, "action", jingle_action_list[elem->action]);
+  if (elem->initiator)
+    lm_message_node_set_attribute(node, "initiator", elem->initiator);
+  if (elem->responder)
+    lm_message_node_set_attribute(node, "responder",elem->responder);
+  if (elem->sid)
+    lm_message_node_set_attribute(node, "sid", elem->sid);
+  g_slist_foreach(elem->content, addContenttoNode, node);
+  return node;
+}
+
+void get_lm_from_content_struct(gpointer data, gpointer userdata)
+{
+  JingleContent* content = data;
+  LmMessageNode* dad = userdata;
+  LmMessageNode* node = lm_message_add_child(dad, "content", NULL), *node2= NULL;
+  
+  if (content->creator == JINGLE_CREATOR_INITIATOR)
+    lm_message_node_set_attribute(node, "creator", "initiator");
+  else
+    lm_message_node_set_attribute(node, "creator", "responder");
+  
+  if (content->disposition)
+    lm_message_node_set_attribute(node, "disposition", content->disposition);
+  
+  if (content->name)
+    lm_message_node_set_attribute(node, "name", content->name);
+  
+  if (content->senders == JINGLE_SENDERS_BOTH)
+    lm_message_node_set_attribute(node, "senders", "both");
+  else if (content->senders == JINGLE_SENDERS_INITIATOR)
+    lm_message_node_set_attribute(node, "senders", "initiator");
+  else if (content->senders == JINGLE_SENDERS_RESPONDER)
+    lm_message_node_set_attribute(node, "senders", "responder");
+    
+    // Care of desc & app
+}
+
+LmMessageNode* dup_lm_message_node(const LmMessageNode* src)
+{
+  LmMessageNode* new = NULL;
+  new = g_memdup(src);
+  src->next = NULL;
+  src->prev = NULL;
+  return src;
+}

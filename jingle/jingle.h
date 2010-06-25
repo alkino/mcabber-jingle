@@ -43,7 +43,7 @@ typedef struct {
   /* pointer to the original LmMessage */
   LmMessage *message;
 
-  /* poiter to the <jingle> element */
+  /* pointer to the <jingle> element */
   LmMessageNode *node;
 
   /* action attribute */
@@ -116,4 +116,7 @@ void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
 void jingle_ack_iq(LmMessage *m);
 JingleAction jingle_action_from_str(const gchar* string);
 
+LmMessageNode* get_lm_from_jingle_struct(const JingleNode* elem)
+void get_lm_from_content_struct(gpointer data, gpointer userdata)
+LmMessageNode* dup_lm_message_node(const LmMessageNode* src)
 #endif
