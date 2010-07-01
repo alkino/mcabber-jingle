@@ -36,14 +36,16 @@ JingleSession *session_new(JingleNode *jn, LmMessageNode* app,
                            LmMessageNode* trans)
 {
   JingleSession *js = g_new0(JingleSession, 1);
+  const gchar *from;
+  
   js->sid = g_strdup(jn->sid);
   js->initiator = g_strdup(jn->initiator);
-  js->from = lm_message_node_get_attribute(lm_message_get_node(jn->message),
-                                           "from");
-  if (!js->from) {
+  from = lm_message_node_get_attribute(lm_message_get_node(jn->message),
+                                       "from");
+  if (!from) {
     return NULL;
   }
-  js->from = g_strdup(js->from);
+  js->from = g_strdup(from);
   
 
   sessions = g_slist_append(sessions, js);

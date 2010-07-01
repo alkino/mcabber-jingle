@@ -10,8 +10,9 @@ typedef enum {
 
 typedef struct {
   JingleStatus  status;
-  const gchar *sid;
-  const gchar *from;
+  gchar *sid;
+  gchar *initiator;
+  gchar *from;
   GSList *content;
 } JingleSession;
 
