@@ -10,6 +10,7 @@
 
 typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err, gpointer *data);
 typedef void (*JingleAppHandle) (JingleNode *jn, JingleContent *cn, gpointer *data);
+typedef LmMessageNode* (*JingleAppGetDescription) (JingleNode *jn, JingleContent *cn, gpointer *data);
 typedef gconstpointer (*JingleTransportCheck) (JingleContent *cn, GError **err, gpointer *data);
 typedef void (*JingleTransportHandle) (JingleNode *jn, JingleContent *cn, gpointer *data);
 
@@ -17,6 +18,8 @@ typedef struct {
   /* check if the description of a JingleContent is correct */
   JingleAppCheck  check;
 
+  JingleAppGetDescription desc;
+  
   /* */
   JingleAppHandle handle;
 

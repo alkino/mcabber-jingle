@@ -94,12 +94,12 @@ typedef struct {
   /* each content element (must) contain one description
    * child element that specifies a desired application.
    * the content of this node is app specific. */
-  gconstpointer *description;
+  LmMessageNode *description;
 
   /* each content element (must) contain one transport
    * child element that specifies a potential transport
    * method */
-  gconstpointer *transport;
+  LmMessageNode *transport;
 
 } JingleContent;
 
@@ -116,7 +116,6 @@ void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
 void jingle_ack_iq(LmMessage *m);
 JingleAction jingle_action_from_str(const gchar* string);
 
-LmMessageNode* get_lm_from_jingle_struct(const JingleNode* elem)
-void get_lm_from_content_struct(gpointer data, gpointer userdata)
-LmMessageNode* dup_lm_message_node(const LmMessageNode* src)
+LmMessageNode* get_lm_from_jingle_struct(const JingleNode* elem);
+void get_lm_from_content_struct(gpointer data, gpointer userdata);
 #endif

@@ -19,7 +19,7 @@
  * USA
  */
 
-#include "config.h"
+#include <config.h>
 
 #include <glib.h>
 #include <loudmouth/loudmouth.h>
@@ -263,25 +263,25 @@ static void jingle_uninit(void)
 
 LmMessageNode* get_lm_from_jingle_struct(const JingleNode* elem)
 {
-  LmMessageNode* node = g_new(JingleNode, 1);
+  LmMessageNode* node = g_new(LmMessageNode, 1);
   lm_message_node_set_value(node, "jingle");
-  if (jingle_action_list[elem->action][0])
-    lm_message_node_set_attribute(node, "action", jingle_action_list[elem->action]);
+  if (jingle_action_list[elem->action].name)
+    lm_message_node_set_attribute(node, "action", jingle_action_list[elem->action].name);
   if (elem->initiator)
     lm_message_node_set_attribute(node, "initiator", elem->initiator);
   if (elem->responder)
     lm_message_node_set_attribute(node, "responder",elem->responder);
   if (elem->sid)
     lm_message_node_set_attribute(node, "sid", elem->sid);
-  g_slist_foreach(elem->content, addContenttoNode, node);
+  g_slist_foreach(elem->content, get_lm_from_content_struct, node);
   return node;
 }
 
 void get_lm_from_content_struct(gpointer data, gpointer userdata)
 {
-  JingleContent* content = data;
-  LmMessageNode* dad = userdata;
-  LmMessageNode* node = lm_message_add_child(dad, "content", NULL), *node2= NULL;
+  JingleContent* content = (JingleContent*) data;
+  LmMessageNode* dad = (LmMessageNode*) userdata;
+  LmMessageNode* node = (LmMessageNode*) lm_message_node_add_child(dad, "content", NULL), *node2= NULL;
   
   if (content->creator == JINGLE_CREATOR_INITIATOR)
     lm_message_node_set_attribute(node, "creator", "initiator");
@@ -302,13 +302,5 @@ void get_lm_from_content_struct(gpointer data, gpointer userdata)
     lm_message_node_set_attribute(node, "senders", "responder");
     
     // Care of desc & app
-}
-
-LmMessageNode* dup_lm_message_node(const LmMessageNode* src)
-{
-  LmMessageNode* new = NULL;
-  new = g_memdup(src);
-  src->next = NULL;
-  src->prev = NULL;
-  return src;
+    
 }
