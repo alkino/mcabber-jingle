@@ -17,8 +17,7 @@ typedef struct {
 } JingleSession;
 
 
-JingleSession *session_new(JingleNode *jn,
-                           LmMessageNode *app,
+JingleSession *session_new(JingleNode *jn, LmMessageNode *app,
                            LmMessageNode *transport);
 JingleSession *session_find();
 void session_delete(JingleSession *sess);

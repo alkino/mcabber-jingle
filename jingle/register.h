@@ -10,17 +10,25 @@
 
 typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err, gpointer *data);
 typedef void (*JingleAppHandle) (JingleNode *jn, JingleContent *cn, gpointer *data);
-typedef LmMessageNode* (*JingleAppGetDescription) (JingleNode *jn, JingleContent *cn, gpointer *data);
+typedef LmMessageNode* (*JingleAppGetLM) (gconstpointer *data);
+typedef gconstpointer* (*JingleAppConvertLM) (LmMessageNode *node);
+
 typedef gconstpointer (*JingleTransportCheck) (JingleContent *cn, GError **err, gpointer *data);
 typedef void (*JingleTransportHandle) (JingleNode *jn, JingleContent *cn, gpointer *data);
+typedef LmMessageNode* (*JingleTransportGetLM) (gconstpointer *data);
+typedef gconstpointer* (*JingleTransportConvertLM) (LmMessageNode *node);
 
 typedef struct {
   /* check if the description of a JingleContent is correct */
-  JingleAppCheck  check;
+  JingleAppCheck check;
 
-  JingleAppGetDescription desc;
+  /* Give a LM from a internal struct */
+  JingleAppGetLM desc;
   
-  /* */
+  /* Give a gconstpointer from a LmMessageNode */
+  JingleAppConvertLM parse;
+  
+  /* If we got a LM with the good xmlns */
   JingleAppHandle handle;
 
 } JingleAppFuncs;
@@ -29,17 +37,18 @@ typedef struct {
   /* check if the transport of a JingleContent is correct */
   JingleAppCheck  check;
 
+  JingleTransportGetLM trans;
+  
+  JingleTransportConvertLM parse;
   /* */
   JingleAppHandle handle;
   
 } JingleTransportFuncs;
 
 
-void jingle_register_app(const gchar *xmlns,
-                         JingleAppFuncs *funcs,
+void jingle_register_app(const gchar *xmlns, JingleAppFuncs *funcs,
                          gpointer data);
-void jingle_register_transport(const gchar *xmlns,
-                               JingleTransportFuncs *funcs,
+void jingle_register_transport(const gchar *xmlns, JingleTransportFuncs *funcs,
                                gpointer data);
 JingleAppFuncs *jingle_get_appfuncs(const gchar *xmlns);
 JingleTransportFuncs *jingle_get_transportfuncs(const gchar *xmlns);
