@@ -22,6 +22,8 @@
 #include <glib.h>
 #include <loudmouth/loudmouth.h>
 
+#include <mcabber/utils.h>
+
 #include <jingle/send.h>
 
 void jingle_send_session_terminate(const LmMessage *m, const gchar *reason) {

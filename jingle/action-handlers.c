@@ -89,6 +89,16 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   if(!is_session) { // None of the app is supported
     jingle_send_session_terminate(m, "unsupported-applications");
   }
+
+  is_session = FALSE;  
+  // Do we support any of this xmlns ?
+  for (child = jn->content; child && !is_session; child = child->next) {
+    if(jingle_get_transportfuncs(((JingleContent*)(child->data))->xmlns_trans) != NULL)
+      is_session = TRUE;
+  }
+  if(!is_session) { // None of the transport is supported
+    jingle_send_session_terminate(m, "unsupported-transports");
+  }
 }
 
 void handle_session_terminate(LmMessage *m, JingleNode *jn)
