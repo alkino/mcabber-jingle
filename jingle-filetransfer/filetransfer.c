@@ -35,6 +35,7 @@
 
 
 gconstpointer jingle_ft_check(JingleContent *cn, GError **err, gpointer *data);
+gconstpointer jingle_ft_parse(JingleContent *cn, GError **err, gpointer *data);
 static void jingle_ft_init(void);
 static void jingle_ft_uninit(void);
 
@@ -61,7 +62,7 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err, gpointer *data)
   LmMessageNode *node;
   const gchar *datestr, *sizestr;
 
-  node = lm_message_node_get_child(cn->description, "offer");
+  node = lm_message_node_get_child(cn->node, "description");
   if (!node) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
                 "the offer element is missing");

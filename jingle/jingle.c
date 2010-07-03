@@ -86,8 +86,7 @@ module_info_t info_jingle = {
 
 
 LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
-                                 LmConnection *connection,
-                                 LmMessage *message,
+                                 LmConnection *connection, LmMessage *message,
                                  gpointer user_data)
 {
   LmMessageSubType iqtype = lm_message_get_sub_type(message);

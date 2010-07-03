@@ -25,11 +25,24 @@
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
+#include <jingle/sessions.h>
+#include <jingle/register.h>
+#include <jingle/send.h>
 
+/* The session-initiate action is used to request negotiation of a new Jingle
+ * session. When sending a session-initiate with one <content/> element, the
+ * value of the <content/> element's 'disposition' attribute MUST be "session"
+ * (if there are multiple <content/> elements then at least one MUST have a
+ * disposition of "session"); if this rule is violated, the responder MUST
+ * return a <bad-request/> error to the initiator.
+ */
 
 void handle_session_initiate(LmMessage *m, JingleNode *jn)
 {
   GError *err = NULL;
+  gboolean is_session = FALSE;
+  GSList *child = NULL;
+  JingleContent *cn;
 
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
@@ -43,22 +56,47 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
     jingle_send_iq_error(m, "cancel", "bad-request", NULL);
     return;
   }
-
-
-
-  /*// if a session with the same sid already exists
-  if (session_find(jn) != NULL) {
+  
+  // one of the content element must be a "session"
+  for (child = jn->content; child && !is_session; child = child->next) {
+    if(g_strcmp0(((JingleContent*)(child->data))->disposition, "session") ||
+       ((JingleContent*)(child->data))->disposition == NULL) // default: session
+      is_session=TRUE;
+  }
+  if(!is_session) {
+    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    return;  
+  }
+  
+  // if a session with the same sid already exists
+  if (session_find(jn->sid, jn->from) != NULL) {
     jingle_send_iq_error(m, "cancel", "unexpected-request", "out-of-order");
     return;
-  }*/
+  }
 
+  // the important from is one in the session-initiate
+  jn->from = lm_message_node_get_attribute(lm_message_get_node(m), "from");
+  
+  
   jingle_ack_iq(m);
+
+  is_session = FALSE;  
+  // Do we support any of this xmlns ?
+  for (child = jn->content; child && !is_session; child = child->next) {
+    if(jingle_get_appfuncs(((JingleContent*)(child->data))->xmlns_desc) != NULL)
+      is_session = TRUE;
+  }
+  if(!is_session) { // None of the app is supported
+    jingle_send_session_terminate(m, "unsupported-applications");
+  }
 }
 
 void handle_session_terminate(LmMessage *m, JingleNode *jn)
 {
-  /*if (session_find(jn) == NULL) {
+  JingleSession *sess;
+  if ((sess = session_find(jn->sid, jn->from)) == NULL) {
     jingle_send_iq_error(m, "cancel", "item-not-found", "unknown-session");
     return;
-  }*/
+  }
+  session_delete(sess);
 }

@@ -48,9 +48,8 @@ GSList *jingle_app_handlers = NULL;
 GSList *jingle_transport_handlers = NULL;
 
 
-void jingle_register_app(const gchar *xmlns,
-                             JingleAppFuncs *funcs,
-                             gpointer data)
+void jingle_register_app(const gchar *xmlns, JingleAppFuncs *funcs,
+                         gpointer data)
 {
   if (!g_str_has_prefix(xmlns, NS_JINGLE_APP_PREFIX)) return;
 
@@ -63,8 +62,7 @@ void jingle_register_app(const gchar *xmlns,
   jingle_app_handlers = g_slist_append(jingle_app_handlers, h);
 }
 
-void jingle_register_transport(const gchar *xmlns,
-                                   JingleTransportFuncs *funcs,
+void jingle_register_transport(const gchar *xmlns, JingleTransportFuncs *funcs,
                                    gpointer data)
 {
   if (!g_str_has_prefix(xmlns, NS_JINGLE_TRANSPORT_PREFIX)) return;

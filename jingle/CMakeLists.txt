@@ -1,4 +1,4 @@
-add_library(jingle MODULE jingle.c check.c action-handlers.c register.c sessions.c)
+add_library(jingle MODULE jingle.c check.c action-handlers.c register.c sessions.c send.c)
 set_target_properties(jingle PROPERTIES COMPILE_FLAGS "")
 include_directories(${LM_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR})
 target_link_libraries(jingle ${LM_LIBRARIES})
