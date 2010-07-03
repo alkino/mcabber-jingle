@@ -88,6 +88,7 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   }
   if(!is_session) { // None of the app is supported
     jingle_send_session_terminate(m, "unsupported-applications");
+    return;
   }
 
   is_session = FALSE;  
@@ -98,6 +99,7 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   }
   if(!is_session) { // None of the transport is supported
     jingle_send_session_terminate(m, "unsupported-transports");
+    return;
   }
 }
 

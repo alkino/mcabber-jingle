@@ -22,11 +22,12 @@
 #include <glib.h>
 #include <loudmouth/loudmouth.h>
 
-#include <mcabber/utils.h>
+#include <mcabber/xmpp_helper.h>
+#include <mcabber/xmpp_defines.h>
 
 #include <jingle/send.h>
 
-void jingle_send_session_terminate(const LmMessage *m, const gchar *reason) {
+void jingle_send_session_terminate(LmMessage *m, const gchar *reason) {
   LmMessage *r;
   LmMessageNode *err;
 
