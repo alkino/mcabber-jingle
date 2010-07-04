@@ -64,7 +64,7 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   for (child = jn->content; child && !is_session; child = child->next) {
     if (g_strcmp0(((JingleContent*)(child->data))->disposition, "session") ||
        ((JingleContent*)(child->data))->disposition == NULL) // default: session
-      is_session=TRUE;
+      is_session = TRUE;
   }
   if (!is_session) {
     jingle_send_iq_error(m, "cancel", "bad-request", NULL);
@@ -72,17 +72,13 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   }
   
   // if a session with the same sid already exists
-  if (session_find(jn->sid, jn->from) != NULL) {
+  if (session_find(jn) != NULL) {
     jingle_send_iq_error(m, "cancel", "unexpected-request", "out-of-order");
     return;
   }
 
-  // the important from is one in the session-initiate
-  jn->from = lm_message_node_get_attribute(lm_message_get_node(m), "from");
-  
   jingle_ack_iq(m);
-  
-  
+
   for (child = jn->content; child; child = child->next) {
     cn = (JingleContent*)(child->data);
     
@@ -98,7 +94,7 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
 void handle_session_terminate(LmMessage *m, JingleNode *jn)
 {
   JingleSession *sess;
-  if ((sess = session_find(jn->sid, jn->from)) == NULL) {
+  if ((sess = session_find(jn)) == NULL) {
     jingle_send_iq_error(m, "cancel", "item-not-found", "unknown-session");
     return;
   }

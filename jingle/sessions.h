@@ -19,7 +19,8 @@ typedef struct {
 
 JingleSession *session_new(JingleNode *jn, LmMessageNode *app,
                            LmMessageNode *transport);
-JingleSession *session_find(const gchar *sid, const gchar *from);
+JingleSession *session_find_by_sid(const gchar *sid, const gchar *from);
+JingleSession *session_find(const JingleNode *jn);
 void session_delete(JingleSession *sess);
 void session_remove(JingleSession *sess);
 void session_free(JingleSession *sess);

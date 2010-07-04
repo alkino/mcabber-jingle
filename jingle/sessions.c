@@ -40,8 +40,7 @@ JingleSession *session_new(JingleNode *jn, LmMessageNode* app,
   
   js->sid = g_strdup(jn->sid);
   js->initiator = g_strdup(jn->initiator);
-  from = lm_message_node_get_attribute(lm_message_get_node(jn->message),
-                                       "from");
+  from = lm_message_node_get_attribute(lm_message_get_node(jn->message), "from");
   if (!from) {
     return NULL;
   }
@@ -51,7 +50,7 @@ JingleSession *session_new(JingleNode *jn, LmMessageNode* app,
   sessions = g_slist_append(sessions, js);
 }
 
-JingleSession *session_find(const gchar *sid, const gchar *from)
+JingleSession *session_find_by_sid(const gchar *sid, const gchar *from)
 {
   GSList *el;
   JingleSession *js;
@@ -62,6 +61,13 @@ JingleSession *session_find(const gchar *sid, const gchar *from)
 	}
   }
   return NULL;
+}
+
+JingleSession *session_find(const JingleNode *jn)
+{
+  LmMessageNode *iq = lm_message_get_node(jn->message);
+  const gchar *from = lm_message_node_get_attribute(iq, "from");
+  return session_find_by_sid(jn->sid, from);
 }
 
 /**

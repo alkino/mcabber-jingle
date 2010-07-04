@@ -35,7 +35,6 @@
 
 
 gconstpointer jingle_ft_check(JingleContent *cn, GError **err, gpointer *data);
-gconstpointer jingle_ft_parse(JingleContent *cn, GError **err, gpointer *data);
 static void jingle_ft_init(void);
 static void jingle_ft_uninit(void);
 
@@ -59,17 +58,23 @@ module_info_t info_jingle_filetransfer = {
 gconstpointer jingle_ft_check(JingleContent *cn, GError **err, gpointer *data)
 {
   JingleFT *ft = NULL;
-  LmMessageNode *node;
+  LmMessageNode *node, *description;
   const gchar *datestr, *sizestr;
 
-  node = lm_message_node_get_child(cn->node, "description");
+  description = lm_message_node_get_child(cn->node, "description");
+  if (!description) {
+    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING, "Huh ?");
+    return NULL;
+  }
+
+  node = lm_message_node_get_child(description, "offer");
   if (!node) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
                 "the offer element is missing");
     return NULL;
   }
 
-  node = lm_message_node_get_child(cn->description, "file");
+  node = lm_message_node_get_child(description, "file");
   if (!node) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
                 "the file element is missing");
