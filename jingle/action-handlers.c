@@ -41,9 +41,11 @@
 void handle_session_initiate(LmMessage *m, JingleNode *jn)
 {
   GError *err = NULL;
-  gboolean is_session = FALSE;
+  gboolean is_session = FALSE, support_both = FALSE;
   GSList *child = NULL;
   JingleContent *cn;
+  JingleAppFuncs *af;
+  JingleTransportFuncs *tf;
 
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
@@ -78,35 +80,18 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   // the important from is one in the session-initiate
   jn->from = lm_message_node_get_attribute(lm_message_get_node(m), "from");
   
-  
   jingle_ack_iq(m);
-
-  is_session = FALSE;  
-  // Do we support any of this xmlns ?
-  for (child = jn->content; child && !is_session; child = child->next) {
-    if (jingle_get_appfuncs(get_xmlnsdesc(child)) != NULL)
-      is_session = TRUE;
-  }
-  if (!is_session) { // None of the app is supported
-    jingle_send_session_terminate(m, "unsupported-applications");
-    return;
-  }
-
-  is_session = FALSE;  
-  // Do we support any of this xmlns ?
-  for (child = jn->content; child && !is_session; child = child->next) {
-    if (jingle_get_transportfuncs(get_xmlnstrans(child)) != NULL)
-      is_session = TRUE;
-  }
-  if (!is_session) { // None of the transport is supported
-    jingle_send_session_terminate(m, "unsupported-transports");
-    return;
-  }
   
-  // Next we ask parsing to the modules
+  
   for (child = jn->content; child; child = child->next) {
-    ((JingleContent*)(child->data))->description = jingle_get_appfuncs(get_xmlnsdesc(child))->check((JingleContent*)(child->data), NULL, NULL);
-    ((JingleContent*)(child->data))->transport = jingle_get_appfuncs(get_xmlnstrans(child))->check((JingleContent*)(child->data), NULL, NULL);
+    cn = (JingleContent*)(child->data);
+    
+    af = jingle_get_appfuncs(cn->xmlns_desc);
+    tf = jingle_get_transportfuncs(cn->xmlns_trans);
+    if (af == NULL && tf == NULL) continue;
+    
+    cn->description = af->check(cn, NULL, NULL);
+    cn->transport = tf->check(cn, NULL, NULL);
   }
 }
 
