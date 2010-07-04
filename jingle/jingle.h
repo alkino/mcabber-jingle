@@ -96,12 +96,12 @@ typedef struct {
   /* each content element (must) contain one description
    * child element that specifies a desired application.
    * the content of this node is app specific. */
-  gconstpointer *description;
+  gconstpointer description;
 
   /* each content element (must) contain one transport
    * child element that specifies a potential transport
    * method */
-  gconstpointer *transport;
+  gconstpointer transport;
   
   const gchar *xmlns_desc;
   const gchar *xmlns_trans;

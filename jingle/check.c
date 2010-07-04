@@ -139,8 +139,6 @@ static JingleContent *check_content(LmMessageNode *node, GError **err)
   
   cn->xmlns_desc = lm_message_node_get_attribute(tmpnode, "xmlns");
   
-  cn->description = (gconstpointer*)jingle_get_appfuncs(cn->xmlns_desc)->parse(tmpnode);
-  
   tmpnode = lm_message_node_get_child(node, "transport");
   if (tmpnode == NULL) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
@@ -150,8 +148,6 @@ static JingleContent *check_content(LmMessageNode *node, GError **err)
   }
 
   cn->xmlns_trans = lm_message_node_get_attribute(tmpnode, "xmlns");
-  
-  cn->transport = (gconstpointer*)jingle_get_transportfuncs(cn->xmlns_trans)->parse(tmpnode);
   
   return cn;
 }

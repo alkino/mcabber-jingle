@@ -28,6 +28,7 @@
 #include <jingle/sessions.h>
 #include <jingle/register.h>
 #include <jingle/send.h>
+#include <jingle/action-handlers.h>
 
 /* The session-initiate action is used to request negotiation of a new Jingle
  * session. When sending a session-initiate with one <content/> element, the
@@ -59,11 +60,11 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   
   // one of the content element must be a "session"
   for (child = jn->content; child && !is_session; child = child->next) {
-    if(g_strcmp0(((JingleContent*)(child->data))->disposition, "session") ||
+    if (g_strcmp0(((JingleContent*)(child->data))->disposition, "session") ||
        ((JingleContent*)(child->data))->disposition == NULL) // default: session
       is_session=TRUE;
   }
-  if(!is_session) {
+  if (!is_session) {
     jingle_send_iq_error(m, "cancel", "bad-request", NULL);
     return;  
   }
@@ -83,10 +84,10 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   is_session = FALSE;  
   // Do we support any of this xmlns ?
   for (child = jn->content; child && !is_session; child = child->next) {
-    if(jingle_get_appfuncs(((JingleContent*)(child->data))->xmlns_desc) != NULL)
+    if (jingle_get_appfuncs(get_xmlnsdesc(child)) != NULL)
       is_session = TRUE;
   }
-  if(!is_session) { // None of the app is supported
+  if (!is_session) { // None of the app is supported
     jingle_send_session_terminate(m, "unsupported-applications");
     return;
   }
@@ -94,12 +95,18 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   is_session = FALSE;  
   // Do we support any of this xmlns ?
   for (child = jn->content; child && !is_session; child = child->next) {
-    if(jingle_get_transportfuncs(((JingleContent*)(child->data))->xmlns_trans) != NULL)
+    if (jingle_get_transportfuncs(get_xmlnstrans(child)) != NULL)
       is_session = TRUE;
   }
-  if(!is_session) { // None of the transport is supported
+  if (!is_session) { // None of the transport is supported
     jingle_send_session_terminate(m, "unsupported-transports");
     return;
+  }
+  
+  // Next we ask parsing to the modules
+  for (child = jn->content; child; child = child->next) {
+    ((JingleContent*)(child->data))->description = jingle_get_appfuncs(get_xmlnsdesc(child))->check((JingleContent*)(child->data), NULL, NULL);
+    ((JingleContent*)(child->data))->transport = jingle_get_appfuncs(get_xmlnstrans(child))->check((JingleContent*)(child->data), NULL, NULL);
   }
 }
 
@@ -111,4 +118,15 @@ void handle_session_terminate(LmMessage *m, JingleNode *jn)
     return;
   }
   session_delete(sess);
+  jingle_ack_iq(m);
+}
+
+const gchar* get_xmlnstrans(const GSList* list)
+{
+  return ((JingleContent*)(list->data))->xmlns_trans;
+}
+
+const gchar* get_xmlnsdesc(const GSList* list)
+{
+  return ((JingleContent*)(list->data))->xmlns_desc;
 }
