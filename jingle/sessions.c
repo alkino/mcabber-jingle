@@ -24,6 +24,7 @@
 
 #include <jingle/jingle.h>
 #include <jingle/sessions.h>
+#include <jingle/register.h>
 
 
 static GSList *sessions;
@@ -67,6 +68,35 @@ JingleSession *session_find(const JingleNode *jn)
   LmMessageNode *iq = lm_message_get_node(jn->message);
   const gchar *from = lm_message_node_get_attribute(iq, "from");
   return session_find_by_sid(jn->sid, from);
+}
+
+void session_add_content(JingleSession *sess, JingleContent *cn)
+{
+  SessionContent *sc = g_new0(SessionContent, 1);
+  const gchar *tmpchar = lm_message_node_get_attribute(cn->description,
+                                                       "xmlns");
+  sc->appfuncs = jingle_get_appfuncs(tmpchar);
+  tmpchar = lm_message_node_get_attribute(cn->transport, "xmlns");
+  sc->transfuncs = jingle_get_transportfuncs(tmpchar);
+  // TODO errors
+  sc->description = sc->appfuncs->check(cn, NULL);
+  sc->transport = sc->appfuncs->check(cn, NULL);
+
+  sess->content = g_slist_append(sess->content, sc);
+}
+
+SessionContent *session_find_sessioncontent(JingleSession *sess,
+                                        gconstpointer desc, gconstpointer trans)
+{
+  GSList *el;
+  SessionContent *sc;
+  for (el = sess->content; el; el = el->next) {
+    sc = (SessionContent*) el->data;
+    if (sc->appfuncs->cmp(sc->description, desc) == TRUE &&
+        sc->transfuncs->cmp(sc->transport, trans) == TRUE)
+      return sc;
+  }
+  return NULL;
 }
 
 /**

@@ -100,7 +100,6 @@ typedef struct {
    * child element that specifies a potential transport
    * method */
   LmMessageNode *transport;
-
 } JingleContent;
 
 struct JingleActionList {
