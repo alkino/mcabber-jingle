@@ -16,6 +16,13 @@ typedef struct {
   GSList *content;
 } JingleSession;
 
+typedef struct {
+  gconstpointer *description;
+  JingleAppFuncs *appfuncs;
+  gconstpointer *transport;
+  JingleTransportFuncs *transfuncs;
+} SessionContent;
+
 
 JingleSession *session_new(JingleNode *jn, LmMessageNode *app,
                            LmMessageNode *transport);

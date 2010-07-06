@@ -34,7 +34,7 @@
 #include "filetransfer.h"
 
 
-gconstpointer jingle_ft_check(JingleContent *cn, GError **err, gpointer *data);
+gconstpointer jingle_ft_check(JingleContent *cn, GError **err);
 static void jingle_ft_init(void);
 static void jingle_ft_uninit(void);
 
@@ -55,26 +55,20 @@ module_info_t info_jingle_filetransfer = {
 };
 
 
-gconstpointer jingle_ft_check(JingleContent *cn, GError **err, gpointer *data)
+gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
 {
   JingleFT *ft = NULL;
-  LmMessageNode *node, *description;
+  LmMessageNode *node;
   const gchar *datestr, *sizestr;
 
-  description = lm_message_node_get_child(cn->node, "description");
-  if (!description) {
-    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING, "Huh ?");
-    return NULL;
-  }
-
-  node = lm_message_node_get_child(description, "offer");
+  node = lm_message_node_get_child(cn->description, "offer");
   if (!node) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
                 "the offer element is missing");
     return NULL;
   }
 
-  node = lm_message_node_get_child(description, "file");
+  node = lm_message_node_get_child(cn->description, "file");
   if (!node) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
                 "the file element is missing");
@@ -116,7 +110,7 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err, gpointer *data)
 
 static void jingle_ft_init(void)
 {
-  jingle_register_app(NS_JINGLE_APP_FT, &funcs, NULL);
+  jingle_register_app(NS_JINGLE_APP_FT, &funcs);
   xmpp_add_feature(NS_JINGLE_APP_FT);
 }
 

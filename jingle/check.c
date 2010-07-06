@@ -105,7 +105,7 @@ static JingleContent *check_content(LmMessageNode *node, GError **err)
   const gchar *creatorstr, *sendersstr;
   gint tmp, tmp2;
   LmMessageNode *tmpnode = NULL;
-  
+
   creatorstr      = lm_message_node_get_attribute(node, "creator");
   cn->disposition = lm_message_node_get_attribute(node, "disposition");
   cn->name        = lm_message_node_get_attribute(node, "name");
@@ -117,7 +117,7 @@ static JingleContent *check_content(LmMessageNode *node, GError **err)
     g_free(cn);
     return NULL;
   }
-  
+
   tmp = index_in_array(creatorstr, jingle_content_creator);
   tmp2 = index_in_array(sendersstr, jingle_content_senders);
   if (tmp < 0 || tmp2 < 0) {
@@ -128,27 +128,16 @@ static JingleContent *check_content(LmMessageNode *node, GError **err)
   }
   cn->creator = (JingleCreator)tmp;
   cn->senders = (JingleSenders)tmp2;
-  
-  tmpnode = lm_message_node_get_child(node, "description");
-  if(tmpnode == NULL) {
-    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
-                "a child element of content is missing");
-    g_free(cn);
-    return NULL;
-  }
-  
-  cn->xmlns_desc = lm_message_node_get_attribute(tmpnode, "xmlns");
-  
-  tmpnode = lm_message_node_get_child(node, "transport");
-  if (tmpnode == NULL) {
-    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
-                "a child element of content is missing");
-    g_free(cn);
-    return NULL;
-  }
 
-  cn->xmlns_trans = lm_message_node_get_attribute(tmpnode, "xmlns");
-  
+  cn->description = lm_message_node_get_child(node, "description");
+  cn->transport   = lm_message_node_get_child(node, "transport");
+  if (cn->description == NULL || cn->transport == NULL) {
+     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
+                 "a child element of content is missing");
+     g_free(cn);
+     return NULL;
+   }
+
   return cn;
 }
 

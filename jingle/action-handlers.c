@@ -41,11 +41,13 @@
 void handle_session_initiate(LmMessage *m, JingleNode *jn)
 {
   GError *err = NULL;
-  gboolean is_session = FALSE, support_both = FALSE;
   GSList *child = NULL;
+  gboolean valid_disposition = FALSE;
   JingleContent *cn;
-  JingleAppFuncs *af;
-  JingleTransportFuncs *tf;
+  JingleAppFuncs *appfuncs; 
+  JingleTransportFuncs *transfuncs;
+  gconstpointer description, transport;
+  const gchar *xmlns;
 
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
@@ -60,13 +62,16 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
     return;
   }
   
-  // one of the content element must be a "session"
-  for (child = jn->content; child && !is_session; child = child->next) {
-    if (g_strcmp0(((JingleContent*)(child->data))->disposition, "session") ||
-       ((JingleContent*)(child->data))->disposition == NULL) // default: session
-      is_session = TRUE;
+  /* When sending a session-initiate at least one <content/> element MUST have
+   * a disposition of "session"); if this rule is violated, the responder MUST
+   * return a <bad-request/> error to the initiator.
+   */
+  for (child = jn->content; child && !valid_disposition; child = child->next) {
+    cn = (JingleContent*)(child->data);
+    if (g_strcmp0(cn->disposition, "session") == 0 || cn->disposition == NULL)
+      valid_disposition = TRUE;
   }
-  if (!is_session) {
+  if (!valid_disposition) {
     jingle_send_iq_error(m, "cancel", "bad-request", NULL);
     return;  
   }
@@ -80,14 +85,20 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   jingle_ack_iq(m);
 
   for (child = jn->content; child; child = child->next) {
-    cn = (JingleContent*)(child->data);
+    cn = (JingleContent *)(child->data);
     
-    af = jingle_get_appfuncs(cn->xmlns_desc);
-    tf = jingle_get_transportfuncs(cn->xmlns_trans);
-    if (af == NULL && tf == NULL) continue;
+    xmlns = lm_message_node_get_attribute(cn->description, "xmlns");
+    appfuncs = jingle_get_appfuncs(xmlns);
+    if (appfuncs == NULL) continue;
     
-    cn->description = af->check(cn, NULL, NULL);
-    cn->transport = tf->check(cn, NULL, NULL);
+    xmlns = lm_message_node_get_attribute(cn->transport, "xmlns");
+    transfuncs = jingle_get_transportfuncs(xmlns);
+    if (appfuncs == NULL) continue; // negociate another transport ?
+    
+    description = appfuncs->check(cn, &err);
+    if (description == NULL || err != NULL) continue;
+    transport = transfuncs->check(cn, &err);
+    if (transport == NULL || err != NULL) continue;
   }
 }
 
@@ -100,14 +111,4 @@ void handle_session_terminate(LmMessage *m, JingleNode *jn)
   }
   session_delete(sess);
   jingle_ack_iq(m);
-}
-
-const gchar* get_xmlnstrans(const GSList* list)
-{
-  return ((JingleContent*)(list->data))->xmlns_trans;
-}
-
-const gchar* get_xmlnsdesc(const GSList* list)
-{
-  return ((JingleContent*)(list->data))->xmlns_desc;
 }

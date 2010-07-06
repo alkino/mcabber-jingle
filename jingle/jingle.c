@@ -299,8 +299,4 @@ void get_lm_from_content_struct(gpointer data, gpointer userdata)
     lm_message_node_set_attribute(node, "senders", "initiator");
   else if (content->senders == JINGLE_SENDERS_RESPONDER)
     lm_message_node_set_attribute(node, "senders", "responder");
-
-  // Care of desc & trans
-  node->children = jingle_get_appfuncs(content->xmlns_desc)->desc(content->description);
-  node->children->next = jingle_get_transportfuncs(content->xmlns_trans)->trans(content->transport);
 }

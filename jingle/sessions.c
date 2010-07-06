@@ -32,8 +32,7 @@ static GSList *sessions;
 /**
  * Create a new session and insert it in the linked list.
  */
-JingleSession *session_new(JingleNode *jn, LmMessageNode* app,
-                           LmMessageNode* trans)
+JingleSession *session_new(JingleNode *jn)
 {
   JingleSession *js = g_new0(JingleSession, 1);
   const gchar *from;
@@ -45,9 +44,9 @@ JingleSession *session_new(JingleNode *jn, LmMessageNode* app,
     return NULL;
   }
   js->from = g_strdup(from);
-  
 
   sessions = g_slist_append(sessions, js);
+  return js;
 }
 
 JingleSession *session_find_by_sid(const gchar *sid, const gchar *from)
