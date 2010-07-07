@@ -21,6 +21,7 @@
 
 #include <glib.h>
 
+#include <mcabber/xmpp_helper.h>
 
 #include <jingle/jingle.h>
 #include <jingle/sessions.h>
@@ -40,7 +41,7 @@ JingleSession *session_new(JingleNode *jn)
   
   js->sid = g_strdup(jn->sid);
   js->initiator = g_strdup(jn->initiator);
-  from = lm_message_node_get_attribute(lm_message_get_node(jn->message), "from");
+  from = lm_message_get_from(jn->message);
   if (!from) {
     return NULL;
   }
@@ -58,15 +59,14 @@ JingleSession *session_find_by_sid(const gchar *sid, const gchar *from)
     js = (JingleSession*) el->data;
     if (g_strcmp0(js->sid, sid) && g_strcmp0(js->from, from)) {
       return js;
-	}
+    }
   }
   return NULL;
 }
 
 JingleSession *session_find(const JingleNode *jn)
 {
-  LmMessageNode *iq = lm_message_get_node(jn->message);
-  const gchar *from = lm_message_node_get_attribute(iq, "from");
+  const gchar *from = lm_message_get_from(jn->message);
   return session_find_by_sid(jn->sid, from);
 }
 

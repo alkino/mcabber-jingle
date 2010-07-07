@@ -25,15 +25,18 @@
 #include <mcabber/xmpp_helper.h>
 #include <mcabber/xmpp_defines.h>
 
+#include <jingle/jingle.h>
 #include <jingle/send.h>
 
-void jingle_send_session_terminate(LmMessage *m, const gchar *reason) {
+
+void jingle_send_session_terminate(LmMessage *m, const gchar *reason)
+{
   LmMessage *r;
   LmMessageNode *err;
 
   r = lm_message_new_iq_from_query(m, LM_MESSAGE_SUB_TYPE_SET);
 
-  if(reason != NULL) {  
+  if (reason != NULL) {  
     err = lm_message_node_add_child(r->node, "reason", NULL);
     lm_message_node_add_child(err, reason, NULL);
   }

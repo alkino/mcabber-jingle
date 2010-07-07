@@ -114,7 +114,6 @@ void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
                           const gchar *cond, const gchar *jinglecond);
 void jingle_ack_iq(LmMessage *m);
 JingleAction jingle_action_from_str(const gchar* string);
+LmMessage *lm_message_from_jinglenode(const JingleNode *jn, const gchar *to);
 
-LmMessageNode* get_lm_from_jingle_struct(const JingleNode* elem);
-void get_lm_from_content_struct(gpointer data, gpointer userdata);
 #endif

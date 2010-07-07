@@ -43,6 +43,7 @@ static guint jingle_connect_hh(const gchar *hname, hk_arg_t *args, gpointer igno
 static guint jingle_disconn_hh(const gchar *hname, hk_arg_t *args, gpointer ignore);
 static void  jingle_init(void);
 static void  jingle_uninit(void);
+static void lm_insert_jinglecontent(gpointer data, gpointer userdata);
 
 
 static LmMessageHandler* jingle_iq_handler = NULL;
@@ -188,7 +189,7 @@ void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
 /**
  * Find the jingle_action corresponding to a string
  */
-JingleAction jingle_action_from_str(const gchar* string)
+JingleAction jingle_action_from_str(const gchar *string)
 {
   guint i, actstrlen = sizeof(jingle_action_list)/sizeof(jingle_action_list[0]);
   for (i = 0; i < actstrlen; i++)
@@ -260,23 +261,37 @@ static void jingle_uninit(void)
   lm_message_handler_unref(jingle_iq_handler);
 }
 
-LmMessageNode* get_lm_from_jingle_struct(const JingleNode* elem)
+LmMessage *lm_message_from_jinglenode(const JingleNode *jn, const gchar *to)
 {
-  LmMessageNode* node = g_new(LmMessageNode, 1);
-  lm_message_node_set_value(node, "jingle");
-  if (jingle_action_list[elem->action].name)
-    lm_message_node_set_attribute(node, "action", jingle_action_list[elem->action].name);
-  if (elem->initiator)
-    lm_message_node_set_attribute(node, "initiator", elem->initiator);
-  if (elem->responder)
-    lm_message_node_set_attribute(node, "responder",elem->responder);
-  if (elem->sid)
-    lm_message_node_set_attribute(node, "sid", elem->sid);
-  g_slist_foreach(elem->content, get_lm_from_content_struct, node);
-  return node;
+  LmMessage* m; 
+  LmMessageNode *jnode;
+  const gchar *actionstr;
+
+  m = lm_message_new_with_sub_type(to, LM_MESSAGE_TYPE_IQ,
+                                   LM_MESSAGE_SUB_TYPE_SET); 
+  jnode = lm_message_node_add_child(m->node, "jingle", NULL);
+
+  if ((actionstr = jingle_action_list[jn->action].name))
+    lm_message_node_set_attribute(jnode, "action", actionstr);
+  else 
+    return NULL;
+
+  if (jn->initiator)
+    lm_message_node_set_attribute(jnode, "initiator", jn->initiator);
+
+  if (jn->responder)
+    lm_message_node_set_attribute(jnode, "responder", jn->responder);
+
+  if (jn->sid)
+    lm_message_node_set_attribute(jnode, "sid", jn->sid);
+  else
+    return NULL;
+
+  g_slist_foreach(jn->content, lm_insert_jinglecontent, jnode);
+  return m;
 }
 
-void get_lm_from_content_struct(gpointer data, gpointer userdata)
+static void lm_insert_jinglecontent(gpointer data, gpointer userdata)
 {
   JingleContent* content = (JingleContent*) data;
   LmMessageNode* dad = (LmMessageNode*) userdata;
