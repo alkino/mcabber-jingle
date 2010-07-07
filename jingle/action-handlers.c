@@ -47,6 +47,7 @@ void handle_content_add(LmMessage *m, JingleNode *jn)
   JingleTransportFuncs *transfuncs;
   gconstpointer description, transport;
   const gchar *xmlns;
+  JingleSession *sess;
 
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
@@ -55,14 +56,14 @@ void handle_content_add(LmMessage *m, JingleNode *jn)
     return;
   }
 
-  // it's better if there is at least one content elem */
+  /* it's better if there is at least one content elem */
   if (g_slist_length(jn->content) < 1) {
     jingle_send_iq_error(m, "cancel", "bad-request", NULL);
     return;
   }
   
   // if a session with the same sid doesn't already exists
-  if (session_find(jn) == NULL) {
+  if ((sess = session_find(jn)) == NULL) {
     jingle_send_iq_error(m, "cancel", "unexpected-request", "out-of-order");
     return;
   }
@@ -84,9 +85,60 @@ void handle_content_add(LmMessage *m, JingleNode *jn)
     if (description == NULL || err != NULL) continue;
     transport = transfuncs->check(cn, &err);
     if (transport == NULL || err != NULL) continue;
+    session_add_content(sess, cn);
   }
 }
 
+void handle_content_remove(LmMessage *m, JingleNode *jn)
+{
+  GError *err = NULL;
+  GSList *child = NULL;
+  JingleContent *cn;
+  JingleAppFuncs *appfuncs; 
+  JingleTransportFuncs *transfuncs;
+  gconstpointer description, transport;
+  const gchar *xmlns;
+  JingleSession *sess;
+
+  if (!check_contents(jn, &err)) {
+    scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
+                  err->message);
+    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    return;
+  }
+
+  /* it's better if there is at least one content elem */
+  if (g_slist_length(jn->content) < 1) {
+    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    return;
+  }
+  
+  // if a session with the same sid doesn't already exists
+  if ((sess = session_find(jn)) == NULL) {
+    jingle_send_iq_error(m, "cancel", "unexpected-request", "out-of-order");
+    return;
+  }
+
+  jingle_ack_iq(m);
+
+  for (child = jn->content; child; child = child->next) {
+    cn = (JingleContent *)(child->data);
+    
+    xmlns = lm_message_node_get_attribute(cn->description, "xmlns");
+    appfuncs = jingle_get_appfuncs(xmlns);
+    if (appfuncs == NULL) continue;
+    
+    xmlns = lm_message_node_get_attribute(cn->transport, "xmlns");
+    transfuncs = jingle_get_transportfuncs(xmlns);
+    if (appfuncs == NULL) continue;
+    
+    description = appfuncs->check(cn, &err);
+    if (description == NULL || err != NULL) continue;
+    transport = transfuncs->check(cn, &err);
+    if (transport == NULL || err != NULL) continue;
+    session_add_content(sess, cn);
+  }
+}
 
 void handle_session_initiate(LmMessage *m, JingleNode *jn)
 {
@@ -98,6 +150,7 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   JingleTransportFuncs *transfuncs;
   gconstpointer description, transport;
   const gchar *xmlns;
+  JingleSession* sess;
 
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
@@ -134,6 +187,8 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
 
   jingle_ack_iq(m);
 
+  sess = session_new(jn);
+  
   for (child = jn->content; child; child = child->next) {
     cn = (JingleContent *)(child->data);
     
@@ -149,7 +204,15 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
     if (description == NULL || err != NULL) continue;
     transport = transfuncs->check(cn, &err);
     if (transport == NULL || err != NULL) continue;
+    
+    session_add_content(sess, cn);
   }
+  
+  if(g_slist_length(sess->content) == 0) {
+    jingle_send_session_terminate(jn, "unsupported-applications");
+  }
+  
+  
 }
 
 void handle_session_terminate(LmMessage *m, JingleNode *jn)

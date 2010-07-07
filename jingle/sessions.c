@@ -73,6 +73,9 @@ JingleSession *session_find(const JingleNode *jn)
 void session_add_content(JingleSession *sess, JingleContent *cn)
 {
   SessionContent *sc = g_new0(SessionContent, 1);
+  
+  sc->name = cn->name;
+  
   const gchar *tmpchar = lm_message_node_get_attribute(cn->description,
                                                        "xmlns");
   sc->appfuncs = jingle_get_appfuncs(tmpchar);
@@ -86,17 +89,24 @@ void session_add_content(JingleSession *sess, JingleContent *cn)
 }
 
 SessionContent *session_find_sessioncontent(JingleSession *sess,
-                                        gconstpointer desc, gconstpointer trans)
+                                            const gchar *name)
 {
   GSList *el;
   SessionContent *sc;
   for (el = sess->content; el; el = el->next) {
     sc = (SessionContent*) el->data;
-    if (sc->appfuncs->cmp(sc->description, desc) == TRUE &&
-        sc->transfuncs->cmp(sc->transport, trans) == TRUE)
+    if (g_strcmp0(sc->name, name))
       return sc;
   }
   return NULL;
+}
+
+void session_remove_sessioncontent(JingleSession *sess, const gchar *name)
+{
+  SessionContent *sc;
+  sc = session_find_sessioncontent(sess, name);
+  if(sc != NULL)
+    sess->content = g_slist_remove(sess->content, sc);
 }
 
 /**

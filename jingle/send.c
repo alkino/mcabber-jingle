@@ -32,6 +32,7 @@
 void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
 {
   LmMessage *r;
+  LmMessageNode *err;
   JingleNode *reply = g_new0(JingleNode, 1);
 
   reply->action = JINGLE_SESSION_TERMINATE;

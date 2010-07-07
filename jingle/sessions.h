@@ -19,6 +19,7 @@ typedef struct {
 } JingleSession;
 
 typedef struct {
+  const gchar *name;
   gconstpointer description;
   JingleAppFuncs *appfuncs;
   gconstpointer transport;
@@ -30,7 +31,8 @@ JingleSession *session_new(JingleNode *jn);
 JingleSession *session_find_by_sid(const gchar *sid, const gchar *from);
 JingleSession *session_find(const JingleNode *jn);
 void session_add_content(JingleSession *sess, JingleContent *cn);
-SessionContent *session_find_sessioncontent(JingleSession *sess, gconstpointer desc, gconstpointer trans);
+SessionContent *session_find_sessioncontent(JingleSession *sess, const gchar *name);
+void session_remove_sessioncontent(JingleSession *sess, const gchar *name);
 void session_delete(JingleSession *sess);
 void session_remove(JingleSession *sess);
 void session_free(JingleSession *sess);
