@@ -29,22 +29,24 @@
 #include <jingle/send.h>
 
 
-void jingle_send_session_terminate(LmMessage *m, const gchar *reason)
+void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
 {
   LmMessage *r;
-  LmMessageNode *err;
+  JingleNode *reply = g_new0(JingleNode, 1);
 
-  r = lm_message_new_iq_from_query(m, LM_MESSAGE_SUB_TYPE_SET);
+  reply->action = JINGLE_SESSION_TERMINATE;
+  reply->sid = jn->sid;
 
-  if (reason != NULL) {  
+  r = lm_message_from_jinglenode(reply, lm_message_get_from(jn->message));
+
+  if (reason != NULL) { 
+    // TODO check reason 
     err = lm_message_node_add_child(r->node, "reason", NULL);
     lm_message_node_add_child(err, reason, NULL);
   }
 
-  // TODO vérifier que reason est connu
-
   if (r) {
-	  lm_connection_send(lconnection, r, NULL);
-	  lm_message_unref(r);
+    lm_connection_send(lconnection, r, NULL);
+    lm_message_unref(r);
   }
 }
