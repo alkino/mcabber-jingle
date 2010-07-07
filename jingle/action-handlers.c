@@ -38,6 +38,56 @@
  * return a <bad-request/> error to the initiator.
  */
 
+void handle_content_add(LmMessage *m, JingleNode *jn)
+{
+  GError *err = NULL;
+  GSList *child = NULL;
+  JingleContent *cn;
+  JingleAppFuncs *appfuncs; 
+  JingleTransportFuncs *transfuncs;
+  gconstpointer description, transport;
+  const gchar *xmlns;
+
+  if (!check_contents(jn, &err)) {
+    scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
+                  err->message);
+    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    return;
+  }
+
+  // it's better if there is at least one content elem */
+  if (g_slist_length(jn->content) < 1) {
+    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    return;
+  }
+  
+  // if a session with the same sid doesn't already exists
+  if (session_find(jn) == NULL) {
+    jingle_send_iq_error(m, "cancel", "unexpected-request", "out-of-order");
+    return;
+  }
+
+  jingle_ack_iq(m);
+
+  for (child = jn->content; child; child = child->next) {
+    cn = (JingleContent *)(child->data);
+    
+    xmlns = lm_message_node_get_attribute(cn->description, "xmlns");
+    appfuncs = jingle_get_appfuncs(xmlns);
+    if (appfuncs == NULL) continue;
+    
+    xmlns = lm_message_node_get_attribute(cn->transport, "xmlns");
+    transfuncs = jingle_get_transportfuncs(xmlns);
+    if (appfuncs == NULL) continue;
+    
+    description = appfuncs->check(cn, &err);
+    if (description == NULL || err != NULL) continue;
+    transport = transfuncs->check(cn, &err);
+    if (transport == NULL || err != NULL) continue;
+  }
+}
+
+
 void handle_session_initiate(LmMessage *m, JingleNode *jn)
 {
   GError *err = NULL;
