@@ -22,6 +22,7 @@
 #include <glib.h>
 
 #include <mcabber/logprint.h>
+#include <mcabber/xmpp_helper.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
@@ -78,7 +79,11 @@ void handle_content_add(LmMessage *m, JingleNode *jn)
   gconstpointer description, transport;
   const gchar *xmlns;
   JingleSession *sess;
-
+  JingleNode accept, reject;
+  JingleContent tmp_cn;
+  LmMessage *r;
+  
+  
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
@@ -100,9 +105,21 @@ void handle_content_add(LmMessage *m, JingleNode *jn)
 
   jingle_ack_iq(m);
 
+  accept.action = JINGLE_CONTENT_ACCEPT;
+  accept.initiator = jn->initiator;
+  accept.responder = jn->responder;
+  accept.sid = jn->sid;
+  accept.content = NULL;
+  
+  reject.action = JINGLE_CONTENT_REJECT;
+  reject.initiator = jn->initiator;
+  reject.responder = jn->responder;
+  reject.sid = jn->sid;
+  reject.content = NULL;
+  
   for (child = jn->content; child; child = child->next) {
     cn = (JingleContent *)(child->data);
-    
+
     xmlns = lm_message_node_get_attribute(cn->description, "xmlns");
     appfuncs = jingle_get_appfuncs(xmlns);
     if (appfuncs == NULL) continue;
@@ -112,10 +129,33 @@ void handle_content_add(LmMessage *m, JingleNode *jn)
     if (appfuncs == NULL) continue;
     
     description = appfuncs->check(cn, &err);
-    if (description == NULL || err != NULL) continue;
+    if (description == NULL || err != NULL) {
+      reject.content = g_slist_append(reject.content, cn);
+      continue;
+    }
     transport = transfuncs->check(cn, &err);
-    if (transport == NULL || err != NULL) continue;
+    if (transport == NULL || err != NULL) {
+      reject.content = g_slist_append(reject.content, cn);
+      continue;
+    }
     session_add_content(sess, cn, ACTIVE);
+    accept.content = g_slist_append(accept.content, cn);
+  }
+  
+  if (g_slist_length(accept.content) != 0) {
+    r = lm_message_from_jinglenode(&accept, lm_message_get_from(m));
+    if (r) {
+      lm_connection_send(lconnection, r, NULL);
+      lm_message_unref(r);
+    }
+  }
+  
+  if (g_slist_length(reject.content) != 0) {
+    r = lm_message_from_jinglenode(&reject, lm_message_get_from(m));
+    if (r) {
+      lm_connection_send(lconnection, r, NULL);
+      lm_message_unref(r);
+    }
   }
 }
 

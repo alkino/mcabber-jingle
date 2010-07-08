@@ -13,6 +13,7 @@ typedef enum {
 typedef enum {
   ACTIVE,
   PENDING,
+  ENDED,
 } SessionState;
 
 typedef struct {
