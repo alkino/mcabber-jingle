@@ -56,11 +56,11 @@ static guint disconn_hid = 0;
  */
 struct JingleActionList jingle_action_list[] = {
   { NULL,                NULL }, // for JINGLE_UNKNOWN_ACTION
-  { "content-accept",    NULL },
+  { "content-accept",    handle_content_accept },
   { "content-add",       handle_content_add },
   { "content-modify",    NULL },
-  { "content-reject",    NULL },
-  { "content-remove",    NULL },
+  { "content-reject",    handle_content_reject },
+  { "content-remove",    handle_content_remove },
   { "description-info",  NULL },
   { "security-info",     NULL },
   { "session-accept",    NULL },
