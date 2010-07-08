@@ -30,14 +30,6 @@
 #include <jingle/send.h>
 #include <jingle/action-handlers.h>
 
-/* The session-initiate action is used to request negotiation of a new Jingle
- * session. When sending a session-initiate with one <content/> element, the
- * value of the <content/> element's 'disposition' attribute MUST be "session"
- * (if there are multiple <content/> elements then at least one MUST have a
- * disposition of "session"); if this rule is violated, the responder MUST
- * return a <bad-request/> error to the initiator.
- */
-
 void handle_content_add(LmMessage *m, JingleNode *jn)
 {
   GError *err = NULL;
@@ -85,7 +77,52 @@ void handle_content_add(LmMessage *m, JingleNode *jn)
     if (description == NULL || err != NULL) continue;
     transport = transfuncs->check(cn, &err);
     if (transport == NULL || err != NULL) continue;
-    session_add_content(sess, cn);
+    session_add_content(sess, cn, ACTIVE);
+  }
+}
+
+void handle_content_reject(LmMessage *m, JingleNode *jn)
+{
+  GError *err = NULL;
+  GSList *child = NULL;
+  JingleContent *cn;
+  JingleAppFuncs *appfuncs; 
+  JingleTransportFuncs *transfuncs;
+  gconstpointer description, transport;
+  const gchar *xmlns;
+  JingleSession *sess;
+
+  if (!check_contents(jn, &err)) {
+    scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
+                  err->message);
+    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    return;
+  }
+
+  /* it's better if there is at least one content elem */
+  if (g_slist_length(jn->content) < 1) {
+    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    return;
+  }
+  
+  // if a session with the same sid doesn't already exists
+  if ((sess = session_find(jn)) == NULL) {
+    jingle_send_iq_error(m, "cancel", "unexpected-request", "out-of-order");
+    return;
+  }
+
+  jingle_ack_iq(m);
+
+  for (child = jn->content; child; child = child->next) {
+    cn = (JingleContent *)(child->data);
+    session_remove_sessioncontent(sess, cn->name);
+  }
+  
+  // If there is nothing more to do, close the session
+  if (g_slist_length(sess->content) == 0) {
+    jingle_send_session_terminate(jn, "success");
+    session_delete(sess);
+    return;
   }
 }
 
@@ -123,23 +160,17 @@ void handle_content_remove(LmMessage *m, JingleNode *jn)
 
   for (child = jn->content; child; child = child->next) {
     cn = (JingleContent *)(child->data);
-    
-    xmlns = lm_message_node_get_attribute(cn->description, "xmlns");
-    appfuncs = jingle_get_appfuncs(xmlns);
-    if (appfuncs == NULL) continue;
-    
-    xmlns = lm_message_node_get_attribute(cn->transport, "xmlns");
-    transfuncs = jingle_get_transportfuncs(xmlns);
-    if (appfuncs == NULL) continue;
-    
-    description = appfuncs->check(cn, &err);
-    if (description == NULL || err != NULL) continue;
-    transport = transfuncs->check(cn, &err);
-    if (transport == NULL || err != NULL) continue;
-    session_add_content(sess, cn);
+    session_remove_sessioncontent(sess, cn->name);
   }
 }
 
+/* The session-initiate action is used to request negotiation of a new Jingle
+ * session. When sending a session-initiate with one <content/> element, the
+ * value of the <content/> element's 'disposition' attribute MUST be "session"
+ * (if there are multiple <content/> elements then at least one MUST have a
+ * disposition of "session"); if this rule is violated, the responder MUST
+ * return a <bad-request/> error to the initiator.
+ */
 void handle_session_initiate(LmMessage *m, JingleNode *jn)
 {
   GError *err = NULL;
@@ -205,13 +236,16 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
     transport = transfuncs->check(cn, &err);
     if (transport == NULL || err != NULL) continue;
     
-    session_add_content(sess, cn);
+    session_add_content(sess, cn, ACTIVE);
   }
   
   if(g_slist_length(sess->content) == 0) {
     jingle_send_session_terminate(jn, "unsupported-applications");
+    session_delete(sess);
+    return;
   }
   
+  // Send a session-accept
   
 }
 

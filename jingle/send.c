@@ -51,3 +51,4 @@ void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
     lm_message_unref(r);
   }
 }
+

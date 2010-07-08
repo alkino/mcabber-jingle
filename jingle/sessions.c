@@ -70,11 +70,13 @@ JingleSession *session_find(const JingleNode *jn)
   return session_find_by_sid(jn->sid, from);
 }
 
-void session_add_content(JingleSession *sess, JingleContent *cn)
+void session_add_content(JingleSession *sess, JingleContent *cn,
+                         SessionState state)
 {
   SessionContent *sc = g_new0(SessionContent, 1);
   
   sc->name = cn->name;
+  sc->state = state;
   
   const gchar *tmpchar = lm_message_node_get_attribute(cn->description,
                                                        "xmlns");
@@ -105,8 +107,20 @@ void session_remove_sessioncontent(JingleSession *sess, const gchar *name)
 {
   SessionContent *sc;
   sc = session_find_sessioncontent(sess, name);
+  if(sc == NULL) return;
+
+  if (sc->state == ACTIVE); // We should stop the transfert
+
+  sess->content = g_slist_remove(sess->content, sc);
+}
+
+void session_changestate_sessioncontent(JingleSession *sess, const gchar *name,
+                                        SessionState state)
+{
+  SessionContent *sc;
+  sc = session_find_sessioncontent(sess, name);
   if(sc != NULL)
-    sess->content = g_slist_remove(sess->content, sc);
+    sc->state = state;
 }
 
 /**

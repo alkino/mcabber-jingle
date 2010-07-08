@@ -5,6 +5,8 @@
 #include <loudmouth/loudmouth.h>
 
 void handle_content_add(LmMessage *m, JingleNode *jn);
+void handle_content_reject(LmMessage *m, JingleNode *jn);
+void handle_content_remove(LmMessage *m, JingleNode *jn);
 void handle_session_initiate(LmMessage *m, JingleNode *jn);
 void handle_session_terminate(LmMessage *m, JingleNode *jn);
 const gchar* get_xmlnsdesc(const GSList* list);
