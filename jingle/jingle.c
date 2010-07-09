@@ -125,7 +125,7 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
 
-  jingle_action_list[jn->action].handler(message, jn);
+  jingle_action_list[jn->action].handler(jn);
 
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 }

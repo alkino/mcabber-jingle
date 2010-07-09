@@ -33,7 +33,7 @@
 #include <jingle/send.h>
 #include <jingle/action-handlers.h>
 
-void handle_content_accept(LmMessage *m, JingleNode *jn)
+void handle_content_accept(JingleNode *jn)
 {
   GError *err = NULL;
   GSList *child = NULL;
@@ -47,23 +47,23 @@ void handle_content_accept(LmMessage *m, JingleNode *jn)
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
-    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
   }
 
   /* it's better if there is at least one content elem */
   if (g_slist_length(jn->content) < 1) {
-    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
   }
   
   // if a session with the same sid doesn't already exists
   if ((sess = session_find(jn)) == NULL) {
-    jingle_send_iq_error(m, "cancel", "item-not-found", "unknown-session");
+    jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
     return;
   }
 
-  jingle_ack_iq(m);
+  jingle_ack_iq(jn->message);
 
   for (child = jn->content; child; child = child->next) {
     cn = (JingleContent *)(child->data);
@@ -71,7 +71,7 @@ void handle_content_accept(LmMessage *m, JingleNode *jn)
   }
 }
 
-void handle_content_add(LmMessage *m, JingleNode *jn)
+void handle_content_add(JingleNode *jn)
 {
   GError *err = NULL;
   GSList *child = NULL;
@@ -89,23 +89,23 @@ void handle_content_add(LmMessage *m, JingleNode *jn)
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
-    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
   }
 
   /* it's better if there is at least one content elem */
   if (g_slist_length(jn->content) < 1) {
-    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
   }
   
   // if a session with the same sid doesn't already exists
   if ((sess = session_find(jn)) == NULL) {
-    jingle_send_iq_error(m, "cancel", "item-not-found", "unknown-session");
+    jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
     return;
   }
 
-  jingle_ack_iq(m);
+  jingle_ack_iq(jn->message);
 
   accept.action = JINGLE_CONTENT_ACCEPT;
   accept.sid = jn->sid;
@@ -141,7 +141,7 @@ void handle_content_add(LmMessage *m, JingleNode *jn)
   }
   
   if (g_slist_length(accept.content) != 0) {
-    r = lm_message_from_jinglenode(&accept, lm_message_get_from(m));
+    r = lm_message_from_jinglenode(&accept, lm_message_get_from(jn->message));
     if (r) {
       lm_connection_send(lconnection, r, NULL);
       lm_message_unref(r);
@@ -149,7 +149,7 @@ void handle_content_add(LmMessage *m, JingleNode *jn)
   }
   
   if (g_slist_length(reject.content) != 0) {
-    r = lm_message_from_jinglenode(&reject, lm_message_get_from(m));
+    r = lm_message_from_jinglenode(&reject, lm_message_get_from(jn->message));
     if (r) {
       lm_connection_send(lconnection, r, NULL);
       lm_message_unref(r);
@@ -157,7 +157,7 @@ void handle_content_add(LmMessage *m, JingleNode *jn)
   }
 }
 
-void handle_content_reject(LmMessage *m, JingleNode *jn)
+void handle_content_reject(JingleNode *jn)
 {
   GError *err = NULL;
   GSList *child = NULL;
@@ -171,23 +171,23 @@ void handle_content_reject(LmMessage *m, JingleNode *jn)
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
-    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
   }
 
   /* it's better if there is at least one content elem */
   if (g_slist_length(jn->content) < 1) {
-    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
   }
   
   // if a session with the same sid doesn't already exists
   if ((sess = session_find(jn)) == NULL) {
-    jingle_send_iq_error(m, "cancel", "item-not-found", "unknown-session");
+    jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
     return;
   }
 
-  jingle_ack_iq(m);
+  jingle_ack_iq(jn->message);
 
   for (child = jn->content; child; child = child->next) {
     cn = (JingleContent *)(child->data);
@@ -202,7 +202,7 @@ void handle_content_reject(LmMessage *m, JingleNode *jn)
   }
 }
 
-void handle_content_remove(LmMessage *m, JingleNode *jn)
+void handle_content_remove(JingleNode *jn)
 {
   GError *err = NULL;
   GSList *child = NULL;
@@ -216,23 +216,23 @@ void handle_content_remove(LmMessage *m, JingleNode *jn)
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
-    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
   }
 
   /* it's better if there is at least one content elem */
   if (g_slist_length(jn->content) < 1) {
-    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
   }
   
   // if a session with the same sid doesn't already exists
   if ((sess = session_find(jn)) == NULL) {
-    jingle_send_iq_error(m, "cancel", "item-not-found", "unknown-session");
+    jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
     return;
   }
 
-  jingle_ack_iq(m);
+  jingle_ack_iq(jn->message);
 
   for (child = jn->content; child; child = child->next) {
     cn = (JingleContent *)(child->data);
@@ -240,7 +240,7 @@ void handle_content_remove(LmMessage *m, JingleNode *jn)
   }
 }
 
-void handle_session_initiate(LmMessage *m, JingleNode *jn)
+void handle_session_initiate(JingleNode *jn)
 {
   GError *err = NULL;
   gboolean valid_disposition = FALSE;
@@ -252,13 +252,13 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
-    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
   }
 
   // a session-initiate message must contains at least one <content> element
   if (g_slist_length(jn->content) < 1) {
-    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
   }
   
@@ -272,28 +272,28 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
       valid_disposition = TRUE;
   }
   if (!valid_disposition) {
-    jingle_send_iq_error(m, "cancel", "bad-request", NULL);
+    jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;  
   }
   
   // if a session with the same sid already exists
   if (session_find(jn) != NULL) {
-    jingle_send_iq_error(m, "cancel", "unexpected-request", "out-of-order");
+    jingle_send_iq_error(jn->message, "cancel", "unexpected-request", "out-of-order");
     return;
   }
 
-  jingle_ack_iq(m);
+  jingle_ack_iq(jn->message);
 
   // Wait that user accept the jingle
   sbuf = g_string_new("");
-  g_string_printf(sbuf, "Received an invitation for a jingle session from <%s>", lm_message_get_from(m));
+  g_string_printf(sbuf, "Received an invitation for a jingle session from <%s>", lm_message_get_from(jn->message));
 
-  scr_WriteIncomingMessage(jidtodisp(lm_message_get_from(m)), sbuf->str, 0, HBB_PREFIX_INFO, 0);
+  scr_WriteIncomingMessage(jidtodisp(lm_message_get_from(jn->message)), sbuf->str, 0, HBB_PREFIX_INFO, 0);
   scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf->str);
 
   {
     const char *id;
-    char *desc = g_strdup_printf("<%s> invites you to do a jingle session", lm_message_get_from(m));
+    char *desc = g_strdup_printf("<%s> invites you to do a jingle session", lm_message_get_from(jn->message));
 
     id = evs_new(desc, NULL, 0, evscallback_jingle, jn, (GDestroyNotify)NULL);
     g_free(desc);
@@ -304,13 +304,13 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   }
 }
 
-void handle_session_terminate(LmMessage *m, JingleNode *jn)
+void handle_session_terminate(JingleNode *jn)
 {
   JingleSession *sess;
   if ((sess = session_find(jn)) == NULL) {
-    jingle_send_iq_error(m, "cancel", "item-not-found", "unknown-session");
+    jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
     return;
   }
   session_delete(sess);
-  jingle_ack_iq(m);
+  jingle_ack_iq(jn->message);
 }

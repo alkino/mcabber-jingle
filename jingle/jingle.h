@@ -104,7 +104,7 @@ typedef struct {
 
 struct JingleActionList {
   const gchar  *name;
-  void (*handler)(LmMessage *, JingleNode *);
+  void (*handler)(JingleNode *);
 };
 
 
