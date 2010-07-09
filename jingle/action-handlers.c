@@ -25,6 +25,7 @@
 #include <mcabber/xmpp_helper.h>
 #include <mcabber/events.h>
 #include <mcabber/hbuf.h>
+#include <mcabber/utils.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
@@ -249,6 +250,13 @@ void handle_session_initiate(JingleNode *jn)
   GSList *child = NULL;
   LmMessage *r;
   
+  // Make sure the from are an user in our roster
+  if (!roster_find(jidtodisp(lm_message_get_from(jn->message)), jidsearch, 0)) {
+    jingle_send_session_terminate(jn, "decline");
+    jingle_free_jinglenode(jn);
+    return;
+  }
+  
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
@@ -295,7 +303,7 @@ void handle_session_initiate(JingleNode *jn)
     const char *id;
     char *desc = g_strdup_printf("<%s> invites you to do a jingle session", lm_message_get_from(jn->message));
 
-    id = evs_new(desc, NULL, 0, evscallback_jingle, jn, (GDestroyNotify)NULL);
+    id = evs_new(desc, NULL, 0, evscallback_jingle, jn, NULL);
     g_free(desc);
     if (id)
       g_string_printf(sbuf, "Please use /event %s accept|reject", id);

@@ -36,12 +36,14 @@
 #include <jingle/check.h>
 #include <jingle/action-handlers.h>
 #include <jingle/register.h>
-
+#include <jingle/send.h>
 
 static void  jingle_register_lm_handlers(void);
 static void  jingle_unregister_lm_handlers(void);
-static guint jingle_connect_hh(const gchar *hname, hk_arg_t *args, gpointer ignore);
-static guint jingle_disconn_hh(const gchar *hname, hk_arg_t *args, gpointer ignore);
+static guint jingle_connect_hh(const gchar *hname, hk_arg_t *args,
+                               gpointer ignore);
+static guint jingle_disconn_hh(const gchar *hname, hk_arg_t *args,
+                               gpointer ignore);
 static void  jingle_init(void);
 static void  jingle_uninit(void);
 static void lm_insert_jinglecontent(gpointer data, gpointer userdata);
@@ -104,7 +106,8 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
     return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
 
   if (g_strcmp0(lm_message_node_get_attribute(jnode, "xmlns"), NS_JINGLE)) {
-    scr_log_print(LPRINT_DEBUG, "jingle: Received a jingle IQ with an invalid namespace");
+    scr_log_print(LPRINT_DEBUG,
+                  "jingle: Received a jingle IQ with an invalid namespace");
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
 
@@ -226,13 +229,15 @@ static void jingle_register_lm_handlers(void)
   }
 }
 
-static guint jingle_connect_hh(const gchar *hname, hk_arg_t *args, gpointer ignore)
+static guint jingle_connect_hh(const gchar *hname, hk_arg_t *args,
+                               gpointer ignore)
 {
   jingle_register_lm_handlers();
   return HOOK_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
 }
 
-static guint jingle_disconn_hh(const gchar *hname, hk_arg_t *args, gpointer ignore)
+static guint jingle_disconn_hh(const gchar *hname, hk_arg_t *args,
+                               gpointer ignore)
 {
   jingle_unregister_lm_handlers();
   return HOOK_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
@@ -296,7 +301,8 @@ static void lm_insert_jinglecontent(gpointer data, gpointer userdata)
 {
   JingleContent* content = (JingleContent*) data;
   LmMessageNode* dad = (LmMessageNode*) userdata;
-  LmMessageNode* node = (LmMessageNode*) lm_message_node_add_child(dad, "content", NULL);
+  LmMessageNode* node = (LmMessageNode*) lm_message_node_add_child(dad,
+                                                               "content", NULL);
   
   if (content->creator == JINGLE_CREATOR_INITIATOR)
     lm_message_node_set_attribute(node, "creator", "initiator");
@@ -317,7 +323,8 @@ static void lm_insert_jinglecontent(gpointer data, gpointer userdata)
     lm_message_node_set_attribute(node, "senders", "responder");
 }
 
-gboolean evscallback_jingle(guint evcontext, const gchar *arg, gpointer userdata)
+gboolean evscallback_jingle(guint evcontext, const gchar *arg,
+                            gpointer userdata)
 {
   JingleNode *jn = userdata;
 
@@ -330,12 +337,14 @@ gboolean evscallback_jingle(guint evcontext, const gchar *arg, gpointer userdata
   */
 
   if (evcontext == EVS_CONTEXT_TIMEOUT) {
-    scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s timed out, cancelled.", jn->initiator);
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s timed out, cancelled.",
+                 jn->initiator);
     jingle_free_jinglenode(jn);
     return FALSE;
   }
   if (evcontext = EVS_CONTEXT_CANCEL) {
-    scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s cancelled.", jn->initiator);
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s cancelled.",
+                 jn->initiator);
     jingle_free_jinglenode(jn);
     return FALSE;
   }
@@ -347,7 +356,7 @@ gboolean evscallback_jingle(guint evcontext, const gchar *arg, gpointer userdata
   if (evcontext == EVS_CONTEXT_ACCEPT) {
     jingle_send_session_accept(jn);
   } else {
-    // TODO: detroy the JingleNode and send a session-reject
+    jingle_send_session_terminate(jn, "decline");
     jingle_free_jinglenode(jn);
   }
 
