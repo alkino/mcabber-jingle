@@ -106,14 +106,10 @@ void handle_content_add(LmMessage *m, JingleNode *jn)
   jingle_ack_iq(m);
 
   accept.action = JINGLE_CONTENT_ACCEPT;
-  accept.initiator = jn->initiator;
-  accept.responder = jn->responder;
   accept.sid = jn->sid;
   accept.content = NULL;
   
   reject.action = JINGLE_CONTENT_REJECT;
-  reject.initiator = jn->initiator;
-  reject.responder = jn->responder;
   reject.sid = jn->sid;
   reject.content = NULL;
   
@@ -299,9 +295,9 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
   jingle_ack_iq(m);
 
   accept.action = JINGLE_SESSION_ACCEPT;
-  accept.initiator = jn->initiator;
-  accept.creator = jn->creator;
-  accept.responder = jn->responder;
+  accept.responder = g_strdup_printf("%s/%s",
+                                     lm_connection_get_jid(lconnection),
+                                     settings_opt_get("resource"));
   accept.sid = jn->sid;
   accept.content = NULL;
   
@@ -341,7 +337,8 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
       lm_message_unref(r);
     }
   }
-
+  
+  // TODO: try transport
 }
 
 void handle_session_terminate(LmMessage *m, JingleNode *jn)
