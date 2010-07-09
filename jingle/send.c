@@ -26,6 +26,7 @@
 #include <mcabber/xmpp_defines.h>
 
 #include <jingle/jingle.h>
+#include <jingle/sessions.h>
 #include <jingle/send.h>
 
 
@@ -52,3 +53,59 @@ void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
   }
 }
 
+void jingle_send_session_accept(JingleNode *jn)
+{
+  JingleNode accept = {0};
+  JingleSession* sess;
+  JingleContent *cn;
+  GSList *child = NULL;
+  JingleAppFuncs *appfuncs;
+  JingleTransportFuncs *transfuncs;
+  gconstpointer description, transport;
+  const gchar *xmlns;
+  GError *err = NULL;
+
+  accept.action = JINGLE_SESSION_ACCEPT;
+  accept.responder = g_strdup_printf("%s/%s",
+                                     lm_connection_get_jid(lconnection),
+                                     settings_opt_get("resource"));
+  accept.sid = jn->sid;
+  accept.content = NULL;
+
+  sess = session_new(jn);
+
+  for (child = jn->content; child; child = child->next) {
+    cn = (JingleContent *)(child->data);
+
+    xmlns = lm_message_node_get_attribute(cn->description, "xmlns");
+    appfuncs = jingle_get_appfuncs(xmlns);
+    if (appfuncs == NULL) continue;
+
+    xmlns = lm_message_node_get_attribute(cn->transport, "xmlns");
+    transfuncs = jingle_get_transportfuncs(xmlns);
+    if (appfuncs == NULL) continue; // negociate another transport ?
+
+    description = appfuncs->check(cn, &err);
+    if (description == NULL || err != NULL) continue;
+    transport = transfuncs->check(cn, &err);
+    if (transport == NULL || err != NULL) continue;
+
+    session_add_content(sess, cn, ACTIVE);
+    accept.content = g_slist_append(accept.content, cn);
+  }
+
+  if(g_slist_length(sess->content) == 0) {
+    jingle_send_session_terminate(jn, "unsupported-applications");
+    session_delete(sess);
+    return;
+  }
+
+  if (g_slist_length(accept.content) <= 0) return;
+
+  accept.message = lm_message_from_jinglenode(&accept, lm_message_get_from(jn->message));
+  if (accept.message) {
+    lm_connection_send_with_reply(lconnection, accept.message,
+                                  NULL, &err);
+    lm_message_unref(accept.message);
+  }
+}
