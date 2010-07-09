@@ -23,6 +23,8 @@
 
 #include <mcabber/logprint.h>
 #include <mcabber/xmpp_helper.h>
+#include <mcabber/events.h>
+#include <mcabber/hbuf.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
@@ -241,9 +243,10 @@ void handle_content_remove(LmMessage *m, JingleNode *jn)
 void handle_session_initiate(LmMessage *m, JingleNode *jn)
 {
   GError *err = NULL;
-  GSList *child = NULL;
   gboolean valid_disposition = FALSE;
   JingleContent *cn;
+  GString *sbuf;
+  GSList *child = NULL;
   LmMessage *r;
   
   if (!check_contents(jn, &err)) {
@@ -281,7 +284,24 @@ void handle_session_initiate(LmMessage *m, JingleNode *jn)
 
   jingle_ack_iq(m);
 
-  // TODO: generate an event and wait for the user's choice
+  // Wait that user accept the jingle
+  sbuf = g_string_new("");
+  g_string_printf(sbuf, "Received an invitation for a jingle session from <%s>", lm_message_get_from(m));
+
+  scr_WriteIncomingMessage(jidtodisp(lm_message_get_from(m)), sbuf->str, 0, HBB_PREFIX_INFO, 0);
+  scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf->str);
+
+  {
+    const char *id;
+    char *desc = g_strdup_printf("<%s> invites you to do a jingle session", lm_message_get_from(m));
+
+    id = evs_new(desc, NULL, 0, evscallback_jingle, jn, (GDestroyNotify)NULL);
+    g_free(desc);
+    if (id)
+      g_string_printf(sbuf, "Please use /event %s accept|reject", id);
+    else
+      g_string_printf(sbuf, "Unable to create a new event!");
+  }
 }
 
 void handle_session_terminate(LmMessage *m, JingleNode *jn)

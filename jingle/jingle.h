@@ -115,5 +115,5 @@ void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
 void jingle_ack_iq(LmMessage *m);
 JingleAction jingle_action_from_str(const gchar* string);
 LmMessage *lm_message_from_jinglenode(const JingleNode *jn, const gchar *to);
-
+gboolean evscallback_jingle(guint evcontext, const gchar *arg, gpointer userdata);
 #endif

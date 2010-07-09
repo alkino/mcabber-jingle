@@ -30,6 +30,7 @@
 #include <mcabber/logprint.h>
 #include <mcabber/xmpp_helper.h>
 #include <mcabber/xmpp_defines.h> 
+#include <mcabber/events.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
@@ -314,4 +315,41 @@ static void lm_insert_jinglecontent(gpointer data, gpointer userdata)
     lm_message_node_set_attribute(node, "senders", "initiator");
   else if (content->senders == JINGLE_SENDERS_RESPONDER)
     lm_message_node_set_attribute(node, "senders", "responder");
+}
+
+gboolean evscallback_jingle(guint evcontext, const gchar *arg, gpointer userdata)
+{
+  JingleNode *jn = userdata;
+
+  // Demande à mcKael l'utilité de ce truc
+  /*
+  if (G_UNLIKELY(!jn)) {
+    scr_LogPrint(LPRINT_LOGNORM, "Error in evs callback.");
+    return FALSE;
+  }
+  */
+
+  if (evcontext == EVS_CONTEXT_TIMEOUT) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s timed out, cancelled.", jn->initiator);
+    jingle_free_jinglenode(jn);
+    return FALSE;
+  }
+  if (evcontext = EVS_CONTEXT_CANCEL) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s cancelled.", jn->initiator);
+    jingle_free_jinglenode(jn);
+    return FALSE;
+  }
+  if (!(evcontext == EVS_CONTEXT_ACCEPT || evcontext == EVS_CONTEXT_REJECT)) {
+    jingle_free_jinglenode(jn);
+    return FALSE;
+  }
+  
+  if (evcontext == EVS_CONTEXT_ACCEPT) {
+    jingle_send_session_accept(jn);
+  } else {
+    // TODO: detroy the JingleNode and send a session-reject
+    jingle_free_jinglenode(jn);
+  }
+
+  return FALSE;
 }
