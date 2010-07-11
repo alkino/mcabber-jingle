@@ -35,6 +35,8 @@
 #include <jingle/action-handlers.h>
 #include <jingle/general-handlers.h>
 
+extern LmMessageHandler* jingle_ack_iq_handler;
+
 void handle_content_accept(JingleNode *jn)
 {
   GError *err = NULL;
@@ -86,8 +88,8 @@ void handle_content_add(JingleNode *jn)
   JingleNode accept, reject;
   JingleContent tmp_cn;
   LmMessage *r;
-  
-  
+  ack_iq *elem;
+
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
@@ -145,7 +147,12 @@ void handle_content_add(JingleNode *jn)
   if (g_slist_length(accept.content) != 0) {
     r = lm_message_from_jinglenode(&accept, lm_message_get_from(jn->message));
     if (r) {
-      lm_connection_send_with_reply(lconnection, r,NULL, NULL);
+      elem->id = g_strdup(lm_message_get_id(r));
+      elem->callback = NULL;
+      elem->udata = NULL;
+      add_ack_wait(elem);
+      // TODO: errors
+      lm_connection_send_with_reply(lconnection, r, jingle_ack_iq_handler, &err);
       lm_message_unref(r);
     }
   }
@@ -153,7 +160,12 @@ void handle_content_add(JingleNode *jn)
   if (g_slist_length(reject.content) != 0) {
     r = lm_message_from_jinglenode(&reject, lm_message_get_from(jn->message));
     if (r) {
-      lm_connection_send(lconnection, r, NULL);
+      elem->id = g_strdup(lm_message_get_id(r));
+      elem->callback = NULL;
+      elem->udata = NULL;
+      add_ack_wait(elem);
+      // TODO: errors
+      lm_connection_send_with_reply(lconnection, r, jingle_ack_iq_handler, &err);
       lm_message_unref(r);
     }
   }

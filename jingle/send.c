@@ -28,6 +28,7 @@
 #include <jingle/jingle.h>
 #include <jingle/sessions.h>
 #include <jingle/send.h>
+#include <jingle/general-handlers.h>
 
 extern LmMessageHandler* jingle_ack_iq_handler;
 
@@ -36,6 +37,7 @@ void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
   LmMessage *r;
   LmMessageNode *err;
   JingleNode *reply = g_new0(JingleNode, 1);
+  ack_iq *elem;
 
   reply->action = JINGLE_SESSION_TERMINATE;
   reply->sid = jn->sid;
@@ -49,7 +51,12 @@ void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
   }
 
   if (r) {
-    lm_connection_send(lconnection, r, NULL);
+    elem->id = g_strdup(lm_message_get_id(r));
+    elem->callback = NULL;
+    elem->udata = NULL;
+    add_ack_wait(elem);
+
+    lm_connection_send_with_reply(lconnection, r, jingle_ack_iq_handler, NULL);
     lm_message_unref(r);
   }
 }
@@ -65,7 +72,8 @@ void jingle_send_session_accept(JingleNode *jn)
   gconstpointer description, transport;
   const gchar *xmlns;
   GError *err = NULL;
-
+  ack_iq *elem;
+ 
   accept.action = JINGLE_SESSION_ACCEPT;
   accept.responder = g_strdup_printf("%s/%s",
                                      lm_connection_get_jid(lconnection),
@@ -84,7 +92,7 @@ void jingle_send_session_accept(JingleNode *jn)
 
     xmlns = lm_message_node_get_attribute(cn->transport, "xmlns");
     transfuncs = jingle_get_transportfuncs(xmlns);
-    if (appfuncs == NULL) continue; // negociate another transport ?
+    if (appfuncs == NULL) continue;
 
     description = appfuncs->check(cn, &err);
     if (description == NULL || err != NULL) continue;
@@ -105,6 +113,10 @@ void jingle_send_session_accept(JingleNode *jn)
 
   accept.message = lm_message_from_jinglenode(&accept, lm_message_get_from(jn->message));
   if (accept.message) {
+	 elem->id = g_strdup(lm_message_get_id(accept.message));
+    elem->callback = NULL;
+    elem->udata = NULL;
+    add_ack_wait(elem);
     lm_connection_send_with_reply(lconnection, accept.message,
                                   jingle_ack_iq_handler, &err);
     lm_message_unref(accept.message);

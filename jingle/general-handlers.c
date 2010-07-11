@@ -27,6 +27,8 @@
 #include <jingle/jingle.h>
 #include <jingle/general-handlers.h>
 
+GSList *ack_wait = NULL;
+
 extern LmMessageHandler* jingle_ack_iq_handler;
 gboolean evscallback_jingle(guint evcontext, const gchar *arg,
                             gpointer userdata)
@@ -72,7 +74,6 @@ LmHandlerResult jingle_handle_ack_iq (LmMessageHandler *handler,
                                       LmConnection *connection, 
                                       LmMessage *message, gpointer user_data)
 {
-  static GSList *ack_wait;
   GSList *child;
   LmMessageNode *node = lm_message_get_node(message);
   const gchar *id = lm_message_node_get_attribute(node, "id");
@@ -80,10 +81,17 @@ LmHandlerResult jingle_handle_ack_iq (LmMessageHandler *handler,
   for (child = ack_wait; child; child = child->next) {
     ai = (ack_iq*)child->data;
     if(!g_strcmp0(ai->id, id)) {
-      ai->callback(ai->udata);
+      g_free(ai->id);
+      if(ai->callback != NULL)
+        ai->callback(message, ai->udata);
       ack_wait = g_slist_remove(ack_wait, child);
       return LM_HANDLER_RESULT_REMOVE_MESSAGE;
     }
   }
   return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
+}
+
+void add_ack_wait(ack_iq *elem)
+{
+  ack_wait = g_slist_append(ack_wait, elem);
 }

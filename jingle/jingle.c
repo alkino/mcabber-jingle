@@ -183,9 +183,14 @@ LmMessage *jingle_new_iq_error(LmMessage *m, const gchar *errtype,
 void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
                           const gchar *cond, const gchar *jinglecond)
 {
+  ack_iq *elem;
   LmMessage *r = jingle_new_iq_error(m, errtype, cond, jinglecond);
   if (r) {
-	  lm_connection_send(lconnection, r, NULL);
+	  elem->id = g_strdup(lm_message_get_id(r));
+     elem->callback = NULL;
+     elem->udata = NULL;
+     add_ack_wait(elem);
+     lm_connection_send_with_reply(lconnection, r, jingle_ack_iq_handler, NULL);
 	  lm_message_unref(r);
   }
 }
