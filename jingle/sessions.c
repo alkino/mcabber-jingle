@@ -109,7 +109,7 @@ void session_remove_sessioncontent(JingleSession *sess, const gchar *name)
   sc = session_find_sessioncontent(sess, name);
   if(sc == NULL) return;
 
-  if (sc->state == ACTIVE); // We should stop the transfert
+  if (sc->state == JINGLE_SESSION_STATE_ACTIVE); // We should stop the transfert
 
   sess->content = g_slist_remove(sess->content, sc);
 }

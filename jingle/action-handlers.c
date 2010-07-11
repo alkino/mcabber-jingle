@@ -33,6 +33,7 @@
 #include <jingle/register.h>
 #include <jingle/send.h>
 #include <jingle/action-handlers.h>
+#include <jingle/general-handlers.h>
 
 void handle_content_accept(JingleNode *jn)
 {
@@ -68,7 +69,7 @@ void handle_content_accept(JingleNode *jn)
 
   for (child = jn->content; child; child = child->next) {
     cn = (JingleContent *)(child->data);
-    session_changestate_sessioncontent(sess, cn->name, ACTIVE);
+    session_changestate_sessioncontent(sess, cn->name, JINGLE_SESSION_STATE_ACTIVE);
   }
 }
 
@@ -137,14 +138,14 @@ void handle_content_add(JingleNode *jn)
       reject.content = g_slist_append(reject.content, cn);
       continue;
     }
-    session_add_content(sess, cn, ACTIVE);
+    session_add_content(sess, cn, JINGLE_SESSION_STATE_ACTIVE);
     accept.content = g_slist_append(accept.content, cn);
   }
   
   if (g_slist_length(accept.content) != 0) {
     r = lm_message_from_jinglenode(&accept, lm_message_get_from(jn->message));
     if (r) {
-      lm_connection_send(lconnection, r, NULL);
+      lm_connection_send_with_reply(lconnection, r,NULL, NULL);
       lm_message_unref(r);
     }
   }

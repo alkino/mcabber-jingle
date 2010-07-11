@@ -29,6 +29,7 @@
 #include <jingle/sessions.h>
 #include <jingle/send.h>
 
+extern LmMessageHandler* jingle_ack_iq_handler;
 
 void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
 {
@@ -90,7 +91,7 @@ void jingle_send_session_accept(JingleNode *jn)
     transport = transfuncs->check(cn, &err);
     if (transport == NULL || err != NULL) continue;
 
-    session_add_content(sess, cn, ACTIVE);
+    session_add_content(sess, cn, JINGLE_SESSION_STATE_ACTIVE);
     accept.content = g_slist_append(accept.content, cn);
   }
 
@@ -105,7 +106,7 @@ void jingle_send_session_accept(JingleNode *jn)
   accept.message = lm_message_from_jinglenode(&accept, lm_message_get_from(jn->message));
   if (accept.message) {
     lm_connection_send_with_reply(lconnection, accept.message,
-                                  NULL, &err);
+                                  jingle_ack_iq_handler, &err);
     lm_message_unref(accept.message);
   }
 }

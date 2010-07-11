@@ -11,9 +11,9 @@ typedef enum {
 } JingleStatus;
 
 typedef enum {
-  ACTIVE,
-  PENDING,
-  ENDED,
+  JINGLE_SESSION_STATE_ACTIVE,
+  JINGLE_SESSION_STATE_PENDING,
+  JINGLE_SESSION_STATE_ENDED,
 } SessionState;
 
 typedef struct {
