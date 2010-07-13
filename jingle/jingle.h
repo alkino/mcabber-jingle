@@ -107,12 +107,32 @@ struct JingleActionList {
   void (*handler)(JingleNode *);
 };
 
+typedef void (*JingleAckCallback) (LmMessage *, gpointer *);
+
+typedef struct {
+  JingleAckCallback callback;
+  gpointer *user_data;
+} JingleAckHandle;
+
+
+LmHandlerResult jingle_handle_ack_iq(LmMessageHandler *handler,
+                                     LmConnection *connection, 
+                                     LmMessage *message, gpointer user_data);
+LmMessageHandler *jingle_new_ack_handler(JingleAckHandle *ri);
 
 LmMessage *jingle_new_iq_error(LmMessage *m, const gchar *errtype,
                                const gchar *cond, const gchar *jinglecond);
 void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
                           const gchar *cond, const gchar *jinglecond);
+
 void jingle_ack_iq(LmMessage *m);
-JingleAction jingle_action_from_str(const gchar* string);
+
 LmMessage *lm_message_from_jinglenode(const JingleNode *jn, const gchar *to);
+void jingle_free_jinglenode(JingleNode *jn);
+
+JingleAction jingle_action_from_str(const gchar* string);
+
+gboolean evscallback_jingle(guint evcontext, const gchar *arg,
+                            gpointer userdata);
+
 #endif

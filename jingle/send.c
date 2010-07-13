@@ -28,21 +28,20 @@
 #include <jingle/jingle.h>
 #include <jingle/sessions.h>
 #include <jingle/send.h>
-#include <jingle/general-handlers.h>
 
-extern LmMessageHandler* jingle_ack_iq_handler;
 
 void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
 {
   LmMessage *r;
   LmMessageNode *err;
   JingleNode *reply = g_new0(JingleNode, 1);
-  ack_iq *elem;
+  JingleAckHandle *ackhandle;
 
   reply->action = JINGLE_SESSION_TERMINATE;
   reply->sid = jn->sid;
 
   r = lm_message_from_jinglenode(reply, lm_message_get_from(jn->message));
+  if (r == NULL) return;
 
   if (reason != NULL) { 
     // TODO check reason 
@@ -50,15 +49,13 @@ void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
     lm_message_node_add_child(err, reason, NULL);
   }
 
-  if (r) {
-    elem->id = g_strdup(lm_message_get_id(r));
-    elem->callback = NULL;
-    elem->udata = NULL;
-    add_ack_wait(elem);
+  ackhandle = g_new0(JingleAckHandle, 1);
+  ackhandle->callback = NULL;
+  ackhandle->user_data = NULL;
 
-    lm_connection_send_with_reply(lconnection, r, jingle_ack_iq_handler, NULL);
-    lm_message_unref(r);
-  }
+  lm_connection_send_with_reply(lconnection, r,
+                                jingle_new_ack_handler(ackhandle), NULL);
+  lm_message_unref(r);
 }
 
 void jingle_send_session_accept(JingleNode *jn)
@@ -72,7 +69,7 @@ void jingle_send_session_accept(JingleNode *jn)
   gconstpointer description, transport;
   const gchar *xmlns;
   GError *err = NULL;
-  ack_iq *elem;
+  JingleAckHandle *ackhandle;
  
   accept.action = JINGLE_SESSION_ACCEPT;
   accept.responder = g_strdup_printf("%s/%s",
@@ -114,12 +111,11 @@ void jingle_send_session_accept(JingleNode *jn)
   accept.message = lm_message_from_jinglenode(&accept,
                                               lm_message_get_from(jn->message));
   if (accept.message) {
-	 elem->id = g_strdup(lm_message_get_id(accept.message));
-    elem->callback = NULL;
-    elem->udata = NULL;
-    add_ack_wait(elem);
+    ackhandle = g_new0(JingleAckHandle, 1);
+    ackhandle->callback = NULL;
+    ackhandle->user_data = NULL;
     lm_connection_send_with_reply(lconnection, accept.message,
-                                  jingle_ack_iq_handler, &err);
+                                  jingle_new_ack_handler(ackhandle), NULL);
     lm_message_unref(accept.message);
   }
 }

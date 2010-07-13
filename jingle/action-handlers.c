@@ -33,9 +33,10 @@
 #include <jingle/register.h>
 #include <jingle/send.h>
 #include <jingle/action-handlers.h>
-#include <jingle/general-handlers.h>
+
 
 extern LmMessageHandler* jingle_ack_iq_handler;
+
 
 void handle_content_accept(JingleNode *jn)
 {
@@ -55,7 +56,7 @@ void handle_content_accept(JingleNode *jn)
     return;
   }
 
-  /* it's better if there is at least one content elem */
+  // it's better if there is at least one content elem
   if (g_slist_length(jn->content) < 1) {
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
@@ -88,7 +89,6 @@ void handle_content_add(JingleNode *jn)
   JingleNode accept, reject;
   JingleContent tmp_cn;
   LmMessage *r;
-  ack_iq *elem;
 
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
@@ -97,13 +97,11 @@ void handle_content_add(JingleNode *jn)
     return;
   }
 
-  /* it's better if there is at least one content elem */
   if (g_slist_length(jn->content) < 1) {
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
   }
-  
-  // if a session with the same sid doesn't already exists
+
   if ((sess = session_find(jn)) == NULL) {
     jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
     return;
@@ -145,28 +143,32 @@ void handle_content_add(JingleNode *jn)
   }
   
   if (g_slist_length(accept.content) != 0) {
+    JingleAckHandle *ackhandle = g_new0(JingleAckHandle, 1);
     r = lm_message_from_jinglenode(&accept, lm_message_get_from(jn->message));
     if (r) {
-      elem->id = g_strdup(lm_message_get_id(r));
-      elem->callback = NULL;
-      elem->udata = NULL;
-      add_ack_wait(elem);
-      // TODO: errors
-      lm_connection_send_with_reply(lconnection, r, jingle_ack_iq_handler, &err);
+      ackhandle->callback = NULL;
+      ackhandle->user_data = NULL;
+      lm_connection_send_with_reply(lconnection, r,
+                                    jingle_new_ack_handler(ackhandle), &err);
       lm_message_unref(r);
+      if (err != NULL) {
+        // TODO
+      }
     }
   }
   
   if (g_slist_length(reject.content) != 0) {
+    JingleAckHandle *ackhandle = g_new0(JingleAckHandle, 1);
     r = lm_message_from_jinglenode(&reject, lm_message_get_from(jn->message));
     if (r) {
-      elem->id = g_strdup(lm_message_get_id(r));
-      elem->callback = NULL;
-      elem->udata = NULL;
-      add_ack_wait(elem);
-      // TODO: errors
-      lm_connection_send_with_reply(lconnection, r, jingle_ack_iq_handler, &err);
+      ackhandle->callback = NULL;
+      ackhandle->user_data = NULL;
+      lm_connection_send_with_reply(lconnection, r,
+                                    jingle_new_ack_handler(ackhandle), &err);
       lm_message_unref(r);
+      if (err != NULL) {
+        // TODO
+      }
     }
   }
 }
@@ -189,13 +191,11 @@ void handle_content_reject(JingleNode *jn)
     return;
   }
 
-  /* it's better if there is at least one content elem */
   if (g_slist_length(jn->content) < 1) {
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
   }
-  
-  // if a session with the same sid doesn't already exists
+
   if ((sess = session_find(jn)) == NULL) {
     jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
     return;
@@ -263,7 +263,7 @@ void handle_session_initiate(JingleNode *jn)
   GSList *child = NULL;
   LmMessage *r;
   
-  // Make sure the from are an user in our roster
+  // Make sure the request come from an user in our roster
   if (!roster_find(jidtodisp(lm_message_get_from(jn->message)), jidsearch, 0)) {
     jingle_send_session_terminate(jn, "decline");
     jingle_free_jinglenode(jn);

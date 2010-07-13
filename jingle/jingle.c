@@ -29,13 +29,14 @@
 #include <mcabber/modules.h>
 #include <mcabber/logprint.h>
 #include <mcabber/xmpp_helper.h>
+#include <mcabber/events.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
 #include <jingle/action-handlers.h>
 #include <jingle/register.h>
 #include <jingle/send.h>
-#include <jingle/general-handlers.h>
+
 
 static void  jingle_register_lm_handlers(void);
 static void  jingle_unregister_lm_handlers(void);
@@ -49,7 +50,7 @@ static void lm_insert_jinglecontent(gpointer data, gpointer userdata);
 
 
 static LmMessageHandler* jingle_iq_handler = NULL;
-LmMessageHandler* jingle_ack_iq_handler = NULL;
+static GSList *ack_handlers = NULL;
 static guint connect_hid = 0;
 static guint disconn_hid = 0;
 
@@ -134,6 +135,78 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
 }
 
 /**
+ * Handle incoming ack iq (type result or error).
+ */
+LmHandlerResult jingle_handle_ack_iq(LmMessageHandler *handler,
+                                     LmConnection *connection, 
+                                     LmMessage *message, gpointer user_data)
+{
+  ack_handlers = g_slist_remove(ack_handlers, handler);
+  lm_message_handler_unref(handler);
+
+  // TODO: check subtype
+  if (user_data != NULL) {
+    JingleAckHandle *ah = user_data;
+    if(ah->callback != NULL)
+      ah->callback(message, ah->user_data);
+
+    g_free(ah);
+  }
+
+  return LM_HANDLER_RESULT_REMOVE_MESSAGE;
+}
+
+LmMessageHandler *jingle_new_ack_handler(JingleAckHandle *ah)
+{
+  LmMessageHandler *h = lm_message_handler_new(jingle_handle_ack_iq,
+                                               (gpointer) ah, NULL);
+  ack_handlers = g_slist_append(ack_handlers, h);
+  return h;
+}
+
+/**
+ * mcabber /event callback.
+ */
+gboolean evscallback_jingle(guint evcontext, const gchar *arg,
+                            gpointer userdata)
+{
+  JingleNode *jn = userdata;
+
+  /*
+  if (G_UNLIKELY(!jn)) {
+    scr_LogPrint(LPRINT_LOGNORM, "Error in evs callback.");
+    return FALSE;
+  }
+  */
+
+  if (evcontext == EVS_CONTEXT_TIMEOUT) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s timed out, cancelled.",
+                 jn->initiator);
+    jingle_free_jinglenode(jn);
+    return FALSE;
+  }
+  if (evcontext = EVS_CONTEXT_CANCEL) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s cancelled.",
+                 jn->initiator);
+    jingle_free_jinglenode(jn);
+    return FALSE;
+  }
+  if (!(evcontext == EVS_CONTEXT_ACCEPT || evcontext == EVS_CONTEXT_REJECT)) {
+    jingle_free_jinglenode(jn);
+    return FALSE;
+  }
+  
+  if (evcontext == EVS_CONTEXT_ACCEPT) {
+    jingle_send_session_accept(jn);
+  } else {
+    jingle_send_session_terminate(jn, "decline");
+    jingle_free_jinglenode(jn);
+  }
+
+  return FALSE;
+}
+
+/**
  * According to the specifications:
  * "An entity that receives an IQ request of type "get" or "set" MUST
  * reply with an IQ response of type "result" or "error"."
@@ -183,15 +256,9 @@ LmMessage *jingle_new_iq_error(LmMessage *m, const gchar *errtype,
 void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
                           const gchar *cond, const gchar *jinglecond)
 {
-  ack_iq *elem;
   LmMessage *r = jingle_new_iq_error(m, errtype, cond, jinglecond);
   if (r) {
-	  elem->id = g_strdup(lm_message_get_id(r));
-     elem->callback = NULL;
-     elem->udata = NULL;
-     add_ack_wait(elem);
-     lm_connection_send_with_reply(lconnection, r, jingle_ack_iq_handler, NULL);
-	  lm_message_unref(r);
+    lm_connection_send(lconnection, r, NULL);
   }
 }
 
@@ -251,8 +318,6 @@ static guint jingle_disconn_hh(const gchar *hname, hk_arg_t *args,
 static void jingle_init(void)
 {
   jingle_iq_handler = lm_message_handler_new(jingle_handle_iq, NULL, NULL);
-  jingle_ack_iq_handler = lm_message_handler_new(jingle_handle_ack_iq, NULL,
-                                                 NULL);
   xmpp_add_feature(NS_JINGLE);
 
   connect_hid = hk_add_handler(jingle_connect_hh, HOOK_POST_CONNECT,
@@ -272,8 +337,6 @@ static void jingle_uninit(void)
 
   lm_message_handler_invalidate(jingle_iq_handler);
   lm_message_handler_unref(jingle_iq_handler);
-  lm_message_handler_invalidate(jingle_ack_iq_handler);
-  lm_message_handler_unref(jingle_ack_iq_handler);
 }
 
 LmMessage *lm_message_from_jinglenode(const JingleNode *jn, const gchar *to)
