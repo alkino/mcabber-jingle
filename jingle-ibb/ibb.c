@@ -33,6 +33,7 @@
 
 #include "ibb.h"
 
+static LmMessageHandler* jingle_ibb_handler = NULL;
 
 gconstpointer jingle_ibb_check(JingleContent *cn, GError **err);
 static void jingle_ibb_init(void);
@@ -84,14 +85,40 @@ gconstpointer jingle_ibb_check(JingleContent *cn, GError **err)
   return (gconstpointer) ibb;
 }
 
+LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
+                                 LmConnection *connection, LmMessage *message,
+                                 gpointer user_data)
+{
+  LmMessageSubType iqtype = lm_message_get_sub_type(message);
+  if (iqtype != LM_MESSAGE_SUB_TYPE_SET)
+    return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
+
+  LmMessageNode *root = lm_message_get_node(message);
+  LmMessageNode *dnode = lm_message_node_get_child(root, "data");
+
+  if (!dnode) // no <data> element found
+    return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
+
+  if (g_strcmp0(lm_message_node_get_attribute(dnode, "xmlns"),
+                NS_TRANSPORT_IBB))
+    return LM_HANDLER_RESULT_REMOVE_MESSAGE;
+
+  jingle_ack_iq(message);
+  
+  return LM_HANDLER_RESULT_REMOVE_MESSAGE;
+}
+
 static void jingle_ibb_init(void)
 {
+  jingle_ibb_handler = lm_message_handler_new(jingle_ibb_handle_iq, NULL, NULL);
   jingle_register_transport(NS_JINGLE_TRANSPORT_IBB, &funcs, JINGLE_TRANS_IN_BAND, JINGLE_TRANS_TCP);
   xmpp_add_feature(NS_JINGLE_TRANSPORT_IBB);
 }
 
 static void jingle_ibb_uninit(void)
 {
+  lm_message_handler_invalidate(jingle_ibb_handler);
+  lm_message_handler_unref(jingle_ibb_handler);
   xmpp_del_feature(NS_JINGLE_TRANSPORT_IBB);
   jingle_unregister_transport(NS_JINGLE_TRANSPORT_IBB);
 }
