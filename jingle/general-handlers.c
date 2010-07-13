@@ -23,6 +23,7 @@
 
 #include <mcabber/events.h>
 #include <mcabber/logprint.h>
+#include <mcabber/xmpp_helper.h>
 
 #include <jingle/jingle.h>
 #include <jingle/general-handlers.h>
@@ -75,8 +76,7 @@ LmHandlerResult jingle_handle_ack_iq (LmMessageHandler *handler,
                                       LmMessage *message, gpointer user_data)
 {
   GSList *child;
-  LmMessageNode *node = lm_message_get_node(message);
-  const gchar *id = lm_message_node_get_attribute(node, "id");
+  const gchar *id = lm_message_get_id(message);
   ack_iq *ai;
   for (child = ack_wait; child; child = child->next) {
     ai = (ack_iq*)child->data;

@@ -30,11 +30,14 @@
 typedef struct {
   gchar *xmlns;
   JingleAppFuncs *funcs;
+  JingleTransMethod method;
 } AppHandlerEntry;
 
 typedef struct {
   gchar *xmlns;
   JingleTransportFuncs *funcs;
+  JingleTransType type;
+  JingleTransMethod method;
 } TransportHandlerEntry;
 
 
@@ -46,7 +49,8 @@ GSList *jingle_app_handlers = NULL;
 GSList *jingle_transport_handlers = NULL;
 
 
-void jingle_register_app(const gchar *xmlns, JingleAppFuncs *funcs)
+void jingle_register_app(const gchar *xmlns, JingleAppFuncs *funcs,
+                         JingleTransMethod method)
 {
   if (!g_str_has_prefix(xmlns, NS_JINGLE_APP_PREFIX)) return;
 
@@ -54,11 +58,13 @@ void jingle_register_app(const gchar *xmlns, JingleAppFuncs *funcs)
 
   h->xmlns  = g_strdup(xmlns);
   h->funcs  = funcs;
-
+  h->method = method;
+  
   jingle_app_handlers = g_slist_append(jingle_app_handlers, h);
 }
 
-void jingle_register_transport(const gchar *xmlns, JingleTransportFuncs *funcs)
+void jingle_register_transport(const gchar *xmlns, JingleTransportFuncs *funcs,
+                               JingleTransType type, JingleTransMethod method)
 {
   if (!g_str_has_prefix(xmlns, NS_JINGLE_TRANSPORT_PREFIX)) return;
 
@@ -66,7 +72,9 @@ void jingle_register_transport(const gchar *xmlns, JingleTransportFuncs *funcs)
 
   h->xmlns  = g_strdup(xmlns);
   h->funcs  = funcs;
-
+  h->method = method;
+  h->type = type;
+  
   jingle_transport_handlers = g_slist_append(jingle_transport_handlers, h);
 }
 

@@ -111,7 +111,8 @@ void jingle_send_session_accept(JingleNode *jn)
 
   if (g_slist_length(accept.content) <= 0) return;
 
-  accept.message = lm_message_from_jinglenode(&accept, lm_message_get_from(jn->message));
+  accept.message = lm_message_from_jinglenode(&accept,
+                                              lm_message_get_from(jn->message));
   if (accept.message) {
 	 elem->id = g_strdup(lm_message_get_id(accept.message));
     elem->callback = NULL;

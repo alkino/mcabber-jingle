@@ -110,7 +110,7 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
 
 static void jingle_ft_init(void)
 {
-  jingle_register_app(NS_JINGLE_APP_FT, &funcs);
+  jingle_register_app(NS_JINGLE_APP_FT, &funcs, JINGLE_TRANS_TCP);
   xmpp_add_feature(NS_JINGLE_APP_FT);
 }
 

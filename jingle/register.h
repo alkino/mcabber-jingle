@@ -7,6 +7,15 @@
 #define NS_JINGLE_APP_PREFIX       "urn:xmpp:jingle:app:"
 #define NS_JINGLE_TRANSPORT_PREFIX "urn:xmpp:jingle:transport:"
 
+typedef enum {
+  JINGLE_TRANS_IN_BAND,
+  JINGLE_TRANS_OUT_BAND,
+} JingleTransType;
+
+typedef enum {
+  JINGLE_TRANS_TCP,
+  JINGLE_TRANS_UDP,
+} JingleTransMethod;
 
 typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err);
 typedef void (*JingleAppHandle) (JingleNode *jn, JingleContent *cn);
@@ -40,8 +49,10 @@ typedef struct {
 } JingleTransportFuncs;
 
 
-void jingle_register_app(const gchar *xmlns, JingleAppFuncs *funcs);
-void jingle_register_transport(const gchar *xmlns, JingleTransportFuncs *funcs);
+void jingle_register_app(const gchar *xmlns, JingleAppFuncs *funcs,
+                         JingleTransMethod method);
+void jingle_register_transport(const gchar *xmlns, JingleTransportFuncs *funcs,
+                               JingleTransType type, JingleTransMethod method);
 JingleAppFuncs *jingle_get_appfuncs(const gchar *xmlns);
 JingleTransportFuncs *jingle_get_transportfuncs(const gchar *xmlns);
 void jingle_unregister_app(const gchar *xmlns);

@@ -17,7 +17,6 @@ typedef struct {
 
   /* the size, in bytes, of the data to be sent */
   gint64 size;
-
 } JingleFT;
 
 #endif
