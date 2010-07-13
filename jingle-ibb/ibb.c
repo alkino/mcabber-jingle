@@ -89,6 +89,9 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
                                  LmConnection *connection, LmMessage *message,
                                  gpointer user_data)
 {
+  const gchar *seq, *sid, *data64;
+  guchar *data;
+  
   LmMessageSubType iqtype = lm_message_get_sub_type(message);
   if (iqtype != LM_MESSAGE_SUB_TYPE_SET)
     return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
@@ -104,6 +107,15 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 
   jingle_ack_iq(message);
+  
+  sid = lm_message_node_get_attribute(dnode, "sid");
+  seq = lm_message_node_get_attribute(dnode, "seq");
+  
+  data64 = lm_message_node_get_value(dnode);
+  
+  data = g_base64_decode(data64, NULL);
+  
+  g_free(data);
   
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 }
