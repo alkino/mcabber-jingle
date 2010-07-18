@@ -36,7 +36,7 @@
 #include <jingle/action-handlers.h>
 #include <jingle/register.h>
 #include <jingle/send.h>
-
+#include <jingle/sessions.h>
 
 static void  jingle_register_lm_handlers(void);
 static void  jingle_unregister_lm_handlers(void);
@@ -395,3 +395,11 @@ static void lm_insert_jinglecontent(gpointer data, gpointer userdata)
     lm_message_node_set_attribute(node, "senders", "responder");
 }
 
+void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data2, guint len)
+{
+  SessionContent *sc = session_find_transport(xmlns, data);
+  if (sc == NULL) {
+    return;  
+  }
+  sc->appfuncs->handle_data(sc->description, data2, len);
+}

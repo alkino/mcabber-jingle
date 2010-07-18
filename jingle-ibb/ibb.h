@@ -10,7 +10,11 @@ typedef struct {
 
   /* The identifiant of the transfer */
   const gchar *sid;
+  
+  guchar *data;
 
+  const gchar *seq;
+  
 } JingleIBB;
 
 #endif

@@ -64,6 +64,7 @@ gconstpointer jingle_ibb_check(JingleContent *cn, GError **err)
 
   blocksize  = lm_message_node_get_attribute(node, "block-size");
   ibb->sid = lm_message_node_get_attribute(node, "sid");
+  ibb->data = NULL;
   
   if (!ibb->sid || !blocksize) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
@@ -89,8 +90,8 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
                                  LmConnection *connection, LmMessage *message,
                                  gpointer user_data)
 {
-  const gchar *seq, *sid, *data64;
-  guchar *data;
+  const gchar *data64;
+  JingleIBB *ibb = g_new0(JingleIBB, 1);
   
   LmMessageSubType iqtype = lm_message_get_sub_type(message);
   if (iqtype != LM_MESSAGE_SUB_TYPE_SET)
@@ -108,17 +109,38 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
 
   jingle_ack_iq(message);
   
-  sid = lm_message_node_get_attribute(dnode, "sid");
-  seq = lm_message_node_get_attribute(dnode, "seq");
+  ibb->sid = lm_message_node_get_attribute(dnode, "sid");
+  ibb->seq = lm_message_node_get_attribute(dnode, "seq");
   
   data64 = lm_message_node_get_value(dnode);
   
-  data = g_base64_decode(data64, NULL);
+  ibb->data = g_base64_decode(data64, NULL);
   
-  g_free(data);
+  
   
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 }
+
+
+gboolean jingle_ibb_cmp(gconstpointer data1, gconstpointer data2)
+{
+  const JingleIBB *ibb1 = data1, *ibb2 = data2;
+  if(g_strcmp0(ibb1->sid, ibb2->sid))
+    return FALSE;
+  return TRUE;
+}
+
+
+int jingle_ibb_check_session(gconstpointer data, gconstpointer session)
+{
+  const JingleIBB *ibb1 = data, *ibb2 = session;
+  if(!g_strcmp0(ibb1->sid, ibb2->sid) && ibb1->seq > ibb2->seq) {
+    // TODO: change the seq in the session
+    return 0;
+  }
+  return 1;
+}
+
 
 static void jingle_ibb_init(void)
 {

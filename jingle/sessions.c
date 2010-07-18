@@ -78,15 +78,13 @@ void session_add_content(JingleSession *sess, JingleContent *cn,
   sc->name = cn->name;
   sc->state = state;
   
-  const gchar *tmpchar = lm_message_node_get_attribute(cn->description,
-                                                       "xmlns");
-  sc->appfuncs = jingle_get_appfuncs(tmpchar);
-  tmpchar = lm_message_node_get_attribute(cn->transport, "xmlns");
-  sc->transfuncs = jingle_get_transportfuncs(tmpchar);
-  // TODO errors
+  sc->xmlns_desc = lm_message_node_get_attribute(cn->description, "xmlns");
+  sc->appfuncs = jingle_get_appfuncs(sc->xmlns_desc);
+  sc->xmlns_trans = lm_message_node_get_attribute(cn->transport, "xmlns");
+  sc->transfuncs = jingle_get_transportfuncs(sc->xmlns_trans);
   sc->description = sc->appfuncs->check(cn, NULL);
-  sc->transport = sc->appfuncs->check(cn, NULL);
-
+  sc->transport = sc->transfuncs->check(cn, NULL);
+  
   sess->content = g_slist_append(sess->content, sc);
 }
 
@@ -97,8 +95,24 @@ SessionContent *session_find_sessioncontent(JingleSession *sess,
   SessionContent *sc;
   for (el = sess->content; el; el = el->next) {
     sc = (SessionContent*) el->data;
-    if (g_strcmp0(sc->name, name))
+    if (!g_strcmp0(sc->name, name))
       return sc;
+  }
+  return NULL;
+}
+
+SessionContent *session_find_transport(const gchar *xmlns_trans, gconstpointer data)
+{
+  GSList *el, *el1;
+  JingleSession *sess;
+  SessionContent *sc;
+  for (el1 = sessions; el1; el1 = el1->next) {
+    sess = (JingleSession*) el1->data;
+    for (el = sess->content; el; el = el->next) {
+      sc = (SessionContent*) el->data;
+      if (!g_strcmp0(sc->xmlns_trans, xmlns_trans) && sc->transfuncs->cmp(sc->transport, data))
+        return sc;
+    }
   }
   return NULL;
 }
@@ -122,6 +136,7 @@ void session_changestate_sessioncontent(JingleSession *sess, const gchar *name,
   if(sc != NULL)
     sc->state = state;
 }
+
 
 /**
  * Remove a session from the linked list and free it.

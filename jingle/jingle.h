@@ -134,5 +134,7 @@ JingleAction jingle_action_from_str(const gchar* string);
 
 gboolean evscallback_jingle(guint evcontext, const gchar *arg,
                             gpointer userdata);
+                            
+void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data2, guint len);
 
 #endif

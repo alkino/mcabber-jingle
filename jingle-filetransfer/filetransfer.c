@@ -140,7 +140,7 @@ static gboolean is_md5_hash(const gchar *hash) {
     return FALSE;
 }
 
-gboolean handle_data(gconstpointer *jingleft, const gchar *data, guint len)
+gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len)
 {
   JingleFT *ft = (JingleFT *) jingleft;
   GError *err = NULL;
