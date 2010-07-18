@@ -64,8 +64,7 @@ gconstpointer jingle_ibb_check(JingleContent *cn, GError **err)
 
   blocksize  = lm_message_node_get_attribute(node, "block-size");
   ibb->sid = lm_message_node_get_attribute(node, "sid");
-  ibb->data = NULL;
-  
+   
   if (!ibb->sid || !blocksize) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
                 "an attribute of the transport element is missing");
@@ -92,6 +91,8 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
 {
   const gchar *data64;
   JingleIBB *ibb = g_new0(JingleIBB, 1);
+  gsize len;
+  guchar *data;
   
   LmMessageSubType iqtype = lm_message_get_sub_type(message);
   if (iqtype != LM_MESSAGE_SUB_TYPE_SET)
@@ -114,9 +115,9 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
   
   data64 = lm_message_node_get_value(dnode);
   
-  ibb->data = g_base64_decode(data64, NULL);
+  data = g_base64_decode(data64, &len);
   
-  
+  handle_trans_data(NS_JINGLE_TRANSPORT_IBB, ibb, (const gchar *)data, (guint)len);
   
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 }
