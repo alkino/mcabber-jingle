@@ -22,6 +22,7 @@
 #include "config.h"
 
 #include <glib.h>
+#include <string.h>
 
 #include <mcabber/modules.h>
 #include <mcabber/utils.h>
@@ -35,6 +36,7 @@
 
 
 gconstpointer jingle_ft_check(JingleContent *cn, GError **err);
+static gboolean is_md5_hash(const gchar *hash);
 static void jingle_ft_init(void);
 static void jingle_ft_uninit(void);
 
@@ -83,17 +85,17 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
 
   ft = g_new0(JingleFT, 1);
   datestr  = lm_message_node_get_attribute(node, "date");
-  ft->hash = lm_message_node_get_attribute(node, "hash");
-  ft->name = lm_message_node_get_attribute(node, "name");
+  ft->hash = (gchar *) lm_message_node_get_attribute(node, "hash");
+  ft->name = (gchar *) lm_message_node_get_attribute(node, "name");
   sizestr  = lm_message_node_get_attribute(node, "size");
-  
+
   if (!ft->name || !sizestr) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
                 "an attribute of the file element is missing");
     g_free(ft);
     return NULL;
   }
-  
+
   ft->date = from_iso8601(datestr, 1);
   ft->size = g_ascii_strtoll(sizestr, NULL, 10);
 
@@ -105,7 +107,66 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
     return NULL;
   }
 
+  ft->name = g_path_get_basename(ft->name);
+  if (!g_strcmp0(ft->name, ".")) {
+    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
+                "the offered file has an invalid filename");
+    g_free(ft->name);
+    g_free(ft);
+    return NULL;
+  }
+
+  // check if the md5 hash is valid ([a-fA-F0-9){32})
+  if (ft->hash != NULL && (strlen(ft->hash) != 32 || !is_md5_hash(ft->hash))) {
+    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
+                "the offered file has an invalid filename");
+    g_free(ft->name);
+    g_free(ft);
+    return NULL;
+  }
+  ft->hash = g_strndup(ft->hash, 32);
+
   return (gconstpointer) ft;
+}
+
+static gboolean is_md5_hash(const gchar *hash) {
+  int i = 0;
+  for (i = 0; i < 32 && hash[i]; i++)
+    if (!g_ascii_isxdigit(hash[i])) break;
+
+  if (i == 31)
+    return TRUE;
+  else
+    return FALSE;
+}
+
+gboolean handle_data(gconstpointer *jingleft, const gchar *data, guint len)
+{
+  JingleFT *ft = (JingleFT *) jingleft;
+  GError *err = NULL;
+  GIOStatus status;
+  gsize bytes_written = 0;
+
+  // TODO: check if the file already exist or if it was created
+  // during the call to jingle_ft_check and handle_data
+  if (ft->outfile == NULL) {
+    ft->outfile = g_io_channel_new_file(ft->name, "w", &err);
+    if (ft->outfile == NULL || err != NULL) {
+      // propagate the GError ?
+      return FALSE;
+	}
+  }
+  status = g_io_channel_write_chars(ft->outfile, data, (gssize) len,
+                                    &bytes_written, &err);
+
+  if (status != G_IO_STATUS_NORMAL || err != NULL) {
+    return FALSE;
+  }
+  if (bytes_written != len) {
+    // not supposed to happen if status is normal, unless outfile is non-blocking
+    return FALSE;
+  }
+  return TRUE;
 }
 
 static void jingle_ft_init(void)

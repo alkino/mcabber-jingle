@@ -10,13 +10,16 @@ typedef struct {
   time_t date;
 
   /* MD5 hash of the file, optional */
-  const gchar *hash;
+  gchar *hash;
 
   /* the name of the file that the sender wishes to send */
-  const gchar *name;
+  gchar *name;
 
   /* the size, in bytes, of the data to be sent */
   gint64 size;
+
+  /* descriptor to the output file */
+  GIOChannel *outfile;
 } JingleFT;
 
 #endif
