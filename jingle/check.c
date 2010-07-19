@@ -69,7 +69,7 @@ gboolean check_jingle(LmMessage *message, LmMessageNode *node,
     return FALSE;
   }
 
-  if (!check_jid_syntax(jn->initiator)) {
+  if (check_jid_syntax(jn->initiator)) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
                 "the initiator attribute in invalid (not a jid)");
     return FALSE;
@@ -120,15 +120,17 @@ static JingleContent *check_content(LmMessageNode *node, GError **err)
 
   tmp = index_in_array(creatorstr, jingle_content_creator);
   tmp2 = index_in_array(sendersstr, jingle_content_senders);
-  if (tmp < 0 || tmp2 < 0) {
+  if (tmp < 0 || (tmp2 < 0 && sendersstr != NULL)) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
                 "the attribute creator or sender is invalid");
     g_free(cn);
     return NULL;
   }
   cn->creator = (JingleCreator)tmp;
-  cn->senders = (JingleSenders)tmp2;
-
+  if(sendersstr != NULL)
+    cn->senders = (JingleSenders)tmp2;
+  else
+    cn->senders = JINGLE_SENDERS_BOTH;
   cn->description = lm_message_node_get_child(node, "description");
   cn->transport   = lm_message_node_get_child(node, "transport");
   if (cn->description == NULL || cn->transport == NULL) {

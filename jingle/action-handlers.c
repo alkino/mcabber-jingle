@@ -26,6 +26,7 @@
 #include <mcabber/events.h>
 #include <mcabber/hbuf.h>
 #include <mcabber/utils.h>
+#include <mcabber/screen.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
@@ -262,6 +263,7 @@ void handle_session_initiate(JingleNode *jn)
   GString *sbuf;
   GSList *child = NULL;
   LmMessage *r;
+  gchar *disp;
   
   // Make sure the request come from an user in our roster
   if (!roster_find(jidtodisp(lm_message_get_from(jn->message)), jidsearch, 0)) {
@@ -309,7 +311,8 @@ void handle_session_initiate(JingleNode *jn)
   sbuf = g_string_new("");
   g_string_printf(sbuf, "Received an invitation for a jingle session from <%s>", lm_message_get_from(jn->message));
 
-  scr_WriteIncomingMessage(jidtodisp(lm_message_get_from(jn->message)), sbuf->str, 0, HBB_PREFIX_INFO, 0);
+  disp = jidtodisp(lm_message_get_from(jn->message));
+  scr_WriteIncomingMessage(disp, sbuf->str, 0, HBB_PREFIX_INFO, 0);
   scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf->str);
 
   {
@@ -322,7 +325,10 @@ void handle_session_initiate(JingleNode *jn)
       g_string_printf(sbuf, "Please use /event %s accept|reject", id);
     else
       g_string_printf(sbuf, "Unable to create a new event!");
+    scr_WriteIncomingMessage(disp, sbuf->str, 0, HBB_PREFIX_INFO, 0);
+    scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf->str);
   }
+  g_free(disp);
 }
 
 void handle_session_terminate(JingleNode *jn)

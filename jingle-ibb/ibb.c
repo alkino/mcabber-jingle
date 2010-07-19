@@ -44,7 +44,7 @@ const gchar *deps[] = { "jingle", NULL };
 
 JingleTransportFuncs funcs = {jingle_ibb_check, NULL};
 
-module_info_t info_jingle_filetransfer = {
+module_info_t  info_jingle_inbandbytestream = {
   .branch          = MCABBER_BRANCH,
   .api             = MCABBER_API_VERSION,
   .version         = PROJECT_VERSION,

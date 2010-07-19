@@ -109,7 +109,12 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
   }
 
   ft->name = g_path_get_basename(ft->name);
-  ft->name = g_build_filename(settings_opt_get("jingle_ft_dir"), ft->name, NULL);
+  
+  if (settings_opt_get("jingle_ft_dir") != NULL)
+    ft->name = g_build_filename(settings_opt_get("jingle_ft_dir"), ft->name, NULL);
+  else
+    ft->name = g_build_filename("/tmp", ft->name, NULL);
+
   if (!g_strcmp0(ft->name, ".")) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
                 "the offered file has an invalid filename");

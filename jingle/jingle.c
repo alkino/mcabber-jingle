@@ -187,20 +187,27 @@ gboolean evscallback_jingle(guint evcontext, const gchar *arg,
     jingle_free_jinglenode(jn);
     return FALSE;
   }
-  if (evcontext = EVS_CONTEXT_CANCEL) {
+  if (evcontext == EVS_CONTEXT_CANCEL) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s cancelled.",
                  jn->initiator);
     jingle_free_jinglenode(jn);
     return FALSE;
   }
   if (!(evcontext == EVS_CONTEXT_ACCEPT || evcontext == EVS_CONTEXT_REJECT)) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s cancelled.",
+                 jn->initiator);
     jingle_free_jinglenode(jn);
     return FALSE;
   }
   
   if (evcontext == EVS_CONTEXT_ACCEPT) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s accepted.",
+                 jn->initiator);
     jingle_send_session_accept(jn);
+
   } else {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s cancelled.",
+                 jn->initiator);
     jingle_send_session_terminate(jn, "decline");
     jingle_free_jinglenode(jn);
   }

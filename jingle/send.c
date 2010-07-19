@@ -24,6 +24,8 @@
 
 #include <mcabber/xmpp_helper.h>
 #include <mcabber/xmpp_defines.h>
+#include <mcabber/settings.h>
+#include <mcabber/logprint.h>
 
 #include <jingle/jingle.h>
 #include <jingle/sessions.h>
@@ -33,7 +35,7 @@
 void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
 {
   LmMessage *r;
-  LmMessageNode *err;
+  LmMessageNode *err,*err2;
   JingleNode *reply = g_new0(JingleNode, 1);
   JingleAckHandle *ackhandle;
 
@@ -44,8 +46,9 @@ void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
   if (r == NULL) return;
 
   if (reason != NULL) { 
+    err2 = lm_message_node_get_child(r->node, "jingle");
     // TODO check reason 
-    err = lm_message_node_add_child(r->node, "reason", NULL);
+    err = lm_message_node_add_child(err2, "reason", NULL);
     lm_message_node_add_child(err, reason, NULL);
   }
 
@@ -95,6 +98,9 @@ void jingle_send_session_accept(JingleNode *jn)
     if (description == NULL || err != NULL) continue;
     transport = transfuncs->check(cn, &err);
     if (transport == NULL || err != NULL) continue;
+  
+    scr_log_print(LPRINT_DEBUG, "jingle: New content accepted: %s",
+                  cn->name);
 
     session_add_content(sess, cn, JINGLE_SESSION_STATE_ACTIVE);
     accept.content = g_slist_append(accept.content, cn);
