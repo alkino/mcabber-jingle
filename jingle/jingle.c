@@ -117,6 +117,8 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
     if (error->domain == JINGLE_CHECK_ERROR) {
       // request malformed, we reply with a bad-request
       jingle_send_iq_error(message, "cancel", "bad-request", NULL);
+      scr_log_print(LPRINT_DEBUG,
+                    "jingle: ", error->message);
     }
     g_clear_error(&error);
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
