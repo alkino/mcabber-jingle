@@ -38,6 +38,8 @@
 
 
 gconstpointer jingle_ft_check(JingleContent *cn, GError **err);
+void jingle_ft_handle(gconstpointer data, LmMessageNode *node);
+gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len);
 static gboolean is_md5_hash(const gchar *hash);
 static void jingle_ft_init(void);
 static void jingle_ft_uninit(void);
@@ -45,7 +47,11 @@ static void jingle_ft_uninit(void);
 
 const gchar *deps[] = { "jingle", NULL };
 
-JingleAppFuncs funcs = {jingle_ft_check, NULL};
+JingleAppFuncs funcs = {
+  jingle_ft_check,
+  jingle_ft_handle,
+  jingle_ft_handle_data
+};
 
 module_info_t info_jingle_filetransfer = {
   .branch          = MCABBER_BRANCH,
@@ -138,7 +144,18 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
   return (gconstpointer) ft;
 }
 
-static gboolean is_md5_hash(const gchar *hash) {
+void jingle_ft_handle(gconstpointer data, LmMessageNode *node)
+{
+  return;
+}
+
+gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len)
+{
+  return FALSE;
+}
+
+static gboolean is_md5_hash(const gchar *hash)
+{
   int i = 0;
   for (i = 0; i < 32 && hash[i]; i++)
     if (!g_ascii_isxdigit(hash[i])) break;
