@@ -18,21 +18,17 @@ typedef enum {
 } JingleTransMethod;
 
 typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err);
-typedef void (*JingleAppHandle) (JingleNode *jn, JingleContent *cn);
-typedef LmMessageNode* (*JingleAppGetLM) (gconstpointer data);
+typedef void (*JingleAppHandle) (gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleAppHandleData) (gconstpointer data, const gchar *data2, guint len);
 
 typedef gconstpointer (*JingleTransportCheck) (JingleContent *cn, GError **err);
-typedef void (*JingleTransportHandle) (gconstpointer data, JingleContent *cn);
+typedef void (*JingleTransportHandle) (gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleTransportCmp) (gconstpointer data1, gconstpointer data2);
 
 typedef struct {
   /* check if the description of a JingleContent is correct */
   JingleAppCheck check;
 
-  /* Give a LM from a internal struct */
-  JingleAppGetLM desc;
-  
   /* If we got a LM with the good xmlns */
   JingleAppHandle handle;
   

@@ -380,6 +380,9 @@ LmMessage *lm_message_from_jinglenode(const JingleNode *jn, const gchar *to)
 
 static void lm_insert_jinglecontent(gpointer data, gpointer userdata)
 {
+  const gchar *xmlns;
+  JingleTransportFuncs *tfunc;
+  JingleAppFuncs *afunc;
   JingleContent* content = (JingleContent*) data;
   LmMessageNode* dad = (LmMessageNode*) userdata;
   LmMessageNode* node = (LmMessageNode*) lm_message_node_add_child(dad,
@@ -402,6 +405,14 @@ static void lm_insert_jinglecontent(gpointer data, gpointer userdata)
     lm_message_node_set_attribute(node, "senders", "initiator");
   else if (content->senders == JINGLE_SENDERS_RESPONDER)
     lm_message_node_set_attribute(node, "senders", "responder");
+   
+  xmlns =  lm_message_node_get_attribute(content->transport, "xmlns");
+  tfunc = jingle_get_transportfuncs(xmlns);
+  tfunc->handle(tfunc->check(content, NULL), node);
+
+  xmlns =  lm_message_node_get_attribute(content->description, "xmlns");
+  afunc = jingle_get_appfuncs(xmlns);
+  afunc->handle(afunc->check(content, NULL), node);
 }
 
 void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data2, guint len)
