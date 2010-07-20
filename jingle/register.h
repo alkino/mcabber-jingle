@@ -23,8 +23,7 @@ typedef LmMessageNode* (*JingleAppGetLM) (gconstpointer data);
 typedef gboolean (*JingleAppHandleData) (gconstpointer data, const gchar *data2, guint len);
 
 typedef gconstpointer (*JingleTransportCheck) (JingleContent *cn, GError **err);
-typedef void (*JingleTransportHandle) (JingleNode *jn, JingleContent *cn);
-typedef LmMessageNode* (*JingleTransportGetLM) (gconstpointer data);
+typedef void (*JingleTransportHandle) (gconstpointer data, JingleContent *cn);
 typedef gboolean (*JingleTransportCmp) (gconstpointer data1, gconstpointer data2);
 
 typedef struct {
@@ -44,8 +43,6 @@ typedef struct {
 typedef struct {
   /* check if the transport of a JingleContent is correct */
   JingleAppCheck  check;
-
-  JingleTransportGetLM trans;
 
   /* */
   JingleAppHandle handle;

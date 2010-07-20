@@ -266,9 +266,11 @@ void handle_session_initiate(JingleNode *jn)
   gchar *disp;
   
   // Make sure the request come from an user in our roster
-  if (!roster_find(jidtodisp(lm_message_get_from(jn->message)), jidsearch, 0)) {
+  disp = jidtodisp(lm_message_get_from(jn->message));
+  if (!roster_find(disp, jidsearch, 0)) {
     jingle_send_session_terminate(jn, "decline");
     jingle_free_jinglenode(jn);
+    g_free(disp);
     return;
   }
   
@@ -276,12 +278,14 @@ void handle_session_initiate(JingleNode *jn)
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
+    g_free(disp);
     return;
   }
 
   // a session-initiate message must contains at least one <content> element
   if (g_slist_length(jn->content) < 1) {
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
+    g_free(disp);
     return;
   }
   
@@ -296,12 +300,14 @@ void handle_session_initiate(JingleNode *jn)
   }
   if (!valid_disposition) {
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
+    g_free(disp);
     return;  
   }
   
   // if a session with the same sid already exists
   if (session_find(jn) != NULL) {
     jingle_send_iq_error(jn->message, "cancel", "unexpected-request", "out-of-order");
+    g_free(disp);
     return;
   }
 
@@ -311,7 +317,6 @@ void handle_session_initiate(JingleNode *jn)
   sbuf = g_string_new("");
   g_string_printf(sbuf, "Received an invitation for a jingle session from <%s>", lm_message_get_from(jn->message));
 
-  disp = jidtodisp(lm_message_get_from(jn->message));
   scr_WriteIncomingMessage(disp, sbuf->str, 0, HBB_PREFIX_INFO, 0);
   scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf->str);
 

@@ -66,8 +66,7 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
   const gchar *datestr, *sizestr;
 
   node = lm_message_node_get_child(cn->description, "offer");
- scr_LogPrint(LPRINT_LOGNORM, "%s",
-                 lm_message_node_to_string(cn->description));
+ 
   if (!node) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
                 "the offer element is missing");
