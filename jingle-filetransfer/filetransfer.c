@@ -29,6 +29,8 @@
 #include <mcabber/xmpp_helper.h>
 #include <mcabber/settings.h>
 #include <mcabber/logprint.h>
+#include <mcabber/compl.h>
+#include <mcabber/commands.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
@@ -44,6 +46,7 @@ static gboolean is_md5_hash(const gchar *hash);
 static void jingle_ft_init(void);
 static void jingle_ft_uninit(void);
 
+static guint file_cid = 0;
 
 const gchar *deps[] = { "jingle", NULL };
 
@@ -195,14 +198,48 @@ gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len)
   return TRUE;
 }
 
+static void do_file(char *arg)
+{
+  char **args = split_arg(arg, 2, 0);
+  
+  if (!args[1]) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: give me a name!");
+    return;
+  }
+  
+  if (!g_strcmp0(args[0], "send")) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: try to sent %s!",
+                 args[1]);
+    
+  
+  } else if (!g_strcmp0(args[0], "request")) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: try to request %s!",
+                 args[1]);
+    //later
+  }
+  
+  free_arg_lst(args);
+}
+
 static void jingle_ft_init(void)
 {
   jingle_register_app(NS_JINGLE_APP_FT, &funcs, JINGLE_TRANSPORT_STREAMING);
   xmpp_add_feature(NS_JINGLE_APP_FT);
+  /* Create completions */
+  file_cid = compl_new_category();
+  if (file_cid) {
+    compl_add_category_word(file_cid, "send");
+    compl_add_category_word(file_cid, "request");
+  }
+  /* Add command */
+  cmd_add("file", "Send / Request a file", file_cid, 0, do_file, NULL);
 }
 
 static void jingle_ft_uninit(void)
 {
   xmpp_del_feature(NS_JINGLE_APP_FT);
   jingle_unregister_app(NS_JINGLE_APP_FT);
+  cmd_del("file");
+  if (file_cid)
+    compl_del_category(file_cid);
 }

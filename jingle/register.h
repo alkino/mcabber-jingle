@@ -55,10 +55,10 @@ typedef struct {
 
 typedef struct {
   /* check if the transport of a JingleContent is correct */
-  JingleAppCheck  check;
+  JingleTransportCheck  check;
 
   /* */
-  JingleAppHandle handle;
+  JingleTransportHandle handle;
   
   JingleTransportCmp cmp;
   

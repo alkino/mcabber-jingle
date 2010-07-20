@@ -75,9 +75,7 @@ void jingle_send_session_accept(JingleNode *jn)
   JingleAckHandle *ackhandle;
  
   accept.action = JINGLE_SESSION_ACCEPT;
-  accept.responder = g_strdup_printf("%s/%s",
-                                     lm_connection_get_jid(lconnection),
-                                     settings_opt_get("resource"));
+  accept.responder = g_strdup_printf("%s", lm_connection_get_jid(lconnection));
   accept.sid = jn->sid;
   accept.content = NULL;
 
@@ -98,7 +96,7 @@ void jingle_send_session_accept(JingleNode *jn)
     if (description == NULL || err != NULL) continue;
     transport = transfuncs->check(cn, &err);
     if (transport == NULL || err != NULL) continue;
-  
+   
     scr_log_print(LPRINT_DEBUG, "jingle: New content accepted: %s", cn->name);
 
     session_add_content(sess, cn, JINGLE_SESSION_STATE_ACTIVE);
