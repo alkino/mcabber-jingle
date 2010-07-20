@@ -197,7 +197,7 @@ gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len)
 
 static void jingle_ft_init(void)
 {
-  jingle_register_app(NS_JINGLE_APP_FT, &funcs, JINGLE_TRANS_TCP);
+  jingle_register_app(NS_JINGLE_APP_FT, &funcs, JINGLE_TRANSPORT_STREAMING);
   xmpp_add_feature(NS_JINGLE_APP_FT);
 }
 

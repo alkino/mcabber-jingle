@@ -137,7 +137,6 @@ void session_changestate_sessioncontent(JingleSession *sess, const gchar *name,
     sc->state = state;
 }
 
-
 /**
  * Remove a session from the linked list and free it.
  */

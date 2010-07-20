@@ -162,7 +162,9 @@ void jingle_ibb_handle(gconstpointer data, LmMessageNode *node)
 static void jingle_ibb_init(void)
 {
   jingle_ibb_handler = lm_message_handler_new(jingle_ibb_handle_iq, NULL, NULL);
-  jingle_register_transport(NS_JINGLE_TRANSPORT_IBB, &funcs, JINGLE_TRANS_IN_BAND, JINGLE_TRANS_TCP);
+  jingle_register_transport(NS_JINGLE_TRANSPORT_IBB, &funcs,
+                            JINGLE_TRANSPORT_STREAMING,
+                            JINGLE_TRANSPORT_LOW);
   xmpp_add_feature(NS_JINGLE_TRANSPORT_IBB);
 }
 

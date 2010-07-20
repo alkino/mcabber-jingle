@@ -30,14 +30,14 @@
 typedef struct {
   gchar *xmlns;
   JingleAppFuncs *funcs;
-  JingleTransMethod method;
+  JingleTransportType transtype;
 } AppHandlerEntry;
 
 typedef struct {
   gchar *xmlns;
   JingleTransportFuncs *funcs;
-  JingleTransType type;
-  JingleTransMethod method;
+  JingleTransportType transtype;
+  JingleTransportPriority priority;
 } TransportHandlerEntry;
 
 
@@ -49,32 +49,42 @@ GSList *jingle_app_handlers = NULL;
 GSList *jingle_transport_handlers = NULL;
 
 
+/**
+ * Register a new supported application.
+ * type is the type of transport the data shall be sent over.
+ */
 void jingle_register_app(const gchar *xmlns, JingleAppFuncs *funcs,
-                         JingleTransMethod method)
+                         JingleTransportType type)
 {
   if (!g_str_has_prefix(xmlns, NS_JINGLE_APP_PREFIX)) return;
 
   AppHandlerEntry *h = g_new(AppHandlerEntry, 1);
 
-  h->xmlns  = g_strdup(xmlns);
-  h->funcs  = funcs;
-  h->method = method;
-  
+  h->xmlns       = g_strdup(xmlns);
+  h->funcs       = funcs;
+  h->transtype   = type;
+
   jingle_app_handlers = g_slist_append(jingle_app_handlers, h);
 }
 
-void jingle_register_transport(const gchar *xmlns, JingleTransportFuncs *funcs,
-                               JingleTransType type, JingleTransMethod method)
+/**
+ * Register a new supported transport.
+ * type is the type of transport.
+ */
+void jingle_register_transport(const gchar *xmlns,
+                               JingleTransportFuncs *funcs,
+                               JingleTransportType type,
+                               JingleTransportPriority prio)
 {
   if (!g_str_has_prefix(xmlns, NS_JINGLE_TRANSPORT_PREFIX)) return;
 
   TransportHandlerEntry *h = g_new(TransportHandlerEntry, 1);
 
-  h->xmlns  = g_strdup(xmlns);
-  h->funcs  = funcs;
-  h->method = method;
-  h->type = type;
-  
+  h->xmlns     = g_strdup(xmlns);
+  h->funcs     = funcs;
+  h->transtype = type;
+  h->priority  = prio;
+
   jingle_transport_handlers = g_slist_append(jingle_transport_handlers, h);
 }
 
@@ -88,6 +98,32 @@ JingleTransportFuncs *jingle_get_transportfuncs(const gchar *xmlns)
 {
   TransportHandlerEntry *entry;
   return (entry = jingle_find_transport(xmlns)) != NULL ? entry->funcs : NULL;
+}
+
+/**
+ * Determine which transport is better suited for a given app.
+ */
+JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns)
+{
+  AppHandlerEntry *app = jingle_find_app(appxmlns);
+  GSList *entry;
+  TransportHandlerEntry *thistransport, *besttransport;
+  JingleTransportPriority bestprio;
+  JingleTransportType requestedtype;
+
+  if (entry == NULL)
+    return NULL;
+
+  requestedtype = app->transtype;
+  for (entry = jingle_transport_handlers; entry; entry = entry->next) {
+    thistransport = (TransportHandlerEntry *) entry->data;
+    if (thistransport->priority > bestprio) {
+      bestprio = thistransport->priority;
+      besttransport = thistransport;
+    }
+  }
+
+  return besttransport->funcs;
 }
 
 /**

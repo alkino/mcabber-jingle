@@ -7,15 +7,32 @@
 #define NS_JINGLE_APP_PREFIX       "urn:xmpp:jingle:apps:"
 #define NS_JINGLE_TRANSPORT_PREFIX "urn:xmpp:jingle:transports:"
 
-typedef enum {
-  JINGLE_TRANS_IN_BAND,
-  JINGLE_TRANS_OUT_BAND,
-} JingleTransType;
 
 typedef enum {
-  JINGLE_TRANS_TCP,
-  JINGLE_TRANS_UDP,
-} JingleTransMethod;
+  /* A datagram transport has one or more components with which to exchange
+   * packets with UDP-like behavior. Packets might be of arbitrary length,
+   * might be received out of order, and might not be received at all
+   * (i.e., the transport is lossy). */
+  JINGLE_TRANSPORT_STREAMING,
+  
+  /* A streaming transport has one or more components with which to exchange
+   * bidirectional bytestreams with TCP-like behavior. Bytes are received
+   * reliably and in order, and applications MUST NOT rely on a stream being
+   * chunked in any specific way. */
+  JINGLE_TRANSPORT_DATAGRAM
+} JingleTransportType;
+
+/**
+ * We need to rank transports to determine which one to choose.
+ * With this system, In-Band Bytestreams could have a low priority, SOCKS5
+ * Bytestream a normal priority, and some stream transport method that allow
+ * direct connection would have a high priority, since it would be the fastest.
+ */
+typedef enum {
+  JINGLE_TRANSPORT_LOW,
+  JINGLE_TRANSPORT_NORMAL,
+  JINGLE_TRANSPORT_HIGH
+} JingleTransportPriority;
 
 typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err);
 typedef void (*JingleAppHandle) (gconstpointer data, LmMessageNode *node);
@@ -49,9 +66,11 @@ typedef struct {
 
 
 void jingle_register_app(const gchar *xmlns, JingleAppFuncs *funcs,
-                         JingleTransMethod method);
-void jingle_register_transport(const gchar *xmlns, JingleTransportFuncs *funcs,
-                               JingleTransType type, JingleTransMethod method);
+                         JingleTransportType type);
+void jingle_register_transport(const gchar *xmlns,
+                               JingleTransportFuncs *funcs,
+                               JingleTransportType type,
+                               JingleTransportPriority prio);
 JingleAppFuncs *jingle_get_appfuncs(const gchar *xmlns);
 JingleTransportFuncs *jingle_get_transportfuncs(const gchar *xmlns);
 void jingle_unregister_app(const gchar *xmlns);
