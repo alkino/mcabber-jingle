@@ -103,14 +103,14 @@ static AppHandlerEntry *jingle_find_app(const gchar *xmlns)
 {
   GSList *entry = g_slist_find_custom(jingle_app_handlers, xmlns,
                                       jingle_entry_cmp);
-  return (AppHandlerEntry *) entry;
+  return entry != NULL ? (AppHandlerEntry *) entry->data : NULL;
 }
 
 static TransportHandlerEntry *jingle_find_transport(const gchar *xmlns)
 {
   GSList *entry = g_slist_find_custom(jingle_transport_handlers, xmlns,
                                       jingle_entry_cmp);
-  return (TransportHandlerEntry *) entry;
+  return entry != NULL ? (TransportHandlerEntry *) entry->data : NULL;
 }
 
 static void jingle_free_app(AppHandlerEntry *entry)

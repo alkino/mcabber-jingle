@@ -28,6 +28,7 @@
 #include <mcabber/utils.h>
 #include <mcabber/xmpp_helper.h>
 #include <mcabber/settings.h>
+#include <mcabber/logprint.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
@@ -65,13 +66,15 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
   const gchar *datestr, *sizestr;
 
   node = lm_message_node_get_child(cn->description, "offer");
+ scr_LogPrint(LPRINT_LOGNORM, "%s",
+                 lm_message_node_to_string(cn->description));
   if (!node) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
                 "the offer element is missing");
     return NULL;
   }
 
-  node = lm_message_node_get_child(cn->description, "file");
+  node = lm_message_node_get_child(node, "file");
   if (!node) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
                 "the file element is missing");
@@ -141,7 +144,7 @@ static gboolean is_md5_hash(const gchar *hash) {
   for (i = 0; i < 32 && hash[i]; i++)
     if (!g_ascii_isxdigit(hash[i])) break;
 
-  if (i == 31)
+  if (i == 32)
     return TRUE;
   else
     return FALSE;

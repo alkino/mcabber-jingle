@@ -92,15 +92,14 @@ void jingle_send_session_accept(JingleNode *jn)
 
     xmlns = lm_message_node_get_attribute(cn->transport, "xmlns");
     transfuncs = jingle_get_transportfuncs(xmlns);
-    if (appfuncs == NULL) continue;
+    if (transfuncs == NULL) continue;
 
     description = appfuncs->check(cn, &err);
     if (description == NULL || err != NULL) continue;
     transport = transfuncs->check(cn, &err);
     if (transport == NULL || err != NULL) continue;
   
-    scr_log_print(LPRINT_DEBUG, "jingle: New content accepted: %s",
-                  cn->name);
+    scr_log_print(LPRINT_DEBUG, "jingle: New content accepted: %s", cn->name);
 
     session_add_content(sess, cn, JINGLE_SESSION_STATE_ACTIVE);
     accept.content = g_slist_append(accept.content, cn);

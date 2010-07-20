@@ -4,8 +4,8 @@
 #include <jingle/jingle.h>
 
 
-#define NS_JINGLE_APP_PREFIX       "urn:xmpp:jingle:app:"
-#define NS_JINGLE_TRANSPORT_PREFIX "urn:xmpp:jingle:transport:"
+#define NS_JINGLE_APP_PREFIX       "urn:xmpp:jingle:apps:"
+#define NS_JINGLE_TRANSPORT_PREFIX "urn:xmpp:jingle:transports:"
 
 typedef enum {
   JINGLE_TRANS_IN_BAND,
