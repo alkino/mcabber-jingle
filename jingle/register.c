@@ -108,7 +108,7 @@ gint cmp_forbid(gconstpointer a, gconstpointer b)
 /**
  * Determine which transport is better suited for a given app.
  */
-JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns, GSList *forbid)
+JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns, GSList **forbid)
 {
   AppHandlerEntry *app = jingle_find_app(appxmlns);
   GSList *entry;
@@ -124,7 +124,7 @@ JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns, GSList *fo
     thistransport = (TransportHandlerEntry *) entry->data;
     
     // Look if it's forbidden
-    if (g_slist_find_custom(forbid, thistransport->xmlns, cmp_forbid))
+    if (g_slist_find_custom(*forbid, thistransport->xmlns, cmp_forbid))
       continue;
     
     if (thistransport->priority > bestprio) {
@@ -132,7 +132,7 @@ JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns, GSList *fo
       besttransport = thistransport;
     }
   }
-
+  *forbid = g_slist_append(*forbid, besttransport->xmlns);
   return besttransport->funcs;
 }
 
