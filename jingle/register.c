@@ -100,10 +100,15 @@ JingleTransportFuncs *jingle_get_transportfuncs(const gchar *xmlns)
   return (entry = jingle_find_transport(xmlns)) != NULL ? entry->funcs : NULL;
 }
 
+gint cmp_forbid(gconstpointer a, gconstpointer b)
+{
+  return g_strcmp0((const gchar *)a, (const gchar *)b);
+}
+
 /**
  * Determine which transport is better suited for a given app.
  */
-JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns)
+JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns, GSList *forbid)
 {
   AppHandlerEntry *app = jingle_find_app(appxmlns);
   GSList *entry;
@@ -117,6 +122,11 @@ JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns)
   requestedtype = app->transtype;
   for (entry = jingle_transport_handlers; entry; entry = entry->next) {
     thistransport = (TransportHandlerEntry *) entry->data;
+    
+    // Look if it's forbidden
+    if (g_slist_find_custom(forbid, thistransport->xmlns, cmp_forbid))
+      continue;
+    
     if (thistransport->priority > bestprio) {
       bestprio = thistransport->priority;
       besttransport = thistransport;
