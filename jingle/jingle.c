@@ -408,11 +408,11 @@ static void lm_insert_jinglecontent(gpointer data, gpointer userdata)
    
   xmlns =  lm_message_node_get_attribute(content->transport, "xmlns");
   tfunc = jingle_get_transportfuncs(xmlns);
-  tfunc->handle(tfunc->check(content, NULL), node);
+  //tfunc->handle(tfunc->check(content, NULL), node);
 
   xmlns =  lm_message_node_get_attribute(content->description, "xmlns");
   afunc = jingle_get_appfuncs(xmlns);
-  afunc->handle(afunc->check(content, NULL), node);
+  //afunc->handle(afunc->check(content, NULL), node);
 }
 
 void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data2, guint len)

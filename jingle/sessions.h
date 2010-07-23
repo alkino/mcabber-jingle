@@ -17,7 +17,7 @@ typedef enum {
 } SessionState;
 
 typedef struct {
-  JingleStatus  status;
+  JingleStatus status;
   gchar *sid;
   gchar *initiator;
   gchar *from;

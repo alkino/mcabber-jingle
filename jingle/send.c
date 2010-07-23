@@ -122,3 +122,24 @@ void jingle_send_session_accept(JingleNode *jn)
     lm_message_unref(accept.message);
   }
 }
+
+void jingle_send_session_initiate(JingleSession *js, const gchar *recipient)
+{
+  JingleNode initiate = {0};
+  JingleAckHandle *ackhandle;
+
+  initiate.action = JINGLE_SESSION_INITIATE;
+  initiate.sid = js->sid;
+  initiate.initiator = js->initiator;
+  initiate.content = NULL; // TODO
+  initiate.message = lm_message_from_jinglenode(&initiate, recipient);
+
+  if (initiate.message) {
+    ackhandle = g_new0(JingleAckHandle, 1);
+    ackhandle->callback = NULL;
+    ackhandle->user_data = NULL;
+    lm_connection_send_with_reply(lconnection, initiate.message,
+                                  jingle_new_ack_handler(ackhandle), NULL);
+    lm_message_unref(initiate.message);
+  }
+}

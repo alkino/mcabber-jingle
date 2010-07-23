@@ -41,7 +41,7 @@
 
 
 gconstpointer jingle_ft_check(JingleContent *cn, GError **err);
-void jingle_ft_handle(gconstpointer data, LmMessageNode *node);
+void jingle_ft_handle(JingleAction act, gconstpointer data, LmMessageNode *node);
 gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len);
 static gboolean is_md5_hash(const gchar *hash);
 static void jingle_ft_init(void);
@@ -148,7 +148,7 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
   return (gconstpointer) ft;
 }
 
-void jingle_ft_handle(gconstpointer data, LmMessageNode *node)
+void jingle_ft_handle(JingleAction act, gconstpointer data, LmMessageNode *node)
 {
   return;
 }
