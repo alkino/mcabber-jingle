@@ -138,4 +138,10 @@ gboolean evscallback_jingle(guint evcontext, const gchar *arg,
 void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data2, guint len);
 
 gchar *new_sid(void);
+
+LmMessage *lm_message_from_jinglesession(const JingleSession *js, 
+                                         const gchar *to,
+                                         JingleAction action);
+                                         
+static void lm_insert_sessioncontent(gpointer data, gpointer userdata);
 #endif

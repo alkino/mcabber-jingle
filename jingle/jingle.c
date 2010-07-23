@@ -378,6 +378,54 @@ LmMessage *lm_message_from_jinglenode(const JingleNode *jn, const gchar *to)
   return m;
 }
 
+LmMessage *lm_message_from_jinglesession(const JingleSession *js, 
+                                         const gchar *to,
+                                         JingleAction action)
+{
+  LmMessage* m; 
+  LmMessageNode *jnode;
+  const gchar *actionstr;
+
+  m = lm_message_new_with_sub_type(to, LM_MESSAGE_TYPE_IQ,
+                                   LM_MESSAGE_SUB_TYPE_SET); 
+  jnode = lm_message_node_add_child(m->node, "jingle", NULL);
+
+  if (actionstr = jingle_action_list[action].name)
+    lm_message_node_set_attribute(jnode, "action", actionstr);
+  else 
+    return NULL;
+
+  if (js->initiator)
+    lm_message_node_set_attribute(jnode, "initiator", js->initiator);
+
+  if (js->sid)
+    lm_message_node_set_attribute(jnode, "sid", js->sid);
+  else
+    return NULL;
+
+  g_slist_foreach(js->content, lm_insert_sessioncontent, jnode);
+  return m;
+}
+
+static void lm_insert_sessioncontent(gpointer data, gpointer userdata)
+{
+  const gchar *xmlns;
+  JingleTransportFuncs *tfunc;
+  JingleAppFuncs *afunc;
+  SessionContent* content = (SessionContent*) data;
+  LmMessageNode* dad = (LmMessageNode*) userdata;
+  LmMessageNode* node = (LmMessageNode*) lm_message_node_add_child(dad,
+                                                               "content", NULL);
+                                                                 
+  if (content->name)
+    lm_message_node_set_attribute(node, "name", content->name);
+  
+  //tfunc->handle(tfunc->check(content, NULL), node);
+
+  //afunc->handle(afunc->check(content, NULL), node);
+
+}
+
 static void lm_insert_jinglecontent(gpointer data, gpointer userdata)
 {
   const gchar *xmlns;

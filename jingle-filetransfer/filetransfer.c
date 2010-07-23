@@ -208,7 +208,7 @@ static void do_file(char *arg)
     return;
   }
   
-  if (!g_file_test (args[1], G_FILE_TEST_EXISTS)) {
+  if (!g_file_test (args[1], G_FILE_TEST_IS_REGULAR | G_FILE_TEST_EXISTS)) {
     scr_LogPrint(LPRINT_LOGNORM, "File doesn't exist!");
     return;
   }
@@ -233,11 +233,15 @@ static void do_file(char *arg)
       jft->size = 0;
       jft->outfile = g_io_channel_new_file (args[1], "r", NULL);
       g_io_channel_set_encoding(jft->outfile, NULL, NULL);
-      while (g_io_channel_read_chars(jft->outfile, (gchar*)data, 1024, &bytes_read, NULL) != G_IO_STATUS_EOF) {
+      // For the md5 and the size
+      while (g_io_channel_read_chars(jft->outfile,
+                                     (gchar*)data, 1024, &bytes_read, NULL)
+             != G_IO_STATUS_EOF) {
         jft->size+=bytes_read;
         g_checksum_update(md5, data, bytes_read);
       }
       jft->hash = g_strdup(g_checksum_get_string(md5));
+      g_io_channel_seek_position (jft->outfile, 0, G_SEEK_SET, NULL);
       session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
       g_checksum_free(md5);
       g_free(sid);

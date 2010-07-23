@@ -75,5 +75,6 @@ JingleAppFuncs *jingle_get_appfuncs(const gchar *xmlns);
 JingleTransportFuncs *jingle_get_transportfuncs(const gchar *xmlns);
 void jingle_unregister_app(const gchar *xmlns);
 void jingle_unregister_transport(const gchar *xmlns);
+JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns, GSList **forbid);
 
 #endif
