@@ -423,3 +423,17 @@ void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data
   }
   sc->appfuncs->handle_data(sc->description, data2, len);
 }
+
+gchar *new_sid(void)
+{
+  gchar *sid;
+  gchar car[] = "azertyuiopqsdfghjklmwxcvbn1234567890AZERTYUIOPQSDFGHJKLMWXCVBN";
+  int i;
+  sid = g_new0(gchar, 11);
+  for (i = 0; i < 10; i++)
+    sid[i] = car[g_random_int_range(0, sizeof(car)/sizeof(car[0]))];
+
+  sid[10] = '\0';
+  
+  return sid;
+}

@@ -139,7 +139,7 @@ void handle_content_add(JingleNode *jn)
       reject.content = g_slist_append(reject.content, cn);
       continue;
     }
-    session_add_content(sess, cn, JINGLE_SESSION_STATE_ACTIVE);
+    session_add_content_from_jinglecontent(sess, cn, JINGLE_SESSION_STATE_ACTIVE);
     accept.content = g_slist_append(accept.content, cn);
   }
   

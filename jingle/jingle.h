@@ -137,4 +137,5 @@ gboolean evscallback_jingle(guint evcontext, const gchar *arg,
                             
 void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data2, guint len);
 
+gchar *new_sid(void);
 #endif

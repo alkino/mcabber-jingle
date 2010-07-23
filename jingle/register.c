@@ -127,7 +127,8 @@ JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns, GSList **f
     if (g_slist_find_custom(*forbid, thistransport->xmlns, cmp_forbid))
       continue;
     
-    if (thistransport->priority > bestprio) {
+    if (thistransport->transtype == requestedtype &&
+        thistransport->priority > bestprio) {
       bestprio = thistransport->priority;
       besttransport = thistransport;
     }

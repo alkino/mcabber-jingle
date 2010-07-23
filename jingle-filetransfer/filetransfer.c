@@ -35,6 +35,7 @@
 #include <jingle/jingle.h>
 #include <jingle/check.h>
 #include <jingle/register.h>
+#include <jingle/sessions.h>
 
 #include "filetransfer.h"
 
@@ -207,16 +208,40 @@ static void do_file(char *arg)
     return;
   }
   
+  if (!g_file_test (args[1], G_FILE_TEST_EXISTS)) {
+    scr_LogPrint(LPRINT_LOGNORM, "File doesn't exist!");
+    return;
+  }
+  
   if (!g_strcmp0(args[0], "send")) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: try to sent %s!",
                  args[1]);
-    
-  
+    // Create a new session for send a file
+    {
+      JingleSession *sess;
+      gchar *sid = new_sid();
+      const gchar *jid = settings_opt_get("jid");
+      JingleFT *jft = g_new0(JingleFT, 1);
+      sess = session_new(sid, jid, jid);
+      session_add_content(sess, "file", JINGLE_SESSION_STATE_PENDING);
+      
+      jft->name = g_strdup(args[1]);
+      jft->hash = NULL;
+      jft->date = 0;
+      jft->size = 0;
+      jft->outfile = NULL;
+      session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
+
+
+      g_free(sid);
+    }  
   } else if (!g_strcmp0(args[0], "request")) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: try to request %s!",
                  args[1]);
     //later
   }
+  
+  
   
   free_arg_lst(args);
 }

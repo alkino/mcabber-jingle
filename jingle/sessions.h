@@ -35,10 +35,19 @@ typedef struct {
   JingleTransportFuncs *transfuncs;
 } SessionContent;
 
-JingleSession *session_new(JingleNode *jn);
+JingleSession *session_new(const gchar *sid, const gchar *initiator,
+                           const gchar *from);
+JingleSession *session_new_from_jinglenode(JingleNode *jn);
 JingleSession *session_find_by_sid(const gchar *sid, const gchar *from);
 JingleSession *session_find(const JingleNode *jn);
-void session_add_content(JingleSession *sess, JingleContent *cn, SessionState state);
+void session_add_content(JingleSession *sess, const gchar *name,
+                         SessionState state);
+void session_add_app(JingleSession *sess, const gchar *name,
+                           const gchar *xmlns, gconstpointer data);
+void session_add_trans(JingleSession *sess, const gchar *name,
+                           const gchar *xmlns, gconstpointer data);
+void session_add_content_from_jinglecontent(JingleSession *sess, JingleContent *cn,
+                         SessionState state);
 SessionContent *session_find_sessioncontent(JingleSession *sess, const gchar *name);
 SessionContent *session_find_transport(const gchar *xmlns_trans, gconstpointer data);
 void session_remove_sessioncontent(JingleSession *sess, const gchar *name);

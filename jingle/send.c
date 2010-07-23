@@ -79,7 +79,7 @@ void jingle_send_session_accept(JingleNode *jn)
   accept.sid = jn->sid;
   accept.content = NULL;
 
-  sess = session_new(jn);
+  sess = session_new_from_jinglenode(jn);
 
   for (child = jn->content; child; child = child->next) {
     cn = (JingleContent *)(child->data);
@@ -99,7 +99,7 @@ void jingle_send_session_accept(JingleNode *jn)
    
     scr_log_print(LPRINT_DEBUG, "jingle: New content accepted: %s", cn->name);
 
-    session_add_content(sess, cn, JINGLE_SESSION_STATE_ACTIVE);
+    session_add_content_from_jinglecontent(sess, cn, JINGLE_SESSION_STATE_ACTIVE);
     accept.content = g_slist_append(accept.content, cn);
   }
 
