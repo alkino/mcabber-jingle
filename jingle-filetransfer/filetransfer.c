@@ -219,20 +219,27 @@ static void do_file(char *arg)
     // Create a new session for send a file
     {
       JingleSession *sess;
+      GChecksum *md5 = g_checksum_new(G_CHECKSUM_MD5);
       gchar *sid = new_sid();
+      guchar data[1024];
+      gsize bytes_read, total = 0;
       const gchar *jid = settings_opt_get("jid");
       JingleFT *jft = g_new0(JingleFT, 1);
       sess = session_new(sid, jid, jid);
       session_add_content(sess, "file", JINGLE_SESSION_STATE_PENDING);
       
-      jft->name = g_strdup(args[1]);
-      jft->hash = NULL;
+      jft->name = g_path_get_basename(args[1]);
       jft->date = 0;
       jft->size = 0;
-      jft->outfile = NULL;
+      jft->outfile = g_io_channel_new_file (args[1], "r", NULL);
+      g_io_channel_set_encoding(jft->outfile, NULL, NULL);
+      while (g_io_channel_read_chars(jft->outfile, (gchar*)data, 1024, &bytes_read, NULL) != G_IO_STATUS_EOF) {
+        jft->size+=bytes_read;
+        g_checksum_update(md5, data, bytes_read);
+      }
+      jft->hash = g_strdup(g_checksum_get_string(md5));
       session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
-
-
+      g_checksum_free(md5);
       g_free(sid);
     }  
   } else if (!g_strcmp0(args[0], "request")) {
