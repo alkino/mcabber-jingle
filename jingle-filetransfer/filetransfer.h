@@ -5,6 +5,11 @@
 #define NS_JINGLE_APP_FT_INFO "urn:xmpp:jingle:apps:file-transfer:info:1"
 #define NS_SI_FT              "http://jabber.org/protocol/si/profile/file-transfer"
 
+typedef enum {
+  JINGLE_FT_OFFER,
+  JINGLE_FT_REQUEST,
+} JingleFTType;
+
 typedef struct {
   /* the last modification of the file, optional */
   time_t date;
@@ -20,6 +25,11 @@ typedef struct {
 
   /* descriptor to the output file */
   GIOChannel *outfile;
+  
+  JingleFTType type;
+  
+  gchar *desc;
+  
 } JingleFT;
 
 #endif

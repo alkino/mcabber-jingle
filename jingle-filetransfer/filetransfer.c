@@ -148,11 +148,6 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
   return (gconstpointer) ft;
 }
 
-void jingle_ft_handle(JingleAction act, gconstpointer data, LmMessageNode *node)
-{
-  return;
-}
-
 gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len)
 {
   return FALSE;
@@ -222,12 +217,14 @@ static void do_file(char *arg)
       GChecksum *md5 = g_checksum_new(G_CHECKSUM_MD5);
       gchar *sid = new_sid();
       guchar data[1024];
-      gsize bytes_read, total = 0;
+      gsize bytes_read;
       const gchar *jid = settings_opt_get("jid");
       JingleFT *jft = g_new0(JingleFT, 1);
       sess = session_new(sid, jid, jid);
       session_add_content(sess, "file", JINGLE_SESSION_STATE_PENDING);
       
+      jft->desc = g_strdup(args[2]);
+      jft->type = JINGLE_FT_OFFER;
       jft->name = g_path_get_basename(args[1]);
       jft->date = 0;
       jft->size = 0;
@@ -255,6 +252,35 @@ static void do_file(char *arg)
   
   
   free_arg_lst(args);
+}
+
+void jingle_ft_handle(JingleAction act, gconstpointer data, LmMessageNode *node)
+{
+  if (act == JINGLE_SESSION_INITIATE) {
+    JingleFT *jft = (JingleFT*) data;
+    if (lm_message_node_get_child(node, "description") != NULL)
+      return;
+  
+    LmMessageNode *node2 = lm_message_node_add_child(node, "description", NULL);
+    lm_message_node_set_attribute(node2, "xmlns", NS_JINGLE_APP_FT);
+    if (jft->type == JINGLE_FT_OFFER)
+      node2 = lm_message_node_add_child(node2, "offer", NULL);
+    else
+      node2 = lm_message_node_add_child(node2, "request", NULL);
+    
+    node2 = lm_message_node_add_child(node2, "file", NULL);
+    
+    lm_message_node_set_attributes(node2, "xmlns", NS_SI_FT, "name", jft->name,
+                                   "size", jft->size, NULL);
+    if (jft->hash != NULL)
+      lm_message_node_set_attribute(node2, "hash", jft->hash);
+    
+    if (jft->desc != NULL)
+      lm_message_node_add_child(node2, "desc", jft->desc);
+    
+    //if (jft->data != 0)
+      
+  }
 }
 
 static void jingle_ft_init(void)
