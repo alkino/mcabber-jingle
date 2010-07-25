@@ -497,7 +497,7 @@ void jingle_handle_app(JingleSession *sess, const gchar *name,
   if (trans == NULL)
     return;
   
-  //session_add_trans(sess, name, xmlns, gconstpointer data);
+  session_add_trans(sess, name, trans->xmlns(), trans->new());
 
   jingle_send_session_initiate(sess, to);
 }

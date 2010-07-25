@@ -38,6 +38,8 @@ static LmMessageHandler* jingle_ibb_handler = NULL;
 gconstpointer jingle_ibb_check(JingleContent *cn, GError **err);
 gboolean jingle_ibb_cmp(gconstpointer data1, gconstpointer data2);
 void jingle_ibb_handle(JingleAction act, gconstpointer data, LmMessageNode *node);
+const gchar* jingle_ibb_xmlns(void);
+gconstpointer jingle_ibb_new(void);
 
 static void jingle_ibb_init(void);
 static void jingle_ibb_uninit(void);
@@ -45,7 +47,7 @@ static void jingle_ibb_uninit(void);
 
 const gchar *deps[] = { "jingle", NULL };
 
-JingleTransportFuncs funcs = {jingle_ibb_check, jingle_ibb_handle, jingle_ibb_cmp};
+JingleTransportFuncs funcs = {jingle_ibb_xmlns, jingle_ibb_check, jingle_ibb_handle, jingle_ibb_cmp, jingle_ibb_new};
 
 module_info_t  info_jingle_inbandbytestream = {
   .branch          = MCABBER_BRANCH,
@@ -58,6 +60,11 @@ module_info_t  info_jingle_inbandbytestream = {
   .next            = NULL,
 };
 
+
+const gchar* jingle_ibb_xmlns(void)
+{
+  return NS_JINGLE_TRANSPORT_IBB;
+}
 
 gconstpointer jingle_ibb_check(JingleContent *cn, GError **err)
 {
@@ -78,7 +85,7 @@ gconstpointer jingle_ibb_check(JingleContent *cn, GError **err)
   ibb->blocksize = g_ascii_strtoll(blocksize, NULL, 10);
 
   // the size attribute is a xs:short an therefore can be negative.
-  if (ibb->blocksize < 0) {
+  if (ibb->blocksize < 0 || ibb->blocksize > IBB_BLOCK_SIZE_MAX) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
                 "block-size is negative");
     g_free(ibb);
@@ -134,6 +141,29 @@ gboolean jingle_ibb_cmp(gconstpointer data1, gconstpointer data2)
   return TRUE;
 }
 
+static gchar *new_ibb_sid(void)
+{
+  gchar *sid;
+  gchar car[] = "azertyuiopqsdfghjklmwxcvbn1234567890AZERTYUIOPQSDFGHJKLMWXCVBN";
+  int i;
+  sid = g_new0(gchar, 7);
+  for (i = 0; i < 6; i++)
+    sid[i] = car[g_random_int_range(0, sizeof(car)/sizeof(car[0]))];
+
+  sid[6] = '\0';
+  
+  return sid;
+}
+
+gconstpointer jingle_ibb_new(void)
+{
+  JingleIBB *ibb = g_new0(JingleIBB, 1);
+  ibb->blocksize = IBB_BLOCK_SIZE_MAX;
+  ibb->sid = new_ibb_sid();
+  ibb->seq = 0;
+  
+  return ibb;
+}
 
 int jingle_ibb_check_session(gconstpointer data, gconstpointer session)
 {
