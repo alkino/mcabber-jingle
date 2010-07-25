@@ -242,6 +242,8 @@ static void do_file(char *arg)
       session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
       g_checksum_free(md5);
       g_free(sid);
+      
+      
     }  
   } else if (!g_strcmp0(args[0], "request")) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: try to request %s!",

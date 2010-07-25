@@ -138,7 +138,7 @@ gboolean jingle_ibb_cmp(gconstpointer data1, gconstpointer data2)
 int jingle_ibb_check_session(gconstpointer data, gconstpointer session)
 {
   const JingleIBB *ibb1 = data, *ibb2 = session;
-  if(!g_strcmp0(ibb1->sid, ibb2->sid) && ibb1->seq > ibb2->seq) {
+  if(!g_strcmp0(ibb1->sid, ibb2->sid) && ibb1->seq == ibb2->seq + 1) {
     // TODO: change the seq in the session
     return 0;
   }

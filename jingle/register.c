@@ -124,7 +124,8 @@ JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns, GSList **f
     thistransport = (TransportHandlerEntry *) entry->data;
     
     // Look if it's forbidden
-    if (g_slist_find_custom(*forbid, thistransport->xmlns, cmp_forbid))
+    if (forbid != NULL &&
+        g_slist_find_custom(*forbid, thistransport->xmlns, cmp_forbid))
       continue;
     
     if (thistransport->transtype == requestedtype &&
@@ -133,7 +134,10 @@ JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns, GSList **f
       besttransport = thistransport;
     }
   }
-  *forbid = g_slist_append(*forbid, besttransport->xmlns);
+  
+  if (forbid != NULL)
+    *forbid = g_slist_append(*forbid, besttransport->xmlns);
+  
   return besttransport->funcs;
 }
 

@@ -139,5 +139,4 @@ void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data
 
 gchar *new_sid(void);
                                          
-static void lm_insert_sessioncontent(gpointer data, gpointer userdata);
 #endif

@@ -47,12 +47,14 @@ static guint jingle_disconn_hh(const gchar *hname, hk_arg_t *args,
 static void  jingle_init(void);
 static void  jingle_uninit(void);
 static void lm_insert_jinglecontent(gpointer data, gpointer userdata);
+static void lm_insert_sessioncontent(gpointer data, gpointer userdata);
 
 
 static LmMessageHandler* jingle_iq_handler = NULL;
 static GSList *ack_handlers = NULL;
 static guint connect_hid = 0;
 static guint disconn_hid = 0;
+
 
 /**
  * Must be aligned with the values in JingleAction
@@ -484,4 +486,18 @@ gchar *new_sid(void)
   sid[10] = '\0';
   
   return sid;
+}
+
+void jingle_handle_app(JingleSession *sess, const gchar *name,
+                       const gchar *xmlns_app, gconstpointer app,
+                       const gchar *to)
+{
+  JingleTransportFuncs *trans = jingle_transport_for_app(xmlns_app, NULL);
+  
+  if (trans == NULL)
+    return;
+  
+  //session_add_trans(sess, name, xmlns, gconstpointer data);
+
+  jingle_send_session_initiate(sess, to);
 }
