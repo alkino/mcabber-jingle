@@ -140,9 +140,4 @@ void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data
 
 gchar *new_sid(void);
 
-void jingle_handle_app(JingleSession *sess, const gchar *name,
-                       const gchar *xmlns_app, gconstpointer app,
-                       const gchar *to);
-
-                                         
 #endif

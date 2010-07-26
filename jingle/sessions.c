@@ -197,3 +197,17 @@ void session_free(JingleSession *sess)
   g_free(sess->from);
   g_free(sess);
 }
+
+void jingle_handle_app(JingleSession *sess, const gchar *name,
+                       const gchar *xmlns_app, gconstpointer app,
+                       const gchar *to)
+{
+  JingleTransportFuncs *trans = jingle_transport_for_app(xmlns_app, NULL);
+  
+  if (trans == NULL)
+    return;
+  
+  session_add_trans(sess, name, trans->xmlns(), trans->new());
+
+  jingle_send_session_initiate(sess, to);
+}

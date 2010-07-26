@@ -57,4 +57,8 @@ void session_delete(JingleSession *sess);
 void session_remove(JingleSession *sess);
 void session_free(JingleSession *sess);
 
+void jingle_handle_app(JingleSession *sess, const gchar *name,
+                       const gchar *xmlns_app, gconstpointer app,
+                       const gchar *to);
+
 #endif
