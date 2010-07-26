@@ -246,8 +246,6 @@ static void do_file(char *arg)
       
       g_checksum_free(md5);
       g_free(sid);
-      
-      
     }  
   } else if (!g_strcmp0(args[0], "request")) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: try to request %s!",

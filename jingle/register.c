@@ -112,8 +112,8 @@ JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns, GSList **f
 {
   AppHandlerEntry *app = jingle_find_app(appxmlns);
   GSList *entry;
-  TransportHandlerEntry *thistransport, *besttransport;
-  JingleTransportPriority bestprio;
+  TransportHandlerEntry *thistransport, *besttransport = NULL;
+  JingleTransportPriority bestprio = JINGLE_TRANSPORT_NONE;
   JingleTransportType requestedtype;
 
   if (entry == NULL)
@@ -138,7 +138,7 @@ JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns, GSList **f
   if (forbid != NULL)
     *forbid = g_slist_append(*forbid, besttransport->xmlns);
   
-  return besttransport->funcs;
+  return besttransport != NULL?besttransport->funcs:NULL;
 }
 
 /**

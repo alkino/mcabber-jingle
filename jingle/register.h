@@ -29,6 +29,7 @@ typedef enum {
  * direct connection would have a high priority, since it would be the fastest.
  */
 typedef enum {
+  JINGLE_TRANSPORT_NONE,
   JINGLE_TRANSPORT_LOW,
   JINGLE_TRANSPORT_NORMAL,
   JINGLE_TRANSPORT_HIGH
