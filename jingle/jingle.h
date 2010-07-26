@@ -4,6 +4,7 @@
 #include <glib.h>
 #include <loudmouth/loudmouth.h>
 
+
 #define NS_JINGLE "urn:xmpp:jingle:1"
 #define NS_JINGLE_ERRORS "urn:xmpp:jingle:errors:1"
 
@@ -138,5 +139,10 @@ gboolean evscallback_jingle(guint evcontext, const gchar *arg,
 void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data2, guint len);
 
 gchar *new_sid(void);
+
+void jingle_handle_app(JingleSession *sess, const gchar *name,
+                       const gchar *xmlns_app, gconstpointer app,
+                       const gchar *to);
+
                                          
 #endif

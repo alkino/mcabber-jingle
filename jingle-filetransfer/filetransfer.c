@@ -31,6 +31,7 @@
 #include <mcabber/logprint.h>
 #include <mcabber/compl.h>
 #include <mcabber/commands.h>
+#include <mcabber/roster.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
@@ -240,6 +241,9 @@ static void do_file(char *arg)
       jft->hash = g_strdup(g_checksum_get_string(md5));
       g_io_channel_seek_position (jft->outfile, 0, G_SEEK_SET, NULL);
       session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
+      
+      jingle_handle_app(sess, "file", NS_JINGLE_APP_FT, jft, CURRENT_JID);
+      
       g_checksum_free(md5);
       g_free(sid);
       
