@@ -219,6 +219,8 @@ static void do_file(char *arg)
       gchar *sid = new_sid();
       guchar data[1024];
       gsize bytes_read;
+      gchar *jid;
+      GSList *el;
       const gchar *jid = settings_opt_get("jid");
       JingleFT *jft = g_new0(JingleFT, 1);
       sess = session_new(sid, jid, jid);
@@ -242,8 +244,16 @@ static void do_file(char *arg)
       g_io_channel_seek_position (jft->outfile, 0, G_SEEK_SET, NULL);
       session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
       
-      jingle_handle_app(sess, "file", NS_JINGLE_APP_FT, jft, CURRENT_JID);
+      jid = CURRENT_JID;
+        
+      el = get_sorted_resources(jid);
+      if (el == NULL)
+        return;
+
+      jid = g_strdup_printf("%s/%s", jid, (gchar*)el->data);
+      jingle_handle_app(sess, "file", NS_JINGLE_APP_FT, jft, jid);
       
+      free_gslist_resources(el);
       g_checksum_free(md5);
       g_free(sid);
     }  

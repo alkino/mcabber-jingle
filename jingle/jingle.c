@@ -377,7 +377,9 @@ LmMessage *lm_message_from_jinglenode(const JingleNode *jn, const gchar *to)
     return NULL;
 
   g_slist_foreach(jn->content, lm_insert_jinglecontent, jnode);
-  return m;
+  scr_LogPrint(LPRINT_LOGNORM, "%s",
+                 lm_message_node_to_string(m->node));
+                 return m;
 }
 
 LmMessage *lm_message_from_jinglesession(const JingleSession *js, 
