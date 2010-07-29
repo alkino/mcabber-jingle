@@ -126,6 +126,8 @@ LmMessage *jingle_new_iq_error(LmMessage *m, const gchar *errtype,
 void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
                           const gchar *cond, const gchar *jinglecond);
 
+gchar *jingle_find_compatible_res(const gchar *jid, const gchar *ns[]);
+
 void jingle_ack_iq(LmMessage *m);
 
 LmMessage *lm_message_from_jinglenode(const JingleNode *jn, const gchar *to);
@@ -138,6 +140,6 @@ gboolean evscallback_jingle(guint evcontext, const gchar *arg,
                             
 void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data2, guint len);
 
-gchar *new_sid(void);
+gchar *jingle_generate_sid(void);
 
 #endif

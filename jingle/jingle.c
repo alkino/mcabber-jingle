@@ -274,6 +274,36 @@ void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
 }
 
 /**
+ * Find the best resource to initiate a jingle session.
+ * Test every ressource for a given jid and return the one
+ * who support all namespaces in ns.
+ */
+gchar *jingle_find_compatible_res(const gchar *jid, const gchar *ns[])
+{
+  gchar *choosenres;
+  guint indexns;
+  gboolean found;
+  GList *roster_usr;
+  GSList *reslist, *thisres;
+
+  roster_usr = buddy_search_jid(jid);
+  reslist = buddy_getresources(roster_usr->data);
+  for (thisres = reslist; thisres; thisres = g_slist_next(thisres)) {
+    found = TRUE;
+    for (indexns = 0; ns[indexns]; indexns++) {
+	  if (!caps_has_feature(buddy_resource_getcaps(roster_usr->data, thisres->data), ns[indexns]))
+	    found = FALSE;
+	}
+	if (!found) continue;
+
+    choosenres = g_strdup(thisres->data);
+    g_slist_foreach(reslist, (GFunc)g_free, NULL);
+    g_slist_free(reslist);
+    return choosenres;
+  }
+}
+
+/**
  * Find the jingle_action corresponding to a string
  */
 JingleAction jingle_action_from_str(const gchar *string)
@@ -476,7 +506,7 @@ void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data
   sc->appfuncs->handle_data(sc->description, data2, len);
 }
 
-gchar *new_sid(void)
+gchar *jingle_generate_sid(void)
 {
   gchar *sid;
   gchar car[] = "azertyuiopqsdfghjklmwxcvbn1234567890AZERTYUIOPQSDFGHJKLMWXCVBN";

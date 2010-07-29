@@ -22,6 +22,7 @@
 #include "config.h"
 
 #include <glib.h>
+#include <glib/gstdio.h>
 #include <string.h>
 
 #include <mcabber/modules.h>
@@ -32,6 +33,7 @@
 #include <mcabber/compl.h>
 #include <mcabber/commands.h>
 #include <mcabber/roster.h>
+#include <mcabber/utils.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
@@ -47,8 +49,6 @@ gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len
 static gboolean is_md5_hash(const gchar *hash);
 static void jingle_ft_init(void);
 static void jingle_ft_uninit(void);
-
-static guint file_cid = 0;
 
 const gchar *deps[] = { "jingle", NULL };
 
@@ -195,76 +195,71 @@ gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len)
   return TRUE;
 }
 
-static void do_file(char *arg)
+static void do_sendfile(char *arg)
 {
-  char **args = split_arg(arg, 2, 0);
+  char **args = split_arg(arg, 1, 0);
   
   if (!args[1]) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: give me a name!");
     return;
   }
   
-  if (!g_file_test (args[1], G_FILE_TEST_IS_REGULAR | G_FILE_TEST_EXISTS)) {
+  if (!g_file_test(args[1], G_FILE_TEST_IS_REGULAR | G_FILE_TEST_EXISTS)) {
     scr_LogPrint(LPRINT_LOGNORM, "File doesn't exist!");
     return;
   }
   
-  if (!g_strcmp0(args[0], "send")) {
-    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: try to sent %s!",
-                 args[1]);
-    // Create a new session for send a file
-    {
-      JingleSession *sess;
-      GChecksum *md5 = g_checksum_new(G_CHECKSUM_MD5);
-      gchar *sid = new_sid();
-      guchar data[1024];
-      gsize bytes_read;
-      gchar *jid;
-      GSList *el;
-      const gchar *jid = settings_opt_get("jid");
-      JingleFT *jft = g_new0(JingleFT, 1);
-      sess = session_new(sid, jid, jid);
-      session_add_content(sess, "file", JINGLE_SESSION_STATE_PENDING);
-      
-      jft->desc = g_strdup(args[2]);
-      jft->type = JINGLE_FT_OFFER;
-      jft->name = g_path_get_basename(args[1]);
-      jft->date = 0;
-      jft->size = 0;
-      jft->outfile = g_io_channel_new_file (args[1], "r", NULL);
-      g_io_channel_set_encoding(jft->outfile, NULL, NULL);
-      // For the md5 and the size
-      while (g_io_channel_read_chars(jft->outfile,
-                                     (gchar*)data, 1024, &bytes_read, NULL)
-             != G_IO_STATUS_EOF) {
-        jft->size+=bytes_read;
-        g_checksum_update(md5, data, bytes_read);
-      }
-      jft->hash = g_strdup(g_checksum_get_string(md5));
-      g_io_channel_seek_position (jft->outfile, 0, G_SEEK_SET, NULL);
-      session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
-      
-      jid = CURRENT_JID;
-        
-      el = get_sorted_resources(jid);
-      if (el == NULL)
-        return;
+  scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: try to sent %s",
+               args[1]);
 
-      jid = g_strdup_printf("%s/%s", jid, (gchar*)el->data);
-      jingle_handle_app(sess, "file", NS_JINGLE_APP_FT, jft, jid);
-      
-      free_gslist_resources(el);
-      g_checksum_free(md5);
-      g_free(sid);
-    }  
-  } else if (!g_strcmp0(args[0], "request")) {
-    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: try to request %s!",
-                 args[1]);
-    //later
+  {
+    /*GChecksum *md5 = g_checksum_new(G_CHECKSUM_MD5);
+    guchar data[1024];
+    gsize bytes_read;*/
+    JingleSession *sess;
+    gchar *sid = jingle_generate_sid();
+    gchar *ressource, *jid;
+    const gchar *namespaces[] = {NS_JINGLE, NS_JINGLE_APP_FT, NULL};
+    struct stat fileinfo;
+    const gchar *myjid = settings_opt_get("jid");
+    JingleFT *jft = g_new0(JingleFT, 1);
+
+    sess = session_new(sid, myjid, myjid);
+    session_add_content(sess, "file", JINGLE_SESSION_STATE_PENDING);
+
+    if (g_stat(args[1], &fileinfo) != 0) {
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: unable to stat %s", args[1]);
+      return;
+    }
+    jft->desc = g_strdup(args[1]);
+    jft->type = JINGLE_FT_OFFER;
+    jft->name = g_path_get_basename(args[1]);
+    jft->date = fileinfo.st_mtime;
+    jft->size = fileinfo.st_size;
+    jft->outfile = g_io_channel_new_file (args[1], "r", NULL);
+    g_io_channel_set_encoding(jft->outfile, NULL, NULL);
+    /*while (g_io_channel_read_chars(jft->outfile,
+                                   (gchar*)data, 1024, &bytes_read, NULL)
+           != G_IO_STATUS_EOF) {
+      jft->size+=bytes_read;
+      g_checksum_update(md5, data, bytes_read);
+    }
+    jft->hash = g_strdup(g_checksum_get_string(md5));
+    g_io_channel_seek_position(jft->outfile, 0, G_SEEK_SET, NULL);*/
+    session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
+
+    ressource = jingle_find_compatible_res(CURRENT_JID, namespaces);
+    if (ressource == NULL)
+      return;
+
+    jid = g_strdup_printf("%s/%s", CURRENT_JID, ressource);
+    jingle_handle_app(sess, "file", NS_JINGLE_APP_FT, jft, jid);
+
+    g_free(ressource);
+    //g_checksum_free(md5);
+    g_free(sid);
   }
-  
-  
-  
+
   free_arg_lst(args);
 }
 
@@ -301,14 +296,13 @@ static void jingle_ft_init(void)
 {
   jingle_register_app(NS_JINGLE_APP_FT, &funcs, JINGLE_TRANSPORT_STREAMING);
   xmpp_add_feature(NS_JINGLE_APP_FT);
-  /* Create completions */
-  file_cid = compl_new_category();
+  /*file_cid = compl_new_category();
   if (file_cid) {
-    compl_add_category_word(file_cid, "send");
-    compl_add_category_word(file_cid, "request");
-  }
+    compl_add_category_word(sendfile_cid, "send");
+    compl_add_category_word(send file_cid, "request");
+  }*/
   /* Add command */
-  cmd_add("file", "Send / Request a file", file_cid, 0, do_file, NULL);
+  cmd_add("sendfile", "Send a file", 0, 0, do_sendfile, NULL);
 }
 
 static void jingle_ft_uninit(void)
@@ -316,6 +310,6 @@ static void jingle_ft_uninit(void)
   xmpp_del_feature(NS_JINGLE_APP_FT);
   jingle_unregister_app(NS_JINGLE_APP_FT);
   cmd_del("file");
-  if (file_cid)
-    compl_del_category(file_cid);
+  /*if (file_cid)
+    compl_del_category(file_cid);*/
 }
