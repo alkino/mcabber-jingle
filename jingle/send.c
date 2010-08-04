@@ -123,16 +123,16 @@ void jingle_send_session_accept(JingleNode *jn)
   }
 }
 
-void jingle_send_session_initiate(JingleSession *js, const gchar *recipient)
+void jingle_send_session_initiate(JingleSession *js)
 {
   JingleNode initiate = {0};
   JingleAckHandle *ackhandle;
 
   initiate.action = JINGLE_SESSION_INITIATE;
   initiate.sid = js->sid;
-  initiate.initiator = js->initiator;
+  initiate.initiator = js->from;
   initiate.content = NULL; // TODO
-  initiate.message = lm_message_from_jinglenode(&initiate, recipient);
+  initiate.message = lm_message_from_jinglenode(&initiate, js->to);
 
   if (initiate.message) {
     ackhandle = g_new0(JingleAckHandle, 1);

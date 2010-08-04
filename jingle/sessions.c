@@ -34,14 +34,14 @@ static GSList *sessions;
 /**
  * Create a new session and insert it in the linked list.
  */
-JingleSession *session_new(const gchar *sid, const gchar *initiator,
-                           const gchar *from)
+JingleSession *session_new(const gchar *sid, const gchar *from,
+                           const gchar *to, SessionOrigin origin)
 {
   JingleSession *js = g_new0(JingleSession, 1);
   
-  js->sid = g_strdup(sid);
-  js->initiator = g_strdup(initiator);
+  js->sid  = g_strdup(sid);
   js->from = g_strdup(from);
+  js->to   = g_strdup(to);
   
   sessions = g_slist_append(sessions, js);
   return js;
@@ -49,14 +49,15 @@ JingleSession *session_new(const gchar *sid, const gchar *initiator,
 
 JingleSession *session_new_from_jinglenode(JingleNode *jn)
 {
-  const gchar *from;
+  const gchar *from, *to;
   
-  from = lm_message_get_from(jn->message);
-  if (!from) {
+  from = lm_message_node_get_attribute(jn->message->node, "from");
+  to = lm_message_node_get_attribute(jn->message->node, "to");
+  if (!from || !to) {
     return NULL;
   }
- 
-  return session_new(jn->sid, jn->initiator, from);
+
+  return session_new(jn->sid, from, to, JINGLE_SESSION_INCOMING);
 }
 
 JingleSession *session_find_by_sid(const gchar *sid, const gchar *from)

@@ -429,9 +429,6 @@ LmMessage *lm_message_from_jinglesession(const JingleSession *js,
   else 
     return NULL;
 
-  if (js->initiator)
-    lm_message_node_set_attribute(jnode, "initiator", js->initiator);
-
   if (js->sid)
     lm_message_node_set_attribute(jnode, "sid", js->sid);
   else

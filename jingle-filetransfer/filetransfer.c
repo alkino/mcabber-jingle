@@ -224,7 +224,7 @@ static void do_sendfile(char *arg)
     const gchar *myjid = settings_opt_get("jid");
     JingleFT *jft = g_new0(JingleFT, 1);
 
-    sess = session_new(sid, myjid, myjid);
+    sess = session_new(sid, myjid, myjid, JINGLE_SESSION_OUTGOING);
     session_add_content(sess, "file", JINGLE_SESSION_STATE_PENDING);
 
     if (g_stat(args[1], &fileinfo) != 0) {

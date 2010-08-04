@@ -36,11 +36,11 @@ typedef enum {
 } JingleTransportPriority;
 
 typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err);
-typedef void (*JingleAppHandle) (JingleAction action, gconstpointer data, LmMessageNode *node);
+typedef void (*JingleAppToMessage) (JingleAction action, gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleAppHandleData) (gconstpointer data, const gchar *data2, guint len);
 
 typedef gconstpointer (*JingleTransportCheck) (JingleContent *cn, GError **err);
-typedef void (*JingleTransportHandle) (JingleAction action, gconstpointer data, LmMessageNode *node);
+typedef void (*JingleTransportToMessage) (JingleAction action, gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleTransportCmp) (gconstpointer data1, gconstpointer data2);
 typedef const gchar* (*JingleTransportxmlns) (void);
 typedef gconstpointer (*JingleTransportNew) (void);
@@ -49,8 +49,8 @@ typedef struct {
   /* check if the description of a JingleContent is correct */
   JingleAppCheck check;
 
-  /* If we got a LM with the good xmlns */
-  JingleAppHandle handle;
+  /* Insert data from the gconstpointer to the node given as an argument */
+  JingleAppToMessage tomessage;
   
   JingleAppHandleData handle_data;
 
@@ -59,11 +59,9 @@ typedef struct {
 typedef struct {
   JingleTransportxmlns xmlns;
   
-  /* check if the transport of a JingleContent is correct */
-  JingleTransportCheck  check;
+  JingleTransportCheck check;
 
-  /* */
-  JingleTransportHandle handle;
+  JingleTransportToMessage tomessage;
   
   JingleTransportCmp cmp;
   
