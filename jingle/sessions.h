@@ -44,13 +44,29 @@ typedef struct {
 } JingleSession;
 
 typedef struct {
+  /* "A unique name or identifier for the content type
+   *  according to the creator" */
   const gchar *name;
+
+  /* */
   SessionState state;
+
+  /* The namespace of the app */
   const gchar *xmlns_desc;
+
+  /* The internal struct of the app module */
   gconstpointer description;
+
+  /* Struct of functions provided by the app module */
   JingleAppFuncs *appfuncs;
+
+  /* The namespace of the transport */
   const gchar *xmlns_trans;
+
+  /* The internal struct of the transport module */
   gconstpointer transport;
+
+  /* Struct of functions provided by the transport module */
   JingleTransportFuncs *transfuncs;
 } SessionContent;
 

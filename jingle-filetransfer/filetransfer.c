@@ -44,7 +44,7 @@
 
 
 gconstpointer jingle_ft_check(JingleContent *cn, GError **err);
-void jingle_ft_handle(JingleAction act, gconstpointer data, LmMessageNode *node);
+void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node);
 gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len);
 static gboolean is_md5_hash(const gchar *hash);
 static void jingle_ft_init(void);
@@ -54,7 +54,7 @@ const gchar *deps[] = { "jingle", NULL };
 
 JingleAppFuncs funcs = {
   jingle_ft_check,
-  jingle_ft_handle,
+  jingle_ft_tomessage,
   jingle_ft_handle_data
 };
 
@@ -263,33 +263,30 @@ static void do_sendfile(char *arg)
   free_arg_lst(args);
 }
 
-void jingle_ft_handle(JingleAction act, gconstpointer data, LmMessageNode *node)
+void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node)
 {
-  if (act == JINGLE_SESSION_INITIATE) {
-    JingleFT *jft = (JingleFT*) data;
-    if (lm_message_node_get_child(node, "description") != NULL)
-      return;
-  
-    LmMessageNode *node2 = lm_message_node_add_child(node, "description", NULL);
-    lm_message_node_set_attribute(node2, "xmlns", NS_JINGLE_APP_FT);
-    if (jft->type == JINGLE_FT_OFFER)
-      node2 = lm_message_node_add_child(node2, "offer", NULL);
-    else
-      node2 = lm_message_node_add_child(node2, "request", NULL);
-    
-    node2 = lm_message_node_add_child(node2, "file", NULL);
-    
-    lm_message_node_set_attributes(node2, "xmlns", NS_SI_FT, "name", jft->name,
-                                   "size", jft->size, NULL);
-    if (jft->hash != NULL)
-      lm_message_node_set_attribute(node2, "hash", jft->hash);
-    
-    if (jft->desc != NULL)
-      lm_message_node_add_child(node2, "desc", jft->desc);
-    
-    //if (jft->data != 0)
-      
-  }
+  JingleFT *jft = (JingleFT*) data;
+  if (lm_message_node_get_child(node, "description") != NULL)
+    return;
+
+  LmMessageNode *node2 = lm_message_node_add_child(node, "description", NULL);
+  lm_message_node_set_attribute(node2, "xmlns", NS_JINGLE_APP_FT);
+  if (jft->type == JINGLE_FT_OFFER)
+    node2 = lm_message_node_add_child(node2, "offer", NULL);
+  else
+    node2 = lm_message_node_add_child(node2, "request", NULL);
+
+  node2 = lm_message_node_add_child(node2, "file", NULL);
+
+  lm_message_node_set_attributes(node2, "xmlns", NS_SI_FT, "name", jft->name,
+                                 "size", jft->size, NULL);
+  if (jft->hash != NULL)
+    lm_message_node_set_attribute(node2, "hash", jft->hash);
+
+  if (jft->desc != NULL)
+    lm_message_node_add_child(node2, "desc", jft->desc);
+
+  //if (jft->data != 0)
 }
 
 static void jingle_ft_init(void)

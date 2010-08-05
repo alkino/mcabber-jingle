@@ -316,6 +316,14 @@ JingleAction jingle_action_from_str(const gchar *string)
   return JINGLE_UNKNOWN_ACTION;
 }
 
+/**
+ * This function should not be called if jn->message was created
+ * using lm_message_from_jinglenode because loudmouth strdup
+ * strings we insert as attributes. the pointers in the LmMessage
+ * and the JingleNode would not refer to the same addresses and
+ * a call to lm_message_unref would not free the data from the
+ * JingleNode.
+ */
 void jingle_free_jinglenode(JingleNode *jn)
 {
   g_slist_foreach(jn->content, (GFunc)g_free, NULL);
@@ -412,32 +420,6 @@ LmMessage *lm_message_from_jinglenode(const JingleNode *jn, const gchar *to)
                  return m;
 }
 
-LmMessage *lm_message_from_jinglesession(const JingleSession *js, 
-                                         const gchar *to,
-                                         JingleAction action)
-{
-  LmMessage* m; 
-  LmMessageNode *jnode;
-  const gchar *actionstr;
-
-  m = lm_message_new_with_sub_type(to, LM_MESSAGE_TYPE_IQ,
-                                   LM_MESSAGE_SUB_TYPE_SET); 
-  jnode = lm_message_node_add_child(m->node, "jingle", NULL);
-
-  if (actionstr = jingle_action_list[action].name)
-    lm_message_node_set_attribute(jnode, "action", actionstr);
-  else 
-    return NULL;
-
-  if (js->sid)
-    lm_message_node_set_attribute(jnode, "sid", js->sid);
-  else
-    return NULL;
-
-  g_slist_foreach(js->content, lm_insert_sessioncontent, jnode);
-  return m;
-}
-
 static void lm_insert_sessioncontent(gpointer data, gpointer userdata)
 {
   const gchar *xmlns;
@@ -466,32 +448,32 @@ static void lm_insert_jinglecontent(gpointer data, gpointer userdata)
   LmMessageNode* dad = (LmMessageNode*) userdata;
   LmMessageNode* node = (LmMessageNode*) lm_message_node_add_child(dad,
                                                                "content", NULL);
-  
+
   if (content->creator == JINGLE_CREATOR_INITIATOR)
     lm_message_node_set_attribute(node, "creator", "initiator");
   else
     lm_message_node_set_attribute(node, "creator", "responder");
-  
+
   if (content->disposition)
     lm_message_node_set_attribute(node, "disposition", content->disposition);
-  
+
   if (content->name)
     lm_message_node_set_attribute(node, "name", content->name);
-  
+
   if (content->senders == JINGLE_SENDERS_BOTH)
     lm_message_node_set_attribute(node, "senders", "both");
   else if (content->senders == JINGLE_SENDERS_INITIATOR)
     lm_message_node_set_attribute(node, "senders", "initiator");
   else if (content->senders == JINGLE_SENDERS_RESPONDER)
     lm_message_node_set_attribute(node, "senders", "responder");
-   
+ 
   xmlns =  lm_message_node_get_attribute(content->transport, "xmlns");
   tfunc = jingle_get_transportfuncs(xmlns);
-  //tfunc->handle(tfunc->check(content, NULL), node);
+  tfunc->tomessage(tfunc->check(content, NULL), node);
 
   xmlns =  lm_message_node_get_attribute(content->description, "xmlns");
   afunc = jingle_get_appfuncs(xmlns);
-  //afunc->handle(afunc->check(content, NULL), node);
+  afunc->tomessage(afunc->check(content, NULL), node);
 }
 
 void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data2, guint len)

@@ -94,7 +94,7 @@ typedef struct {
 
   /* each content element (must) contain one description
    * child element that specifies a desired application.
-   * the content of this node is app specific. */
+   * the connt of this node is app specific. */
   LmMessageNode *description;
 
   /* each content element (must) contain one transport

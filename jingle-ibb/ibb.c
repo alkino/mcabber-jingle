@@ -37,7 +37,7 @@ static LmMessageHandler* jingle_ibb_handler = NULL;
 
 gconstpointer jingle_ibb_check(JingleContent *cn, GError **err);
 gboolean jingle_ibb_cmp(gconstpointer data1, gconstpointer data2);
-void jingle_ibb_handle(JingleAction act, gconstpointer data, LmMessageNode *node);
+void jingle_ibb_tomessage(gconstpointer data, LmMessageNode *node);
 const gchar* jingle_ibb_xmlns(void);
 gconstpointer jingle_ibb_new(void);
 
@@ -47,7 +47,13 @@ static void jingle_ibb_uninit(void);
 
 const gchar *deps[] = { "jingle", NULL };
 
-JingleTransportFuncs funcs = {jingle_ibb_xmlns, jingle_ibb_check, jingle_ibb_handle, jingle_ibb_cmp, jingle_ibb_new};
+JingleTransportFuncs funcs = {
+  jingle_ibb_xmlns,
+  jingle_ibb_check,
+  jingle_ibb_tomessage,
+  jingle_ibb_cmp,
+  jingle_ibb_new
+};
 
 module_info_t  info_jingle_inbandbytestream = {
   .branch          = MCABBER_BRANCH,
@@ -175,20 +181,18 @@ int jingle_ibb_check_session(gconstpointer data, gconstpointer session)
   return 1;
 }
 
-void jingle_ibb_handle(JingleAction act, gconstpointer data, LmMessageNode *node)
+void jingle_ibb_tomessage(gconstpointer data, LmMessageNode *node)
 {
-  if (act == JINGLE_SESSION_INITIATE) {
-    JingleIBB *jibb = (JingleIBB*) data;
-    gchar *bsize = g_strdup_printf("%i", jibb->blocksize);
-    if (lm_message_node_get_child(node, "transport") != NULL)
-      return;
-  
-    LmMessageNode *node2 = lm_message_node_add_child(node, "transport", NULL);
-    lm_message_node_set_attributes(node2, "xmlns", NS_JINGLE_TRANSPORT_IBB,
-                                   "sid", jibb->sid,
-                                   "block-size", bsize);
-    g_free(bsize);
-  }
+  JingleIBB *jibb = (JingleIBB*) data;
+  gchar *bsize = g_strdup_printf("%i", jibb->blocksize);
+  if (lm_message_node_get_child(node, "transport") != NULL)
+    return;
+
+  LmMessageNode *node2 = lm_message_node_add_child(node, "transport", NULL);
+  lm_message_node_set_attributes(node2, "xmlns", NS_JINGLE_TRANSPORT_IBB,
+                                 "sid", jibb->sid,
+                                 "block-size", bsize);
+  g_free(bsize);
 }
 
 static void jingle_ibb_init(void)

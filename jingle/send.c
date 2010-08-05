@@ -127,11 +127,23 @@ void jingle_send_session_initiate(JingleSession *js)
 {
   JingleNode initiate = {0};
   JingleAckHandle *ackhandle;
+  GSList *listentry;
+  SessionContent *content;
+  JingleContent *jcontent;
 
   initiate.action = JINGLE_SESSION_INITIATE;
   initiate.sid = js->sid;
   initiate.initiator = js->from;
-  initiate.content = NULL; // TODO
+  for(listentry = js->content; listentry; listentry = g_slist_next(listentry)) {
+    /*content = (SessionContent *)listentry->data;
+    jcontent = g_new0(JingleContent, 1);
+    jcontent->node = lm_message_node_add_child()
+    jcontent->creator = JINGLE_CREATOR_INITIATOR;
+    jcontent->name = content->name
+    tfunc->tomessage(, node);
+    jcontent->transport = 
+    initiate.content = g_slist_append(initiate.content, jcontent);*/
+  }
   initiate.message = lm_message_from_jinglenode(&initiate, js->to);
 
   if (initiate.message) {

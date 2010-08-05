@@ -36,11 +36,11 @@ typedef enum {
 } JingleTransportPriority;
 
 typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err);
-typedef void (*JingleAppToMessage) (JingleAction action, gconstpointer data, LmMessageNode *node);
+typedef void (*JingleAppToMessage) (gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleAppHandleData) (gconstpointer data, const gchar *data2, guint len);
 
 typedef gconstpointer (*JingleTransportCheck) (JingleContent *cn, GError **err);
-typedef void (*JingleTransportToMessage) (JingleAction action, gconstpointer data, LmMessageNode *node);
+typedef void (*JingleTransportToMessage) (gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleTransportCmp) (gconstpointer data1, gconstpointer data2);
 typedef const gchar* (*JingleTransportxmlns) (void);
 typedef gconstpointer (*JingleTransportNew) (void);
