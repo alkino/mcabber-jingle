@@ -199,18 +199,18 @@ static void do_sendfile(char *arg)
 {
   char **args = split_arg(arg, 1, 0);
   
-  if (!args[1]) {
+  if (!args[0]) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: give me a name!");
     return;
   }
   
-  if (!g_file_test(args[1], G_FILE_TEST_IS_REGULAR | G_FILE_TEST_EXISTS)) {
+  if (!g_file_test(args[0], G_FILE_TEST_IS_REGULAR | G_FILE_TEST_EXISTS)) {
     scr_LogPrint(LPRINT_LOGNORM, "File doesn't exist!");
     return;
   }
   
   scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: try to sent %s",
-               args[1]);
+               args[0]);
 
   {
     /*GChecksum *md5 = g_checksum_new(G_CHECKSUM_MD5);
@@ -227,16 +227,16 @@ static void do_sendfile(char *arg)
     sess = session_new(sid, myjid, myjid, JINGLE_SESSION_OUTGOING);
     session_add_content(sess, "file", JINGLE_SESSION_STATE_PENDING);
 
-    if (g_stat(args[1], &fileinfo) != 0) {
+    if (g_stat(args[0], &fileinfo) != 0) {
       scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: unable to stat %s", args[1]);
       return;
     }
-    jft->desc = g_strdup(args[1]);
+    jft->desc = g_strdup(args[0]);
     jft->type = JINGLE_FT_OFFER;
-    jft->name = g_path_get_basename(args[1]);
+    jft->name = g_path_get_basename(args[0]);
     jft->date = fileinfo.st_mtime;
     jft->size = fileinfo.st_size;
-    jft->outfile = g_io_channel_new_file (args[1], "r", NULL);
+    jft->outfile = g_io_channel_new_file (args[0], "r", NULL);
     g_io_channel_set_encoding(jft->outfile, NULL, NULL);
     /*while (g_io_channel_read_chars(jft->outfile,
                                    (gchar*)data, 1024, &bytes_read, NULL)

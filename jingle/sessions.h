@@ -95,5 +95,8 @@ void session_free(JingleSession *sess);
 void jingle_handle_app(JingleSession *sess, const gchar *name,
                        const gchar *xmlns_app, gconstpointer app,
                        const gchar *to);
+LmMessage *lm_message_from_jinglesession(const JingleSession *js,
+                                         const gchar *to,
+                                         JingleAction action);
 
 #endif

@@ -125,33 +125,17 @@ void jingle_send_session_accept(JingleNode *jn)
 
 void jingle_send_session_initiate(JingleSession *js)
 {
-  JingleNode initiate = {0};
   JingleAckHandle *ackhandle;
   GSList *listentry;
-  SessionContent *content;
-  JingleContent *jcontent;
+  
+  LmMessage* mess = lm_message_from_jinglesession(js, js->to, JINGLE_SESSION_INITIATE);
 
-  initiate.action = JINGLE_SESSION_INITIATE;
-  initiate.sid = js->sid;
-  initiate.initiator = js->from;
-  for(listentry = js->content; listentry; listentry = g_slist_next(listentry)) {
-    /*content = (SessionContent *)listentry->data;
-    jcontent = g_new0(JingleContent, 1);
-    jcontent->node = lm_message_node_add_child()
-    jcontent->creator = JINGLE_CREATOR_INITIATOR;
-    jcontent->name = content->name
-    tfunc->tomessage(, node);
-    jcontent->transport = 
-    initiate.content = g_slist_append(initiate.content, jcontent);*/
-  }
-  initiate.message = lm_message_from_jinglenode(&initiate, js->to);
-
-  if (initiate.message) {
+  if (mess) {
     ackhandle = g_new0(JingleAckHandle, 1);
     ackhandle->callback = NULL;
     ackhandle->user_data = NULL;
-    lm_connection_send_with_reply(lconnection, initiate.message,
+    lm_connection_send_with_reply(lconnection, mess,
                                   jingle_new_ack_handler(ackhandle), NULL);
-    lm_message_unref(initiate.message);
+    lm_message_unref(mess);
   }
 }
