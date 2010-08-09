@@ -254,8 +254,7 @@ static void lm_insert_sessioncontent(gpointer data, gpointer userdata)
   if (content->name)
     lm_message_node_set_attribute(node, "name", content->name);
   
-  content->transfuncs->tomessage(content->description, node);
+  content->transfuncs->tomessage(content->transport, node);
 
-  content->appfuncs->tomessage(content->transport, node);
+  content->appfuncs->tomessage(content->description, node);
 }
-

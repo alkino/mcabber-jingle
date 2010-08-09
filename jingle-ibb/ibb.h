@@ -8,7 +8,7 @@
 
 typedef struct {
   /* Size of the blocks */
-  int blocksize;
+  guint blocksize;
 
   /* The identifiant of the transfer */
   const gchar *sid;

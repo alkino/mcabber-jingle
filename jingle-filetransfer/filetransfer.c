@@ -218,13 +218,23 @@ static void do_sendfile(char *arg)
     gsize bytes_read;*/
     JingleSession *sess;
     gchar *sid = jingle_generate_sid();
-    gchar *ressource, *jid;
+    gchar *ressource, *recipientjid;
     const gchar *namespaces[] = {NS_JINGLE, NS_JINGLE_APP_FT, NULL};
     struct stat fileinfo;
-    const gchar *myjid = settings_opt_get("jid");
+    const gchar *myjid = lm_connection_get_jid(lconnection);
     JingleFT *jft = g_new0(JingleFT, 1);
 
-    sess = session_new(sid, myjid, myjid, JINGLE_SESSION_OUTGOING);
+    if (CURRENT_JID == NULL) { // CURRENT_JID = the jid of the user which has focus
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Please, choose a valid JID in the roster");
+      return;
+    }
+    ressource = jingle_find_compatible_res(CURRENT_JID, namespaces);
+    if (ressource == NULL)
+      return;
+
+    recipientjid = g_strdup_printf("%s/%s", CURRENT_JID, ressource);
+
+    sess = session_new(sid, myjid, recipientjid, JINGLE_SESSION_OUTGOING);
     session_add_content(sess, "file", JINGLE_SESSION_STATE_PENDING);
 
     if (g_stat(args[0], &fileinfo) != 0) {
@@ -248,16 +258,8 @@ static void do_sendfile(char *arg)
     g_io_channel_seek_position(jft->outfile, 0, G_SEEK_SET, NULL);*/
     session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
 
-    if (CURRENT_JID == NULL) {
-      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Please, choose a valid JID in the roster");
-      return;
-    }
-    ressource = jingle_find_compatible_res(CURRENT_JID, namespaces);
-    if (ressource == NULL)
-      return;
 
-    jid = g_strdup_printf("%s/%s", CURRENT_JID, ressource);
-    jingle_handle_app(sess, "file", NS_JINGLE_APP_FT, jft, jid);
+    jingle_handle_app(sess, "file", NS_JINGLE_APP_FT, jft, recipientjid);
 
     g_free(ressource);
     //g_checksum_free(md5);
@@ -284,8 +286,7 @@ void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node)
 
   node2 = lm_message_node_add_child(node2, "file", NULL);
 
-  if(!g_sprintf(size, "%li", jft->size))
-    return;
+  size = g_strdup_printf("%lli", jft->size);
   
   lm_message_node_set_attributes(node2, "xmlns", NS_SI_FT, "name", jft->name,
                                  "size", size, NULL);
