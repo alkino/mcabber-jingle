@@ -205,11 +205,11 @@ static void do_sendfile(char *arg)
   }
   
   if (!g_file_test(args[0], G_FILE_TEST_IS_REGULAR | G_FILE_TEST_EXISTS)) {
-    scr_LogPrint(LPRINT_LOGNORM, "File doesn't exist!");
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: File doesn't exist!");
     return;
   }
   
-  scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: try to sent %s",
+  scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Trying to send %s",
                args[0]);
 
   {
@@ -248,6 +248,10 @@ static void do_sendfile(char *arg)
     g_io_channel_seek_position(jft->outfile, 0, G_SEEK_SET, NULL);*/
     session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
 
+    if (CURRENT_JID == NULL) {
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Please, choose a valid JID in the roster");
+      return;
+    }
     ressource = jingle_find_compatible_res(CURRENT_JID, namespaces);
     if (ressource == NULL)
       return;
