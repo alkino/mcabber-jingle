@@ -24,7 +24,7 @@
 #include <jingle/jingle.h>
 #include <jingle/sessions.h>
 #include <jingle/register.h>
-
+#include <mcabber/logprint.h>
 
 static GSList *sessions;
 
@@ -206,8 +206,10 @@ void jingle_handle_app(JingleSession *sess, const gchar *name,
 {
   JingleTransportFuncs *trans = jingle_transport_for_app(xmlns_app, NULL);
   
-  if (trans == NULL)
+  if (trans == NULL) {
+    scr_LogPrint(LPRINT_LOGNORM, "Unable to find a transport for %s", xmlns_app);
     return;
+  }
   
   session_add_trans(sess, name, trans->xmlns(), trans->new());
 
