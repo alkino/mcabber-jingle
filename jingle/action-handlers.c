@@ -44,7 +44,7 @@ void handle_content_accept(JingleNode *jn)
   GError *err = NULL;
   GSList *child = NULL;
   JingleContent *cn;
-  JingleAppFuncs *appfuncs; 
+  JingleAppFuncs *appfuncs;
   JingleTransportFuncs *transfuncs;
   gconstpointer description, transport;
   const gchar *xmlns;

@@ -47,7 +47,7 @@ static void jingle_ibb_uninit(void);
 
 const gchar *deps[] = { "jingle", NULL };
 
-JingleTransportFuncs funcs = {
+static JingleTransportFuncs funcs = {
   jingle_ibb_xmlns,
   jingle_ibb_check,
   jingle_ibb_tomessage,

@@ -52,7 +52,7 @@ static void jingle_ft_uninit(void);
 
 const gchar *deps[] = { "jingle", NULL };
 
-JingleAppFuncs funcs = {
+static JingleAppFuncs funcs = {
   jingle_ft_check,
   jingle_ft_tomessage,
   jingle_ft_handle_data
@@ -266,6 +266,8 @@ static void do_sendfile(char *arg)
 void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node)
 {
   JingleFT *jft = (JingleFT*) data;
+  gchar *size = NULL;
+  
   if (lm_message_node_get_child(node, "description") != NULL)
     return;
 
@@ -278,8 +280,13 @@ void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node)
 
   node2 = lm_message_node_add_child(node2, "file", NULL);
 
+  if(!g_sprintf(size, "%li", jft->size))
+    return;
+  
   lm_message_node_set_attributes(node2, "xmlns", NS_SI_FT, "name", jft->name,
-                                 "size", jft->size, NULL);
+                                 "size", size, NULL);
+  g_free(size);
+  
   if (jft->hash != NULL)
     lm_message_node_set_attribute(node2, "hash", jft->hash);
 
