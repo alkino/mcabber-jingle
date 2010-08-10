@@ -67,9 +67,11 @@ JingleSession *session_find_by_sid(const gchar *sid, const gchar *from)
 {
   GSList *el;
   JingleSession *js;
+  gchar *recipient;
   for (el = sessions; el; el = el->next) {
     js = (JingleSession*) el->data;
-    if (g_strcmp0(js->sid, sid) && g_strcmp0(js->from, from)) {
+    recipient = (js->origin == JINGLE_SESSION_INCOMING) ? js->from : js->to;
+    if (!g_strcmp0(js->sid, sid) && !g_strcmp0(recipient, from)) {
       return js;
     }
   }
