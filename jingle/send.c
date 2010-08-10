@@ -123,6 +123,24 @@ void jingle_send_session_accept(JingleNode *jn)
   }
 }
 
+static void jingle_handle_ack_iq_si(LmMessage *mess, gpointer *data)
+{
+  LmMessageNode *node;
+  const gchar *type, *cause;
+  
+  if(lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_RESULT)
+    return;
+  if(lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_ERROR) {
+    node = lm_message_get_node(mess);
+    node = lm_message_node_get_child(node,"error");
+    type = lm_message_node_get_attribute(node, "type");
+    if(node->children != NULL) {
+      cause = node->children->name;
+    }
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle: session-initiate refuse: %s %s", type, cause);
+  } 
+}
+
 void jingle_send_session_initiate(JingleSession *js)
 {
   JingleAckHandle *ackhandle;
@@ -135,7 +153,7 @@ void jingle_send_session_initiate(JingleSession *js)
 
   if (mess) {
     ackhandle = g_new0(JingleAckHandle, 1);
-    ackhandle->callback = NULL;
+    ackhandle->callback = jingle_handle_ack_iq_si;
     ackhandle->user_data = NULL;
     lm_connection_send_with_reply(lconnection, mess,
                                   jingle_new_ack_handler(ackhandle), NULL);

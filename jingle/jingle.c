@@ -119,7 +119,7 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
       // request malformed, we reply with a bad-request
       jingle_send_iq_error(message, "cancel", "bad-request", NULL);
       scr_log_print(LPRINT_DEBUG,
-                    "jingle: ", error->message);
+                    "jingle: %s", error->message);
     }
     g_clear_error(&error);
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
@@ -290,8 +290,8 @@ gchar *jingle_find_compatible_res(const gchar *jid, const gchar *ns[])
   for (thisres = reslist; thisres; thisres = g_slist_next(thisres)) {
     found = TRUE;
     for (indexns = 0; ns[indexns]; indexns++) {
-	   if (!caps_has_feature(buddy_resource_getcaps(roster_usr->data, thisres->data), ns[indexns]))
-	     found = FALSE;
+	  // if (!caps_has_feature(buddy_resource_getcaps(roster_usr->data, thisres->data), ns[indexns]))
+	   //  found = FALSE;
 	 }
 	 if (!found) continue;
 
