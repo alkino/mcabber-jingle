@@ -61,11 +61,31 @@ void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
   lm_message_unref(r);
 }
 
+static void jingle_handle_ack_iq_sa(LmMessage *mess, gpointer *data)
+{
+  LmMessageNode *node;
+  const gchar *type, *cause;
+  JingleSession *sess = (JingleSession*)data;
+  
+  if(lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_RESULT)
+    return;
+  if(lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_ERROR) {
+    node = lm_message_get_node(mess);
+    node = lm_message_node_get_child(node,"error");
+    type = lm_message_node_get_attribute(node, "type");
+    if(node->children != NULL)
+      cause = node->children->name;
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle: session-accept %s: %s", type, cause);
+  }
+  // We delete the session, there was an error
+  session_delete(sess);
+}
+
 void jingle_send_session_accept(JingleNode *jn)
 {
-  JingleNode accept = {0};
   JingleSession *sess;
   JingleContent *cn;
+  LmMessage *mess;
   GSList *child = NULL;
   JingleAppFuncs *appfuncs;
   JingleTransportFuncs *transfuncs;
@@ -74,11 +94,6 @@ void jingle_send_session_accept(JingleNode *jn)
   GError *err = NULL;
   JingleAckHandle *ackhandle;
  
-  accept.action = JINGLE_SESSION_ACCEPT;
-  accept.responder = g_strdup(lm_connection_get_jid(lconnection));
-  accept.sid = jn->sid;
-  accept.content = NULL;
-
   sess = session_new_from_jinglenode(jn);
 
   for (child = jn->content; child; child = child->next) {
@@ -100,7 +115,6 @@ void jingle_send_session_accept(JingleNode *jn)
     scr_log_print(LPRINT_DEBUG, "jingle: New content accepted: %s", cn->name);
 
     session_add_content_from_jinglecontent(sess, cn, JINGLE_SESSION_STATE_ACTIVE);
-    accept.content = g_slist_append(accept.content, cn);
   }
 
   if(g_slist_length(sess->content) == 0) {
@@ -109,17 +123,14 @@ void jingle_send_session_accept(JingleNode *jn)
     return;
   }
 
-  if (g_slist_length(accept.content) <= 0) return;
-
-  accept.message = lm_message_from_jinglenode(&accept,
-                                              lm_message_get_from(jn->message));
-  if (accept.message) {
+  mess = lm_message_from_jinglesession(sess, JINGLE_CONTENT_ACCEPT);
+  if (mess) {
     ackhandle = g_new0(JingleAckHandle, 1);
-    ackhandle->callback = NULL;
-    ackhandle->user_data = NULL;
-    lm_connection_send_with_reply(lconnection, accept.message,
+    ackhandle->callback = jingle_handle_ack_iq_sa;
+    ackhandle->user_data = (gpointer*)sess
+    lm_connection_send_with_reply(lconnection, mess,
                                   jingle_new_ack_handler(ackhandle), NULL);
-    lm_message_unref(accept.message);
+    lm_message_unref(mess);
   }
 }
 
