@@ -189,9 +189,11 @@ void jingle_ibb_tomessage(gconstpointer data, LmMessageNode *node)
     return;
 
   LmMessageNode *node2 = lm_message_node_add_child(node, "transport", NULL);
+
   lm_message_node_set_attributes(node2, "xmlns", NS_JINGLE_TRANSPORT_IBB,
                                  "sid", jibb->sid,
-                                 "block-size", bsize);
+                                 "block-size", bsize,
+                                 NULL);
   g_free(bsize);
 }
 

@@ -213,7 +213,7 @@ void jingle_handle_app(JingleSession *sess, const gchar *name,
   
   session_add_trans(sess, name, trans->xmlns(), trans->new());
 
-  jingle_send_session_initiate(sess, to);
+  jingle_send_session_initiate(sess);
 }
 
 LmMessage *lm_message_from_jinglesession(const JingleSession *js,
@@ -228,6 +228,8 @@ LmMessage *lm_message_from_jinglesession(const JingleSession *js,
                                    LM_MESSAGE_SUB_TYPE_SET);
   jnode = lm_message_node_add_child(m->node, "jingle", NULL);
 
+  lm_message_node_set_attribute(jnode, "xmlns", NS_JINGLE);
+  
   if (actionstr = jingle_action_list[action].name)
     lm_message_node_set_attribute(jnode, "action", actionstr);
   else

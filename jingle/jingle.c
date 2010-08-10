@@ -288,8 +288,6 @@ gchar *jingle_find_compatible_res(const gchar *jid, const gchar *ns[])
   roster_usr = buddy_search_jid(jid);
   reslist = buddy_getresources(roster_usr->data);
   for (thisres = reslist; thisres; thisres = g_slist_next(thisres)) {
-    choosenres = g_strdup(thisres->data);
-    return choosenres;
     found = TRUE;
     for (indexns = 0; ns[indexns]; indexns++) {
 	   if (!caps_has_feature(buddy_resource_getcaps(roster_usr->data, thisres->data), ns[indexns]))
@@ -302,6 +300,7 @@ gchar *jingle_find_compatible_res(const gchar *jid, const gchar *ns[])
     g_slist_free(reslist);
     return choosenres;
   }
+
   return NULL;
 }
 

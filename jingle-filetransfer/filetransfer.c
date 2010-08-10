@@ -231,9 +231,11 @@ static void do_sendfile(char *arg)
       return;
     }
     ressource = jingle_find_compatible_res(CURRENT_JID, namespaces);
-    if (ressource == NULL)
+    if (ressource == NULL) {
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Cannot send file, because there is no ressource available");
       return;
-
+    }
+    
     recipientjid = g_strdup_printf("%s/%s", CURRENT_JID, ressource);
 
     sess = session_new(sid, myjid, recipientjid, JINGLE_SESSION_OUTGOING);
@@ -259,7 +261,6 @@ static void do_sendfile(char *arg)
     jft->hash = g_strdup(g_checksum_get_string(md5));
     g_io_channel_seek_position(jft->outfile, 0, G_SEEK_SET, NULL);*/
     session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
-
 
     jingle_handle_app(sess, "file", NS_JINGLE_APP_FT, jft, recipientjid);
 
