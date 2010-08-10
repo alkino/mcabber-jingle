@@ -74,6 +74,7 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
 {
   JingleFT *ft = NULL;
   LmMessageNode *node;
+  gint64 tmpsize;
   const gchar *datestr, *sizestr;
 
   node = lm_message_node_get_child(cn->description, "offer");
@@ -111,15 +112,16 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
   }
 
   ft->date = from_iso8601(datestr, 1);
-  ft->size = g_ascii_strtoll(sizestr, NULL, 10);
+  tmpsize = g_ascii_strtoll(sizestr, NULL, 10);
 
   // the size attribute is a xs:integer an therefore can be negative.
-  if (ft->size < 0) {
+  if (tmpsize < 0) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
                 "the offered file has a negative size");
     g_free(ft);
     return NULL;
   }
+  ft->size = tmpsize;
 
   ft->name = g_path_get_basename(ft->name);
   
@@ -286,7 +288,7 @@ void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node)
 
   node2 = lm_message_node_add_child(node2, "file", NULL);
 
-  size = g_strdup_printf("%lli", jft->size);
+  size = g_strdup_printf("%" G_GUINT64_FORMAT, jft->size);
   
   lm_message_node_set_attributes(node2, "xmlns", NS_SI_FT, "name", jft->name,
                                  "size", size, NULL);

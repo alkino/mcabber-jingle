@@ -21,7 +21,7 @@ typedef struct {
   gchar *name;
 
   /* the size, in bytes, of the data to be sent */
-  gint64 size;
+  guint64 size;
 
   /* descriptor to the output file */
   GIOChannel *outfile;
