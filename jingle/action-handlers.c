@@ -336,6 +336,39 @@ void handle_session_initiate(JingleNode *jn)
   g_free(disp);
 }
 
+void handle_session_accept(JingleNode *jn)
+{
+  JingleSession *sess;
+  JingleContent *jc;
+  SessionContent *sc;
+  
+  GSList *el;
+  const gchar *from = lm_message_get_from(jn->message);
+  
+  // We're looking if the session exist
+  sess = session_find_by_sid(jn->sid, from);
+  if (sess == NULL) {
+    // TODO: send unknow-session
+    return;
+  }
+  
+  jingle_ack_iq(jn->message);
+  
+  for (el = jn->content; el; el = el->next) {
+    jc = (JingleContent*)el->data;
+    session_changestate_sessioncontent(sess, jc->name,
+                                       JINGLE_SESSION_STATE_ACTIVE);
+  }
+  
+  // We delete content who have been refuse
+  for (el = sess->content; el; el = el->next) {
+    sc = (SessionContent*) el->data;
+    if (sc->state == JINGLE_SESSION_STATE_PENDING) {
+      session_remove_sessioncontent(sess, sc->name);
+    }
+  }
+}
+
 void handle_session_terminate(JingleNode *jn)
 {
   JingleSession *sess;

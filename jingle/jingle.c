@@ -72,7 +72,7 @@ struct JingleActionList jingle_action_list[] = {
   { "session-info",      NULL },
   { "session-initiate",  handle_session_initiate },
   { "session-terminate", handle_session_terminate },
-  { "transport-accept",  NULL },
+  { "transport-accept",  handle_session_accept },
   { "transport-info",    NULL },
   { "transport-reject",  NULL },
   { "transport-replace", NULL },
@@ -417,9 +417,7 @@ LmMessage *lm_message_from_jinglenode(const JingleNode *jn, const gchar *to)
     return NULL;
 
   g_slist_foreach(jn->content, lm_insert_jinglecontent, jnode);
-  scr_LogPrint(LPRINT_LOGNORM, "%s",
-                 lm_message_node_to_string(m->node));
-                 return m;
+  return m;
 }
 
 static void lm_insert_jinglecontent(gpointer data, gpointer userdata)
