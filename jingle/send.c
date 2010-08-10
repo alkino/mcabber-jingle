@@ -128,8 +128,10 @@ void jingle_send_session_initiate(JingleSession *js)
   JingleAckHandle *ackhandle;
   GSList *listentry;
   
-  LmMessage* mess = lm_message_from_jinglesession(js, js->to,
+  LmMessage *mess = lm_message_from_jinglesession(js, js->to,
                                                   JINGLE_SESSION_INITIATE);
+  lm_message_node_set_attribute(lm_message_node_get_child(mess->node, "jingle"),
+                                "initiator", js->from);
 
   if (mess) {
     ackhandle = g_new0(JingleAckHandle, 1);

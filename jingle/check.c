@@ -69,7 +69,7 @@ gboolean check_jingle(LmMessage *message, LmMessageNode *node,
     return FALSE;
   }
 
-  if (check_jid_syntax(jn->initiator)) {
+  if (actionstr != NULL && check_jid_syntax(jn->initiator)) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
                 "the initiator attribute in invalid (not a jid)");
     return FALSE;
