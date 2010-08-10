@@ -348,7 +348,7 @@ void handle_session_accept(JingleNode *jn)
   // We're looking if the session exist
   sess = session_find_by_sid(jn->sid, from);
   if (sess == NULL) {
-    // TODO: send unknow-session
+    jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
     return;
   }
   

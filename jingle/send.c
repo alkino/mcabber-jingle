@@ -123,7 +123,7 @@ void jingle_send_session_accept(JingleNode *jn)
     return;
   }
 
-  mess = lm_message_from_jinglesession(sess, JINGLE_CONTENT_ACCEPT);
+  mess = lm_message_from_jinglesession(sess, JINGLE_SESSION_ACCEPT);
   if (mess) {
     ackhandle = g_new0(JingleAckHandle, 1);
     ackhandle->callback = jingle_handle_ack_iq_sa;
