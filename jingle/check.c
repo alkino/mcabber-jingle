@@ -69,7 +69,7 @@ gboolean check_jingle(LmMessage *message, LmMessageNode *node,
     return FALSE;
   }
 
-  if (actionstr != NULL && check_jid_syntax(jn->initiator)) {
+  if (jn->initiator != NULL && check_jid_syntax(jn->initiator)) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
                 "the initiator attribute in invalid (not a jid)");
     return FALSE;
@@ -111,26 +111,37 @@ static JingleContent *check_content(LmMessageNode *node, GError **err)
   cn->name        = lm_message_node_get_attribute(node, "name");
   sendersstr      = lm_message_node_get_attribute(node, "senders");
 
-  if (creatorstr == NULL || cn->name == NULL) {
+  if (cn->name == NULL) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
-                "an attribute of the content element is missing");
+                "the name attribute of the content element is missing");
     g_free(cn);
     return NULL;
   }
-
-  tmp = index_in_array(creatorstr, jingle_content_creator);
-  tmp2 = index_in_array(sendersstr, jingle_content_senders);
-  if (tmp < 0 || (tmp2 < 0 && sendersstr != NULL)) {
-    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
-                "the attribute creator or sender is invalid");
-    g_free(cn);
-    return NULL;
+  
+  if (creatorstr == NULL) {
+    cn->creator = JINGLE_CREATOR_INITIATOR;
+  } else {
+    tmp = index_in_array(creatorstr, jingle_content_creator);
+    if(tmp < 0) {
+      g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
+                  "the creator attribute is invalid");
+	}
+    cn->creator = (JingleCreator)tmp;
   }
-  cn->creator = (JingleCreator)tmp;
-  if(sendersstr != NULL)
+  
+  if (sendersstr == NULL) {
+	  cn->senders = JINGLE_SENDERS_BOTH;
+  } else {
+    tmp2 = index_in_array(sendersstr, jingle_content_senders);
+    if (tmp2 < 0) {
+      g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
+                  "the senders attribute is invalid");
+      g_free(cn);
+      return NULL;
+    }
     cn->senders = (JingleSenders)tmp2;
-  else
-    cn->senders = JINGLE_SENDERS_BOTH;
+  }
+    
   cn->description = lm_message_node_get_child(node, "description");
   cn->transport   = lm_message_node_get_child(node, "transport");
   if (cn->description == NULL || cn->transport == NULL) {

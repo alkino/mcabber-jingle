@@ -200,13 +200,16 @@ gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len)
 static void do_sendfile(char *arg)
 {
   char **args = split_arg(arg, 1, 0);
+  gchar *filename;
   
   if (!args[0]) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: give me a name!");
     return;
   }
   
-  if (!g_file_test(args[0], G_FILE_TEST_IS_REGULAR | G_FILE_TEST_EXISTS)) {
+  filename = expand_filename(args[0]); // expand ~ to HOME
+  
+  if (!g_file_test(filename, G_FILE_TEST_IS_REGULAR | G_FILE_TEST_EXISTS)) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: File doesn't exist!");
     return;
   }
@@ -247,10 +250,10 @@ static void do_sendfile(char *arg)
     }
     jft->desc = g_strdup(args[0]);
     jft->type = JINGLE_FT_OFFER;
-    jft->name = g_path_get_basename(args[0]);
+    jft->name = g_path_get_basename(filename);
     jft->date = fileinfo.st_mtime;
     jft->size = fileinfo.st_size;
-    jft->outfile = g_io_channel_new_file (args[0], "r", NULL);
+    jft->outfile = g_io_channel_new_file (filename, "r", NULL);
     g_io_channel_set_encoding(jft->outfile, NULL, NULL);
     /*while (g_io_channel_read_chars(jft->outfile,
                                    (gchar*)data, 1024, &bytes_read, NULL)
