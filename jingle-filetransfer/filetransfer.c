@@ -226,7 +226,7 @@ static void do_sendfile(char *arg)
     gchar *ressource, *recipientjid;
     const gchar *namespaces[] = {NS_JINGLE, NS_JINGLE_APP_FT, NULL};
     struct stat fileinfo;
-    const gchar *myjid = lm_connection_get_jid(lconnection);
+    const gchar *myjid = g_strdup(lm_connection_get_jid(lconnection));
     JingleFT *jft = g_new0(JingleFT, 1);
 
     if (CURRENT_JID == NULL) { // CURRENT_JID = the jid of the user which has focus
@@ -244,7 +244,7 @@ static void do_sendfile(char *arg)
     sess = session_new(sid, myjid, recipientjid, JINGLE_SESSION_OUTGOING);
     session_add_content(sess, "file", JINGLE_SESSION_STATE_PENDING);
 
-    if (g_stat(args[0], &fileinfo) != 0) {
+    if (g_stat(filename, &fileinfo) != 0) {
       scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: unable to stat %s", args[1]);
       return;
     }

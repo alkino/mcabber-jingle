@@ -64,7 +64,7 @@ void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
 void jingle_send_session_accept(JingleNode *jn)
 {
   JingleNode accept = {0};
-  JingleSession* sess;
+  JingleSession *sess;
   JingleContent *cn;
   GSList *child = NULL;
   JingleAppFuncs *appfuncs;
@@ -75,7 +75,7 @@ void jingle_send_session_accept(JingleNode *jn)
   JingleAckHandle *ackhandle;
  
   accept.action = JINGLE_SESSION_ACCEPT;
-  accept.responder = g_strdup_printf("%s", lm_connection_get_jid(lconnection));
+  accept.responder = g_strdup(lm_connection_get_jid(lconnection));
   accept.sid = jn->sid;
   accept.content = NULL;
 
@@ -148,8 +148,7 @@ void jingle_send_session_initiate(JingleSession *js)
   JingleAckHandle *ackhandle;
   GSList *listentry;
   
-  LmMessage *mess = lm_message_from_jinglesession(js, js->to,
-                                                  JINGLE_SESSION_INITIATE);
+  LmMessage *mess = lm_message_from_jinglesession(js, JINGLE_SESSION_INITIATE);
   lm_message_node_set_attribute(lm_message_node_get_child(mess->node, "jingle"),
                                 "initiator", js->from);
 

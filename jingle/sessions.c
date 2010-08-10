@@ -54,6 +54,7 @@ JingleSession *session_new_from_jinglenode(JingleNode *jn)
   
   from = lm_message_node_get_attribute(jn->message->node, "from");
   to = lm_message_node_get_attribute(jn->message->node, "to");
+
   if (!from || !to) {
     return NULL;
   }
@@ -217,15 +218,17 @@ void jingle_handle_app(JingleSession *sess, const gchar *name,
 }
 
 LmMessage *lm_message_from_jinglesession(const JingleSession *js,
-                                         const gchar *to,
                                          JingleAction action)
 {
   LmMessage* m; 
   LmMessageNode *jnode;
-  const gchar *actionstr;
+  const gchar *actionstr, *recipient;
+  
+  recipient = (js->origin == JINGLE_SESSION_INCOMING) ? js->from : js->to;
 
-  m = lm_message_new_with_sub_type(to, LM_MESSAGE_TYPE_IQ,
+  m = lm_message_new_with_sub_type(recipient, LM_MESSAGE_TYPE_IQ,
                                    LM_MESSAGE_SUB_TYPE_SET);
+
   jnode = lm_message_node_add_child(m->node, "jingle", NULL);
 
   lm_message_node_set_attribute(jnode, "xmlns", NS_JINGLE);
