@@ -127,7 +127,7 @@ void jingle_send_session_accept(JingleNode *jn)
   if (mess) {
     ackhandle = g_new0(JingleAckHandle, 1);
     ackhandle->callback = jingle_handle_ack_iq_sa;
-    ackhandle->user_data = (gpointer*)sess
+    ackhandle->user_data = (gpointer*)sess;
     lm_connection_send_with_reply(lconnection, mess,
                                   jingle_new_ack_handler(ackhandle), NULL);
     lm_message_unref(mess);
