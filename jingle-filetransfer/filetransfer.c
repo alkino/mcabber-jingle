@@ -46,7 +46,7 @@
 gconstpointer jingle_ft_check(JingleContent *cn, GError **err);
 void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node);
 gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len);
-void jingle_ft_start(gconstpointer data);
+void jingle_ft_start(gconstpointer data, gsize size);
 static gboolean is_md5_hash(const gchar *hash);
 static void jingle_ft_init(void);
 static void jingle_ft_uninit(void);
@@ -219,9 +219,6 @@ static void do_sendfile(char *arg)
                args[0]);
 
   {
-    /*GChecksum *md5 = g_checksum_new(G_CHECKSUM_MD5);
-    guchar data[1024];
-    gsize bytes_read;*/
     JingleSession *sess;
     gchar *sid = jingle_generate_sid();
     gchar *ressource, *recipientjid;
@@ -256,14 +253,7 @@ static void do_sendfile(char *arg)
     jft->size = fileinfo.st_size;
     jft->outfile = g_io_channel_new_file (filename, "r", NULL);
     g_io_channel_set_encoding(jft->outfile, NULL, NULL);
-    /*while (g_io_channel_read_chars(jft->outfile,
-                                   (gchar*)data, 1024, &bytes_read, NULL)
-           != G_IO_STATUS_EOF) {
-      jft->size+=bytes_read;
-      g_checksum_update(md5, data, bytes_read);
-    }
-    jft->hash = g_strdup(g_checksum_get_string(md5));
-    g_io_channel_seek_position(jft->outfile, 0, G_SEEK_SET, NULL);*/
+    
     session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
 
     jingle_handle_app(sess, "file", NS_JINGLE_APP_FT, jft, recipientjid);
@@ -271,6 +261,8 @@ static void do_sendfile(char *arg)
     g_free(ressource);
     //g_checksum_free(md5);
     g_free(sid);
+    g_io_channel_unref(jft->outfile);
+    g_io_channel_shutdown(jft->outfile, TRUE, NULL);
   }
 
   free_arg_lst(args);
@@ -308,9 +300,31 @@ void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node)
   //if (jft->data != 0)
 }
 
-void jingle_ft_send(gconstpointer data, gsize size)
+void jingle_ft_send_hash(gchar *sid, gchar *to, gchar *hash)
 {
-  JingleFT *jft = (JingleFT*)data;
+  JingleAckHandle *ackhandle;
+  
+  LmMessage *r = lm_message_new_with_sub_type(to, LM_MESSAGE_TYPE_IQ, LM_MESSAGE_SUB_TYPE_SET);
+  LmMessageNode *node = lm_message_get_node(r);
+  lm_message_node_add_child(node, "jingle", NULL);
+  node = lm_message_node_get_child(node, "jingle");
+  lm_message_node_set_attributes(node, "xmlns", NS_JINGLE, "sid", sid, "action", "session-info", NULL);
+  lm_message_node_add_child(node, "hash", hash);
+  node = lm_message_node_get_child(node, "hash");
+  lm_message_node_set_attribute(node, "xmlns", NS_JINGLE_APP_FT_INFO);
+  
+  ackhandle = g_new0(JingleAckHandle, 1);
+  ackhandle->callback = NULL;
+  ackhandle->user_data = NULL;
+  
+  lm_connection_send_with_reply(lconnection, r,
+                                jingle_new_ack_handler(ackhandle), NULL);
+  lm_message_unref(r);
+}
+
+void jingle_ft_send(JingleSession *sess, SessionContent *sc, gsize size)
+{
+  JingleFT *jft = (JingleFT*)(sc->description);
   gchar *buf = g_new0(gchar, size);
   gsize read;
   GIOStatus status;
@@ -318,35 +332,46 @@ void jingle_ft_send(gconstpointer data, gsize size)
   
   do {
     count++;
-    status = g_io_channel_read_chars(jft->outfile, buf, size, &read, NULL);
-  while (status == GIO_STATUS_AGAIN && count < 10);
+    status = g_io_channel_read_chars(jft->outfile, (gchar*)buf, size, &read, NULL);
+  } while (status == G_IO_STATUS_AGAIN && count < 10);
   
-  if (status == GIO_STATUS_AGAIN) {
+  if (status == G_IO_STATUS_AGAIN) {
     // TODO: something better
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: file unavailable");
     return;
   }
   
-  if (status == GIO_STATUS_ERROR) {
+  if (status == G_IO_STATUS_ERROR) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: an error occured");
     return;
   }
   
-  // Call a handle in jingle who will call the trans
-  //jingle_handle_data
+  g_checksum_update(jft->md5, (guchar*)buf, read);
   
-  if (status == GIO_STATUS_EOF) {
+  // Call a handle in jingle who will call the trans
+  handle_app_data(sess, sc, buf, read);
+  
+  g_free(buf);
+  
+  if (status == G_IO_STATUS_EOF) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finish (%s)", jft->name);
+    jft->hash = g_strdup(g_checksum_get_string(jft->md5));
     // Call a function to say state is ended
+    // Send the hash
+    jingle_ft_send_hash(sess->sid, sess->to, jft->hash);
+    g_checksum_free(jft->md5);
     
+    // Wait the session-terminate
   }
 }
 
-void jingle_ft_start(gconstpointer data, gsize size)
+void jingle_ft_start(gchar *sid, gchar *name, gconstpointer data, gsize size)
 {
   JingleFT *jft = (JingleFT*)data;
-
-
+  
+  jft->md5 = g_checksum_new(G_CHECKSUM_MD5);
+  
+  jingle_ft_send(sid, name, data, size);
 }
 
 static void jingle_ft_init(void)

@@ -98,4 +98,6 @@ void jingle_handle_app(JingleSession *sess, const gchar *name,
 LmMessage *lm_message_from_jinglesession(const JingleSession *js,
                                          JingleAction action);
 
+void handle_app_data(JingleSession *sess, SessionContent *sc, gchar *data, gsize size);
+
 #endif

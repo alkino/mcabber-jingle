@@ -270,3 +270,9 @@ static void lm_insert_sessioncontent(gpointer data, gpointer userdata)
 
   content->appfuncs->tomessage(content->description, node);
 }
+
+void handle_app_data(JingleSession *sess, SessionContent *sc, gchar *data, gsize size)
+{
+  // TODO: verify that the module is always loaded
+  sc->transfuncs->send(sess->to, sc->transport, data, size);
+}

@@ -30,6 +30,8 @@ typedef struct {
   
   gchar *desc;
   
+  GChecksum *md5;
+  
 } JingleFT;
 
 #endif

@@ -45,6 +45,7 @@ typedef void (*JingleTransportToMessage) (gconstpointer data, LmMessageNode *nod
 typedef gboolean (*JingleTransportCmp) (gconstpointer data1, gconstpointer data2);
 typedef const gchar* (*JingleTransportxmlns) (void);
 typedef gconstpointer (*JingleTransportNew) (void);
+typedef void (*JingleTransportSend) (const gchar *to, gconstpointer data, gchar *buf, gsize size);
 
 typedef struct {
   /* check if the description of a JingleContent is correct */
@@ -69,6 +70,8 @@ typedef struct {
   JingleTransportCmp cmp;
   
   JingleTransportNew new;
+  
+  JingleTransportSend send;
 } JingleTransportFuncs;
 
 
