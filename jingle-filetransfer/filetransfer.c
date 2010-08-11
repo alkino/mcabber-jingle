@@ -46,6 +46,7 @@
 gconstpointer jingle_ft_check(JingleContent *cn, GError **err);
 void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node);
 gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len);
+void jingle_ft_start(gconstpointer data);
 static gboolean is_md5_hash(const gchar *hash);
 static void jingle_ft_init(void);
 static void jingle_ft_uninit(void);
@@ -305,6 +306,47 @@ void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node)
     lm_message_node_add_child(node2, "desc", jft->desc);
 
   //if (jft->data != 0)
+}
+
+void jingle_ft_send(gconstpointer data, gsize size)
+{
+  JingleFT *jft = (JingleFT*)data;
+  gchar *buf = g_new0(gchar, size);
+  gsize read;
+  GIOStatus status;
+  int count = 0;
+  
+  do {
+    count++;
+    status = g_io_channel_read_chars(jft->outfile, buf, size, &read, NULL);
+  while (status == GIO_STATUS_AGAIN && count < 10);
+  
+  if (status == GIO_STATUS_AGAIN) {
+    // TODO: something better
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: file unavailable");
+    return;
+  }
+  
+  if (status == GIO_STATUS_ERROR) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: an error occured");
+    return;
+  }
+  
+  // Call a handle in jingle who will call the trans
+  //jingle_handle_data
+  
+  if (status == GIO_STATUS_EOF) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finish (%s)", jft->name);
+    // Call a function to say state is ended
+    
+  }
+}
+
+void jingle_ft_start(gconstpointer data, gsize size)
+{
+  JingleFT *jft = (JingleFT*)data;
+
+
 }
 
 static void jingle_ft_init(void)

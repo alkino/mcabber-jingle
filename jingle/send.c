@@ -65,10 +65,20 @@ static void jingle_handle_ack_iq_sa(LmMessage *mess, gpointer *data)
 {
   LmMessageNode *node;
   const gchar *type, *cause;
+  GSList *child = NULL;
   JingleSession *sess = (JingleSession*)data;
+  SessionContent *sc;
   
-  if(lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_RESULT)
+  if(lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_RESULT) {
+    // Go go go! We start jobs!
+    for (child = sess->content; child; child = child->next) {
+      sc = (SessionContent*)child->data;
+      // TODO size!
+      sc->appfuncs->start(sc, 2048); 
+    }
     return;
+  }
+  
   if(lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_ERROR) {
     node = lm_message_get_node(mess);
     node = lm_message_node_get_child(node,"error");

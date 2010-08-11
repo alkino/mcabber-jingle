@@ -38,6 +38,7 @@ typedef enum {
 typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err);
 typedef void (*JingleAppToMessage) (gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleAppHandleData) (gconstpointer data, const gchar *data2, guint len);
+typedef void (*JingleAppStart) (gconstpointer data, gsize size);
 
 typedef gconstpointer (*JingleTransportCheck) (JingleContent *cn, GError **err);
 typedef void (*JingleTransportToMessage) (gconstpointer data, LmMessageNode *node);
@@ -53,6 +54,8 @@ typedef struct {
   JingleAppToMessage tomessage;
   
   JingleAppHandleData handle_data;
+  
+  JingleAppStart start;
 
 } JingleAppFuncs;
 
