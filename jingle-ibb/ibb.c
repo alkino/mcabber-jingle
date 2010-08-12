@@ -129,7 +129,7 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
   jingle_ack_iq(message);
   
   ibb->sid = lm_message_node_get_attribute(dnode, "sid");
-  ibb->seq = lm_message_node_get_attribute(dnode, "seq");
+  ibb->seq = g_ascii_strtoll(lm_message_node_get_attribute(dnode, "seq"), NULL, 10);
   
   data64 = lm_message_node_get_value(dnode);
   
@@ -197,6 +197,39 @@ void jingle_ibb_tomessage(gconstpointer data, LmMessageNode *node)
                                  "block-size", bsize,
                                  NULL);
   g_free(bsize);
+}
+
+static void jingle_ibb_handle_ack_iq_send(LmMessage *mess, gpointer *data)
+{
+  
+
+}
+
+void jingle_ibb_send(const gchar *to, gconstpointer data, gchar *buf, gsize size)
+{
+  JingleIBB *jibb = (JingleIBB*)data;
+  JingleAckHandle *ackhandle;
+  gchar* base64 = g_base64_encode((const guchar *)data, size);
+  
+  LmMessage *r = lm_message_new_with_sub_type(to, LM_MESSAGE_TYPE_IQ, LM_MESSAGE_SUB_TYPE_SET);
+  LmMessageNode *node = lm_message_get_node(r);
+  lm_message_node_add_child(node, "data", NULL);
+  node = lm_message_node_get_child(node, "data");
+  lm_message_node_set_attributes(node, "xmlns", NS_TRANSPORT_IBB, "sid", jibb->sid, "seq", jibb->seq, NULL);
+  lm_message_node_set_value(node, base64);
+  
+  ackhandle = g_new0(JingleAckHandle, 1);
+  ackhandle->callback = jingle_ibb_handle_ack_iq_send;
+  ackhandle->user_data = NULL;
+  
+  lm_connection_send_with_reply(lconnection, r,
+                                jingle_new_ack_handler(ackhandle), NULL);
+  lm_message_unref(r);
+  
+  // The next packet will be seq++
+  jibb->seq++;
+  
+  g_free(base64);
 }
 
 static void jingle_ibb_init(void)

@@ -274,8 +274,8 @@ static void lm_insert_sessioncontent(gpointer data, gpointer userdata)
 
 void handle_app_data(const gchar *sid, const gchar *from, const gchar *name, gchar *data, gsize size)
 {
-  // TODO: verify that the module is always loaded
+  // TODO: check that the module is always loaded
   JingleSession *sess = session_find_by_sid(sid, from);
   SessionContent *sc = session_find_sessioncontent(sess, name);
-sc->transfuncs->send(sess->to, sc->transport, data, size);
+  sc->transfuncs->send(sess->to, sc->transport, data, size);
 }

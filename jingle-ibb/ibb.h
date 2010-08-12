@@ -13,7 +13,7 @@ typedef struct {
   /* The identifiant of the transfer */
   const gchar *sid;
 
-  const gchar *seq;
+  gint64 seq;
   
 } JingleIBB;
 
