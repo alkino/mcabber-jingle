@@ -3,7 +3,6 @@
 
 #include <jingle/jingle.h>
 
-
 #define NS_JINGLE_APP_PREFIX       "urn:xmpp:jingle:apps:"
 #define NS_JINGLE_TRANSPORT_PREFIX "urn:xmpp:jingle:transports:"
 
@@ -38,7 +37,8 @@ typedef enum {
 typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err);
 typedef void (*JingleAppToMessage) (gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleAppHandleData) (gconstpointer data, const gchar *data2, guint len);
-typedef void (*JingleAppStart) (gconstpointer data, gsize size);
+typedef void (*JingleAppStart) (const gchar *sid, const gchar *from, const gchar *name, gconstpointer data, gsize size);
+typedef void (*JingleAppSend) (const gchar *sid, const gchar *from, const gchar *name, gconstpointer data, gsize size);
 
 typedef gconstpointer (*JingleTransportCheck) (JingleContent *cn, GError **err);
 typedef void (*JingleTransportToMessage) (gconstpointer data, LmMessageNode *node);
@@ -57,6 +57,8 @@ typedef struct {
   JingleAppHandleData handle_data;
   
   JingleAppStart start;
+  
+  JingleAppSend send;
 
 } JingleAppFuncs;
 

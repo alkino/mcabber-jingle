@@ -74,7 +74,7 @@ static void jingle_handle_ack_iq_sa(LmMessage *mess, gpointer *data)
     for (child = sess->content; child; child = child->next) {
       sc = (SessionContent*)child->data;
       // TODO size!
-      sc->appfuncs->start(sc, 2048); 
+      sc->appfuncs->start(sess->sid, sess->from, sc->name, sc->description, 2048);
     }
     return;
   }

@@ -21,10 +21,11 @@
 
 #include <glib.h>
 
+#include <mcabber/logprint.h>
+
 #include <jingle/jingle.h>
 #include <jingle/sessions.h>
 #include <jingle/register.h>
-#include <mcabber/logprint.h>
 
 static GSList *sessions;
 
@@ -271,8 +272,10 @@ static void lm_insert_sessioncontent(gpointer data, gpointer userdata)
   content->appfuncs->tomessage(content->description, node);
 }
 
-void handle_app_data(JingleSession *sess, SessionContent *sc, gchar *data, gsize size)
+void handle_app_data(const gchar *sid, const gchar *from, const gchar *name, gchar *data, gsize size)
 {
   // TODO: verify that the module is always loaded
-  sc->transfuncs->send(sess->to, sc->transport, data, size);
+  JingleSession *sess = session_find_by_sid(sid, from);
+  SessionContent *sc = session_find_sessioncontent(sess, name);
+sc->transfuncs->send(sess->to, sc->transport, data, size);
 }
