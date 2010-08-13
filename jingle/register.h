@@ -37,15 +37,15 @@ typedef enum {
 typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err);
 typedef void (*JingleAppToMessage) (gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleAppHandleData) (gconstpointer data, const gchar *data2, guint len);
-typedef void (*JingleAppStart) (const gchar *sid, const gchar *from, const gchar *name, gconstpointer data, gsize size);
-typedef void (*JingleAppSend) (const gchar *sid, const gchar *from, const gchar *name, gconstpointer data, gsize size);
+typedef void (*JingleAppStart) (session_content *sc, gsize size);
+typedef void (*JingleAppSend) (session_content *sc, gsize size);
 
 typedef gconstpointer (*JingleTransportCheck) (JingleContent *cn, GError **err);
 typedef void (*JingleTransportToMessage) (gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleTransportCmp) (gconstpointer data1, gconstpointer data2);
 typedef const gchar* (*JingleTransportxmlns) (void);
 typedef gconstpointer (*JingleTransportNew) (void);
-typedef void (*JingleTransportSend) (const gchar *to, gconstpointer data, gchar *buf, gsize size);
+typedef void (*JingleTransportSend) (session_content *sc, const gchar *to, gconstpointer data, gchar *buf, gsize size);
 
 typedef struct {
   /* check if the description of a JingleContent is correct */

@@ -211,7 +211,7 @@ void handle_content_reject(JingleNode *jn)
   
   // If there is nothing more to do, close the session
   if (g_slist_length(sess->content) == 0) {
-    jingle_send_session_terminate(jn, "success");
+    jingle_send_session_terminate(sess, "success");
     session_delete(sess);
     return;
   }
@@ -268,7 +268,7 @@ void handle_session_initiate(JingleNode *jn)
   // Make sure the request come from an user in our roster
   disp = jidtodisp(lm_message_get_from(jn->message));
   if (!roster_find(disp, jidsearch, 0)) {
-    jingle_send_session_terminate(jn, "decline");
+    // jingle_send_session_terminate(jn, "decline");
     jingle_free_jinglenode(jn);
     g_free(disp);
     return;
@@ -341,6 +341,7 @@ void handle_session_accept(JingleNode *jn)
   JingleSession *sess;
   JingleContent *jc;
   SessionContent *sc;
+  session_content *sc2;
   
   GSList *el;
   const gchar *from = lm_message_get_from(jn->message);
@@ -373,7 +374,7 @@ void handle_session_accept(JingleNode *jn)
   for (el = sess->content; el; el = el->next) {
     sc = (SessionContent*)el->data;
     // TODO size!
-    sc->appfuncs->start(sess->sid, (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to, sc->name, sc->description, 2048);
+    sc2sc->appfuncs->start(sess->sid, (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to, sc->name, sc->description, 2048);
   }
 
 }

@@ -209,7 +209,7 @@ gboolean evscallback_jingle(guint evcontext, const gchar *arg,
   } else {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s cancelled.",
                  jn->initiator);
-    jingle_send_session_terminate(jn, "decline");
+    // TODO: jingle_send_session_terminate(jn, "decline");
     jingle_free_jinglenode(jn);
   }
 
@@ -464,6 +464,20 @@ void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data
     return;  
   }
   sc->appfuncs->handle_data(sc->description, data2, len);
+}
+
+void handle_trans_next(session_content *sc2) {
+  JingleSession *sess = session_find_by_sid(sc2->sid, sc2->from);
+  if (sess == NULL) {
+    // TODO: err
+    return;
+  }
+  
+  SessionContent *sc = session_find_sessioncontent(sess, sc2->name);
+  
+  // TODO: size!
+  sc->appfuncs->send(sc2, 2048);
+  g_free(sc2);
 }
 
 gchar *jingle_generate_sid(void)

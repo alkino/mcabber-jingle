@@ -85,7 +85,7 @@ void session_add_content_from_jinglecontent(JingleSession *sess, JingleContent *
                          SessionState state);
 SessionContent *session_find_sessioncontent(JingleSession *sess, const gchar *name);
 SessionContent *session_find_transport(const gchar *xmlns_trans, gconstpointer data);
-void session_remove_sessioncontent(JingleSession *sess, const gchar *name);
+int session_remove_sessioncontent(JingleSession *sess, const gchar *name);
 void session_changestate_sessioncontent(JingleSession *sess, const gchar *name,
                                         SessionState state);
 void session_delete(JingleSession *sess);

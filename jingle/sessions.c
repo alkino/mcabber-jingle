@@ -162,15 +162,17 @@ SessionContent *session_find_transport(const gchar *xmlns_trans, gconstpointer d
   return NULL;
 }
 
-void session_remove_sessioncontent(JingleSession *sess, const gchar *name)
+int session_remove_sessioncontent(JingleSession *sess, const gchar *name)
 {
   SessionContent *sc;
   sc = session_find_sessioncontent(sess, name);
   if(sc == NULL) return;
 
-  if (sc->state == JINGLE_SESSION_STATE_ACTIVE); // We should stop the transfert
+  if (sc->state == JINGLE_SESSION_STATE_ACTIVE); // We should stop the transfer
 
   sess->content = g_slist_remove(sess->content, sc);
+  
+  return g_slist_length(sess->content);
 }
 
 void session_changestate_sessioncontent(JingleSession *sess, const gchar *name,
@@ -276,10 +278,14 @@ void handle_app_data(const gchar *sid, const gchar *from, const gchar *name, gch
 {
   // TODO: check that the module is always loaded
   JingleSession *sess = session_find_by_sid(sid, from);
+  session_content *sc2 = g_new0(session_content, 1);
   if (sess == NULL) {
     scr_LogPrint(LPRINT_LOGNORM, "Session not found (%s)", name);
     return;
   }
   SessionContent *sc = session_find_sessioncontent(sess, name);
-  sc->transfuncs->send(sess->to, sc->transport, data, size);
+  sc2->sid = sess->sid;
+  sc2->from = (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to;
+  sc2->name = sc->name;
+  sc->transfuncs->send(sc2, sess->to, sc->transport, data, size);
 }

@@ -39,6 +39,7 @@
 #include <jingle/check.h>
 #include <jingle/register.h>
 #include <jingle/sessions.h>
+#include <jingle/send.h>
 
 #include "filetransfer.h"
 
@@ -46,8 +47,8 @@
 gconstpointer jingle_ft_check(JingleContent *cn, GError **err);
 void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node);
 gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len);
-void jingle_ft_start(const gchar *sid, const gchar *from, const gchar *name, gconstpointer data, gsize size);
-void jingle_ft_send(const gchar *sid, const gchar *from, const gchar *name, gconstpointer data, gsize size);
+void jingle_ft_start(session_content *sc, gsize size);
+void jingle_ft_send(session_content *sc, gsize size);
 static gboolean is_md5_hash(const gchar *hash);
 static void jingle_ft_init(void);
 static void jingle_ft_uninit(void);
@@ -169,24 +170,25 @@ static gboolean is_md5_hash(const gchar *hash)
 
 gboolean jingle_ft_handle_data(gconstpointer jingleft, const gchar *data, guint len)
 {
-  JingleFT *ft = (JingleFT *) jingleft;
+  JingleFT *jft = (JingleFT *) jingleft;
   GError *err = NULL;
   GIOStatus status;
   gsize bytes_written = 0;
 
   // TODO: check if the file already exist or if it was created
   // during the call to jingle_ft_check and handle_data
-  if (ft->outfile == NULL) {
-    ft->outfile = g_io_channel_new_file(ft->name, "w", &err);
-    if (ft->outfile == NULL || err != NULL) {
+  if (jft->outfile == NULL) {
+    jft->outfile = g_io_channel_new_file(jft->name, "w", &err);
+    if (jft->outfile == NULL || err != NULL) {
       // propagate the GError ?
       return FALSE;
 	}
+	g_io_channel_set_encoding(jft->outfile, NULL, NULL);
   }
 
-  status = g_io_channel_write_chars(ft->outfile, data, (gssize) len,
+  status = g_io_channel_write_chars(jft->outfile, data, (gssize) len,
                                     &bytes_written, &err);
-  g_io_channel_flush (ft->outfile, NULL);
+  g_io_channel_flush(jft->outfile, NULL);
   if (status != G_IO_STATUS_NORMAL || err != NULL) {
     return FALSE;
   }
@@ -325,9 +327,9 @@ void jingle_ft_send_hash(gchar *sid, gchar *to, gchar *hash)
   lm_message_unref(r);
 }
 
-void jingle_ft_send(const gchar *sid, const gchar *from, const gchar *name, gconstpointer data, gsize size)
+void jingle_ft_send(session_content *sc, gsize size)
 {
-  JingleFT *jft = (JingleFT*)(data);
+  JingleFT *jft;
   gchar *buf = g_new0(gchar, size);
   gsize read;
   GIOStatus status;
@@ -335,11 +337,11 @@ void jingle_ft_send(const gchar *sid, const gchar *from, const gchar *name, gcon
   JingleSession *sess = session_find_by_sid(sid, from);
   if (sess == NULL) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: error before transfer");
-    // TODO: send session-terminate / delete session
+    // TODO: send error
     return;
   }
   
-  SessionContent *sc = session_find_sessioncontent(sess, name);
+  SessionContent *sc2 = session_find_sessioncontent(sess, name);
   
   do {
     count++;
@@ -357,42 +359,46 @@ void jingle_ft_send(const gchar *sid, const gchar *from, const gchar *name, gcon
     return;
   }
   
-  g_checksum_update(jft->md5, (guchar*)buf, read);
-  
-  // Call a handle in jingle who will call the trans
-  handle_app_data(sid, from, name, buf, read);
-  
-  g_free(buf);
+  if (status == G_IO_STATUS_NORMAL) {
+    g_checksum_update(jft->md5, (guchar*)buf, read);
+    // Call a handle in jingle who will call the trans
+    handle_app_data(sid, from, name, buf, read);
+    g_free(buf);
+  }
   
   if (status == G_IO_STATUS_EOF) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finish (%s)", jft->name);
     jft->hash = g_strdup(g_checksum_get_string(jft->md5));
     // Call a function to say state is ended
-    session_changestate_sessioncontent(sess, sc->name, JINGLE_SESSION_STATE_ENDED);
+    session_changestate_sessioncontent(sess, sc2->name, JINGLE_SESSION_STATE_ENDED);
     // Send the hash
     jingle_ft_send_hash(sess->sid, sess->to, jft->hash);
     g_checksum_free(jft->md5);
     
-    // Send a session-terminate (success)
-    
+    if (!session_remove_sessioncontent(sess, sc2->name)) {
+      jingle_send_session_terminate(sess, "success");
+      session_delete(sess);
+    }
   }
 }
 
-void jingle_ft_start(const gchar *sid, const gchar *from, const gchar *name, gconstpointer data, gsize size)
+void jingle_ft_start(session_content *sc, gsize size)
 {
-  JingleFT *jft = (JingleFT*)data;
+  JingleFT *jft;
   
-  JingleSession *sess = session_find_by_sid(sid, from);
+  JingleSession *sess = session_find_by_sid(sc->sid, sc->from);
   if (sess == NULL) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: error before transfer");
     return;
   }
   
-  SessionContent *sc = session_find_sessioncontent(sess, name);
+  SessionContent *sc2 = session_find_sessioncontent(sess, sc->name);
 
+  jft = (JingleFT*)sc2->description;
+  
   jft->md5 = g_checksum_new(G_CHECKSUM_MD5);
   
-  sc->appfuncs->send(sid, from, name, data, size);
+  sc->appfuncs->send(sc, data, size);
 }
 
 static void jingle_ft_init(void)

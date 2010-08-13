@@ -32,24 +32,27 @@
 #include <jingle/send.h>
 
 
-void jingle_send_session_terminate(JingleNode *jn, const gchar *reason)
+void jingle_send_session_terminate(JingleSession *js, const gchar *reason)
 {
-  LmMessage *r;
-  LmMessageNode *err,*err2;
-  JingleNode *reply = g_new0(JingleNode, 1);
   JingleAckHandle *ackhandle;
 
-  reply->action = JINGLE_SESSION_TERMINATE;
-  reply->sid = jn->sid;
-
-  r = lm_message_from_jinglenode(reply, lm_message_get_from(jn->message));
+  LmMessage *r = lm_message_new_with_sub_type(js->to, LM_MESSAGE_TYPE_IQ,
+                                              LM_MESSAGE_SUB_TYPE_SET);
+  LmMessageNode *node = lm_message_get_node(r);
+  lm_message_node_add_child(node, "jingle", NULL);
+  node = lm_message_node_get_child(node, "jingle");
+  lm_message_node_set_attributes(node, "xmlns", NS_JINGLE,
+                                 "action", "session-terminate",
+                                 "sid", js->sid,
+                                 NULL);
+  lm_message_node_add_child(node, "reason", NULL);
+  node = lm_message_node_get_child(node, "reason");
+  
   if (r == NULL) return;
 
   if (reason != NULL) { 
-    err2 = lm_message_node_get_child(r->node, "jingle");
-    // TODO check reason 
-    err = lm_message_node_add_child(err2, "reason", NULL);
-    lm_message_node_add_child(err, reason, NULL);
+    node = lm_message_node_get_child(node, "reason");
+    lm_message_node_add_child(node, reason, NULL);
   }
 
   ackhandle = g_new0(JingleAckHandle, 1);
@@ -122,13 +125,13 @@ void jingle_send_session_accept(JingleNode *jn)
   }
 
   if(g_slist_length(sess->content) == 0) {
-    jingle_send_session_terminate(jn, "unsupported-applications");
+    jingle_send_session_terminate(sess, "unsupported-applications");
     session_delete(sess);
     return;
   }
 
   mess = lm_message_from_jinglesession(sess, JINGLE_SESSION_ACCEPT);
-  scr_log_print(LPRINT_DEBUG, "%s", lm_message_node_to_string(mess->node));
+ 
   if (mess) {
     ackhandle = g_new0(JingleAckHandle, 1);
     ackhandle->callback = jingle_handle_ack_iq_sa;
@@ -167,7 +170,6 @@ void jingle_send_session_initiate(JingleSession *js)
   LmMessage *mess = lm_message_from_jinglesession(js, JINGLE_SESSION_INITIATE);
   lm_message_node_set_attribute(lm_message_node_get_child(mess->node, "jingle"),
                                 "initiator", js->from);
-scr_log_print(LPRINT_DEBUG, "%s", lm_message_node_to_string(mess->node));
  
   if (mess) {
     ackhandle = g_new0(JingleAckHandle, 1);

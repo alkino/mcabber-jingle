@@ -43,7 +43,7 @@ gboolean jingle_ibb_cmp(gconstpointer data1, gconstpointer data2);
 void jingle_ibb_tomessage(gconstpointer data, LmMessageNode *node);
 const gchar* jingle_ibb_xmlns(void);
 gconstpointer jingle_ibb_new(void);
-void jingle_ibb_send(const gchar *to, gconstpointer data, gchar *buf, gsize size);
+void jingle_ibb_send(session_content *sc, const gchar *to, gconstpointer data, gchar *buf, gsize size);
 
 static void jingle_ibb_init(void);
 static void jingle_ibb_uninit(void);
@@ -206,13 +206,13 @@ void jingle_ibb_tomessage(gconstpointer data, LmMessageNode *node)
   g_free(bsize);
 }
 
-static void jingle_ibb_handle_ack_iq_send(LmMessage *mess, gpointer *data)
+static void jingle_ibb_handle_ack_iq_send(LmMessage *mess, gpointer data)
 {
-  
-
+  // TODO: check the sub type (error ??)
+  handle_trans_next((session_content*)data);
 }
 
-void jingle_ibb_send(const gchar *to, gconstpointer data, gchar *buf, gsize size)
+void jingle_ibb_send(session_content *sc, const gchar *to, gconstpointer data, gchar *buf, gsize size)
 {
   JingleIBB *jibb = (JingleIBB*)data;
   JingleAckHandle *ackhandle;
@@ -223,13 +223,16 @@ void jingle_ibb_send(const gchar *to, gconstpointer data, gchar *buf, gsize size
   LmMessageNode *node = lm_message_get_node(r);
   lm_message_node_add_child(node, "data", NULL);
   node = lm_message_node_get_child(node, "data");
-  lm_message_node_set_attributes(node, "xmlns", NS_TRANSPORT_IBB, "sid", jibb->sid, "seq", seq, NULL);
+  lm_message_node_set_attributes(node, "xmlns", NS_TRANSPORT_IBB,
+                                 "sid", jibb->sid,
+                                 "seq", seq,
+                                 NULL);
   lm_message_node_set_value(node, base64);
   
   ackhandle = g_new0(JingleAckHandle, 1);
   ackhandle->callback = jingle_ibb_handle_ack_iq_send;
-  ackhandle->user_data = NULL;
-  scr_log_print(LPRINT_DEBUG, "%s", lm_message_node_to_string(r->node));
+  ackhandle->user_data = (gpointer)sc;
+ 
   lm_connection_send_with_reply(lconnection, r,
                                 jingle_new_ack_handler(ackhandle), NULL);
   lm_message_unref(r);

@@ -115,6 +115,11 @@ typedef struct {
   gpointer *user_data;
 } JingleAckHandle;
 
+typedef struct {
+  const gchar *sid;
+  const gchar *from;
+  const gchar *name;
+} session_content;
 
 LmHandlerResult jingle_handle_ack_iq(LmMessageHandler *handler,
                                      LmConnection *connection, 

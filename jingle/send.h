@@ -7,7 +7,7 @@
 #include <jingle/jingle.h>
 #include <jingle/sessions.h>
 
-void jingle_send_session_terminate(JingleNode *jn, const gchar *reason);
+void jingle_send_session_terminate(JingleSession *js, const gchar *reason);
 void jingle_send_session_initiate(JingleSession *js);
 void jingle_send_session_accept(JingleNode *jn);
 
