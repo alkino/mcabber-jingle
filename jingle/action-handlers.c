@@ -341,7 +341,7 @@ void handle_session_accept(JingleNode *jn)
   JingleSession *sess;
   JingleContent *jc;
   SessionContent *sc;
-  session_content *sc2;
+  session_content *sc2 = g_new0(session_content, 1);
   
   GSList *el;
   const gchar *from = lm_message_get_from(jn->message);
@@ -374,7 +374,10 @@ void handle_session_accept(JingleNode *jn)
   for (el = sess->content; el; el = el->next) {
     sc = (SessionContent*)el->data;
     // TODO size!
-    sc2sc->appfuncs->start(sess->sid, (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to, sc->name, sc->description, 2048);
+    sc2->sid = sess->sid;
+    sc2->from = (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to;
+    sc2->name = sc->name;
+    sc->appfuncs->start(sc2, 2048);
   }
 
 }

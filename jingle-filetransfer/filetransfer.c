@@ -334,14 +334,16 @@ void jingle_ft_send(session_content *sc, gsize size)
   gsize read;
   GIOStatus status;
   int count = 0;
-  JingleSession *sess = session_find_by_sid(sid, from);
+  JingleSession *sess = session_find_by_sid(sc->sid, sc->from);
   if (sess == NULL) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: error before transfer");
     // TODO: send error
     return;
   }
   
-  SessionContent *sc2 = session_find_sessioncontent(sess, name);
+  SessionContent *sc2 = session_find_sessioncontent(sess, sc->name);
+  
+  jft = (JingleFT*)sc2->description;
   
   do {
     count++;
@@ -362,7 +364,7 @@ void jingle_ft_send(session_content *sc, gsize size)
   if (status == G_IO_STATUS_NORMAL) {
     g_checksum_update(jft->md5, (guchar*)buf, read);
     // Call a handle in jingle who will call the trans
-    handle_app_data(sid, from, name, buf, read);
+    handle_app_data(sc->sid, sc->from, sc->name, buf, read);
     g_free(buf);
   }
   
@@ -398,7 +400,7 @@ void jingle_ft_start(session_content *sc, gsize size)
   
   jft->md5 = g_checksum_new(G_CHECKSUM_MD5);
   
-  sc->appfuncs->send(sc, data, size);
+  sc2->appfuncs->send(sc, size);
 }
 
 static void jingle_ft_init(void)
