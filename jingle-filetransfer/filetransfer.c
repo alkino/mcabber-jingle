@@ -225,7 +225,8 @@ static void do_sendfile(char *arg)
 {
   char **args = split_arg(arg, 1, 0);
   gchar *filename;
-  
+  struct stat fileinfo;
+
   if (!args[0]) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: give me a name!");
     return;
@@ -233,7 +234,12 @@ static void do_sendfile(char *arg)
   
   filename = expand_filename(args[0]); // expand ~ to HOME
   
-  if (!g_file_test(filename, G_FILE_TEST_IS_REGULAR | G_FILE_TEST_EXISTS)) {
+  if (g_stat(filename, &fileinfo) != 0) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: unable to stat %s", args[1]);
+    return;
+  }
+  
+  if (!S_ISREG(fileinfo.st_mode)) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: File doesn't exist!");
     return;
   }
@@ -246,7 +252,6 @@ static void do_sendfile(char *arg)
     gchar *sid = jingle_generate_sid();
     gchar *ressource, *recipientjid;
     const gchar *namespaces[] = {NS_JINGLE, NS_JINGLE_APP_FT, NULL};
-    struct stat fileinfo;
     const gchar *myjid = g_strdup(lm_connection_get_jid(lconnection));
     JingleFT *jft = g_new0(JingleFT, 1);
 
@@ -265,10 +270,6 @@ static void do_sendfile(char *arg)
     sess = session_new(sid, myjid, recipientjid, JINGLE_SESSION_OUTGOING);
     session_add_content(sess, "file", JINGLE_SESSION_STATE_PENDING);
 
-    if (g_stat(filename, &fileinfo) != 0) {
-      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: unable to stat %s", args[1]);
-      return;
-    }
     jft->desc = g_strdup(args[0]);
     jft->type = JINGLE_FT_OFFER;
     jft->name = g_path_get_basename(filename);
