@@ -155,11 +155,6 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
   return (gconstpointer) ft;
 }
 
-gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len)
-{
-  return FALSE;
-}
-
 static gboolean is_md5_hash(const gchar *hash)
 {
   int i = 0;
@@ -172,7 +167,7 @@ static gboolean is_md5_hash(const gchar *hash)
     return FALSE;
 }
 
-gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len)
+gboolean jingle_ft_handle_data(gconstpointer jingleft, const gchar *data, guint len)
 {
   JingleFT *ft = (JingleFT *) jingleft;
   GError *err = NULL;
@@ -188,9 +183,10 @@ gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len)
       return FALSE;
 	}
   }
+
   status = g_io_channel_write_chars(ft->outfile, data, (gssize) len,
                                     &bytes_written, &err);
-
+  g_io_channel_flush (ft->outfile, NULL);
   if (status != G_IO_STATUS_NORMAL || err != NULL) {
     return FALSE;
   }
@@ -255,6 +251,11 @@ static void do_sendfile(char *arg)
     jft->date = fileinfo.st_mtime;
     jft->size = fileinfo.st_size;
     jft->outfile = g_io_channel_new_file (filename, "r", NULL);
+    if (jft->outfile == NULL) {
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Cannot open file %s", args[1]);
+      return;
+    }
+    
     g_io_channel_set_encoding(jft->outfile, NULL, NULL);
     
     session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);

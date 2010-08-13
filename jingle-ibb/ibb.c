@@ -23,10 +23,12 @@
 
 #include <glib.h>
 
+#include <mcabber/xmpp.h>
 #include <mcabber/modules.h>
 #include <mcabber/utils.h>
 #include <mcabber/xmpp_helper.h>
 #include <mcabber/logprint.h>
+#include <mcabber/hooks.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
@@ -46,6 +48,8 @@ void jingle_ibb_send(const gchar *to, gconstpointer data, gchar *buf, gsize size
 static void jingle_ibb_init(void);
 static void jingle_ibb_uninit(void);
 
+static guint connect_hid = 0;
+static guint disconn_hid = 0;
 
 const gchar *deps[] = { "jingle", NULL };
 
@@ -212,7 +216,7 @@ void jingle_ibb_send(const gchar *to, gconstpointer data, gchar *buf, gsize size
 {
   JingleIBB *jibb = (JingleIBB*)data;
   JingleAckHandle *ackhandle;
-  gchar *base64 = g_base64_encode((const guchar *)data, size);
+  gchar *base64 = g_base64_encode((const guchar *)buf, size);
   gchar *seq = g_strdup_printf("%" G_GINT64_FORMAT, jibb->seq);
   
   LmMessage *r = lm_message_new_with_sub_type(to, LM_MESSAGE_TYPE_IQ, LM_MESSAGE_SUB_TYPE_SET);
@@ -236,9 +240,48 @@ void jingle_ibb_send(const gchar *to, gconstpointer data, gchar *buf, gsize size
   g_free(base64);
 }
 
+static void jingle_ibb_unregister_lm_handlers(void)
+{
+  if (lconnection) {
+    lm_connection_unregister_message_handler(lconnection, jingle_ibb_handler,
+        LM_MESSAGE_TYPE_IQ);
+  }
+}
+
+static void jingle_ibb_register_lm_handlers(void)
+{
+  jingle_ibb_unregister_lm_handlers();
+  if (lconnection) {
+    lm_connection_register_message_handler(lconnection, jingle_ibb_handler,
+        LM_MESSAGE_TYPE_IQ,
+        LM_HANDLER_PRIORITY_FIRST);
+  }
+}
+
+static guint jingle_ibb_connect_hh(const gchar *hname, hk_arg_t *args,
+                               gpointer ignore)
+{
+  jingle_ibb_register_lm_handlers();
+  return HOOK_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
+}
+
+static guint jingle_ibb_disconn_hh(const gchar *hname, hk_arg_t *args,
+                               gpointer ignore)
+{
+  jingle_ibb_unregister_lm_handlers();
+  return HOOK_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
+}
+
 static void jingle_ibb_init(void)
 {
   jingle_ibb_handler = lm_message_handler_new(jingle_ibb_handle_iq, NULL, NULL);
+  
+  connect_hid = hk_add_handler(jingle_ibb_connect_hh, HOOK_POST_CONNECT,
+      G_PRIORITY_DEFAULT_IDLE, NULL);
+  disconn_hid = hk_add_handler(jingle_ibb_disconn_hh, HOOK_PRE_DISCONNECT,
+      G_PRIORITY_DEFAULT_IDLE, NULL);
+  jingle_ibb_register_lm_handlers();
+  
   jingle_register_transport(NS_JINGLE_TRANSPORT_IBB, &funcs,
                             JINGLE_TRANSPORT_STREAMING,
                             JINGLE_TRANSPORT_LOW);
