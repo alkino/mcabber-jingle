@@ -336,6 +336,48 @@ void handle_session_initiate(JingleNode *jn)
   g_free(disp);
 }
 
+void handle_session_info(JingleNode *jn)
+{
+  JingleSession *sess;
+  SessionContent *sc;
+  GSList *el;
+
+  if ((sess = session_find(jn)) == NULL) {
+    jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
+    return;
+  }
+
+  /* "If either party receives an empty session-info message
+   * for an active session, it MUST send an empty IQ result;
+   * this usage functions as a "ping" to determine session
+   * vitality via the XMPP signalling channel." */
+  if (jn->node->children == NULL) {
+    jingle_ack_iq(jn->message);
+    return;
+  }
+
+  /* We don't know the app to which the message is addressed.
+   * Only the app module itself may know, based on the element
+   * name and its xmlns, so we need to try every app module. */
+  for (el = sess->content; el; el = el->next) {
+    sc = (SessionContent*)el->data;
+    if (sc->appfuncs->handle == NULL)
+      continue;
+
+    if (sc->appfuncs->handle(JINGLE_SESSION_INFO, sc->description,
+                             jn->node->children)) {
+      jingle_ack_iq(jn->message);
+      return;
+	}
+  }
+  /* "If the party that receives an informational message
+   * does not understand the payload, it MUST return a
+   * <feature-not-implemented/> error with a Jingle-specific
+   * error condition of <unsupported-info/>." */
+  jingle_send_iq_error(jn->message, "modify", "feature-not-implemented",
+                       "unsupported-info");
+}
+
 void handle_session_accept(JingleNode *jn)
 {
   JingleSession *sess;

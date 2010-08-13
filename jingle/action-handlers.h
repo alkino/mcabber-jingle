@@ -4,11 +4,14 @@
 #include <glib.h>
 #include <loudmouth/loudmouth.h>
 
+
 void handle_content_accept(JingleNode *jn);
 void handle_content_add(JingleNode *jn);
 void handle_content_reject(JingleNode *jn);
 void handle_content_remove(JingleNode *jn);
 void handle_session_accept(JingleNode *jn);
+void handle_session_info(JingleNode *jn);
 void handle_session_initiate(JingleNode *jn);
 void handle_session_terminate(JingleNode *jn);
+
 #endif

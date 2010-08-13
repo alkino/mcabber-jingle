@@ -35,6 +35,7 @@ typedef enum {
 } JingleTransportPriority;
 
 typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err);
+typedef gboolean (*JingleAppHandle) (JingleAction action, gconstpointer data, LmMessageNode *node);
 typedef void (*JingleAppToMessage) (gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleAppHandleData) (gconstpointer data, const gchar *data2, guint len);
 typedef void (*JingleAppStart) (session_content *sc, gsize size);
@@ -52,30 +53,35 @@ typedef struct {
   /* check if the description of a JingleContent is correct */
   JingleAppCheck check;
 
+  /* handle an incoming jingle message (session-info, description-info...).
+   * If the function could not handle the incoming data, the caller should
+   * reply to the incoming message with an error iq */
+  JingleAppHandle handle;
+
   /* Insert data from the gconstpointer to the node given as an argument */
   JingleAppToMessage tomessage;
-  
+
   JingleAppHandleData handle_data;
-  
+
   JingleAppStart start;
-  
+
   JingleAppSend send;
-  
+
   JingleAppStop stop;
 
 } JingleAppFuncs;
 
 typedef struct {
   JingleTransportxmlns xmlns;
-  
+
   JingleTransportCheck check;
 
   JingleTransportToMessage tomessage;
-  
+
   JingleTransportCmp cmp;
-  
+
   JingleTransportNew new;
-  
+
   JingleTransportSend send;
 } JingleTransportFuncs;
 

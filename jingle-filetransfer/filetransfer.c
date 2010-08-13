@@ -45,6 +45,7 @@
 
 
 gconstpointer jingle_ft_check(JingleContent *cn, GError **err);
+gboolean jingle_ft_handle(JingleAction action, gconstpointer data, LmMessageNode *node);
 void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node);
 gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len);
 void jingle_ft_start(session_content *sc, gsize size);
@@ -59,12 +60,13 @@ static void jingle_ft_uninit(void);
 const gchar *deps[] = { "jingle", NULL };
 
 static JingleAppFuncs funcs = {
-  jingle_ft_check,
-  jingle_ft_tomessage,
-  jingle_ft_handle_data,
-  jingle_ft_start,
-  jingle_ft_send,
-  jingle_ft_stop
+  .check        = jingle_ft_check,
+  .handle       = jingle_ft_handle,
+  .tomessage    = jingle_ft_tomessage,
+  .handle_data  = jingle_ft_handle_data,
+  .start        = jingle_ft_start,
+  .send         = jingle_ft_send,
+  .stop         = jingle_ft_stop
 };
 
 module_info_t info_jingle_filetransfer = {
@@ -158,6 +160,16 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
   ft->hash = g_strndup(ft->hash, 32);
 
   return (gconstpointer) ft;
+}
+
+gboolean jingle_ft_handle(JingleAction action, gconstpointer data, LmMessageNode *node)
+{
+  if (action == JINGLE_SESSION_INFO) {
+    if (!g_strcmp0(lm_message_node_get_attribute(node, "xmlns"), NS_JINGLE_APP_FT_INFO)
+        && !g_strcmp0(node->name, "hash")) {
+      ((JingleFT *)data)->hash = lm_message_node_get_value(node);
+	}
+  }
 }
 
 static gboolean is_md5_hash(const gchar *hash)
@@ -420,21 +432,21 @@ void jingle_ft_start(session_content *sc, gsize size)
 void jingle_ft_stop(gconstpointer data)
 {
   JingleFT *jft = (JingleFT*)data;
-  
+
   if (jft->hash != NULL) {
     if (g_strcmp0(jft->hash, g_checksum_get_string(jft->md5))) {
       scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: File corrupt (%s)", jft->name);
     } else {
-      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finish (%s) and verified", jft->name);
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finished (%s) and verified", jft->name);
     }
   } else {
-    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finish (%s) but not verified", jft->name);
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finished (%s) but not verified", jft->name);
   }
-  
+
   g_checksum_free(jft->md5);
-  
+
   g_io_channel_flush(jft->outfile, NULL);
-  
+
   g_io_channel_unref(jft->outfile);
 }
 
