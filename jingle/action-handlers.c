@@ -361,12 +361,21 @@ void handle_session_accept(JingleNode *jn)
   }
   
   // We delete content who have been refuse
-  for (el = sess->content; el; el = el->next) {
+  /*for (el = sess->content; el; el = el->next) {
     sc = (SessionContent*) el->data;
     if (sc->state == JINGLE_SESSION_STATE_PENDING) {
+      scr_log_print(LPRINT_DEBUG, "Delete %s!", sc->name);
       session_remove_sessioncontent(sess, sc->name);
     }
+  }*/
+  
+  // Go go go! We start jobs!
+  for (el = sess->content; el; el = el->next) {
+    sc = (SessionContent*)el->data;
+    // TODO size!
+    sc->appfuncs->start(sess->sid, (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to, sc->name, sc->description, 2048);
   }
+
 }
 
 void handle_session_terminate(JingleNode *jn)

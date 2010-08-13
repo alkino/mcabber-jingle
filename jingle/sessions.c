@@ -276,6 +276,10 @@ void handle_app_data(const gchar *sid, const gchar *from, const gchar *name, gch
 {
   // TODO: check that the module is always loaded
   JingleSession *sess = session_find_by_sid(sid, from);
+  if (sess == NULL) {
+    scr_LogPrint(LPRINT_LOGNORM, "Session not found (%s)", name);
+    return;
+  }
   SessionContent *sc = session_find_sessioncontent(sess, name);
   sc->transfuncs->send(sess->to, sc->transport, data, size);
 }

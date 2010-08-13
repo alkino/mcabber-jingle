@@ -26,6 +26,7 @@
 #include <mcabber/modules.h>
 #include <mcabber/utils.h>
 #include <mcabber/xmpp_helper.h>
+#include <mcabber/logprint.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
@@ -40,6 +41,7 @@ gboolean jingle_ibb_cmp(gconstpointer data1, gconstpointer data2);
 void jingle_ibb_tomessage(gconstpointer data, LmMessageNode *node);
 const gchar* jingle_ibb_xmlns(void);
 gconstpointer jingle_ibb_new(void);
+void jingle_ibb_send(const gchar *to, gconstpointer data, gchar *buf, gsize size);
 
 static void jingle_ibb_init(void);
 static void jingle_ibb_uninit(void);
@@ -52,7 +54,8 @@ static JingleTransportFuncs funcs = {
   jingle_ibb_check,
   jingle_ibb_tomessage,
   jingle_ibb_cmp,
-  jingle_ibb_new
+  jingle_ibb_new,
+  jingle_ibb_send
 };
 
 module_info_t  info_jingle_inbandbytestream = {
@@ -108,7 +111,7 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
                                  gpointer user_data)
 {
   const gchar *data64;
-  JingleIBB *ibb = g_new0(JingleIBB, 1);
+  JingleIBB *jibb = g_new0(JingleIBB, 1);
   gsize len;
   guchar *data;
   
@@ -128,14 +131,14 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
 
   jingle_ack_iq(message);
   
-  ibb->sid = lm_message_node_get_attribute(dnode, "sid");
-  ibb->seq = g_ascii_strtoll(lm_message_node_get_attribute(dnode, "seq"), NULL, 10);
+  jibb->sid = lm_message_node_get_attribute(dnode, "sid");
+  jibb->seq = g_ascii_strtoll(lm_message_node_get_attribute(dnode, "seq"), NULL, 10);
   
   data64 = lm_message_node_get_value(dnode);
   
   data = g_base64_decode(data64, &len);
   
-  handle_trans_data(NS_JINGLE_TRANSPORT_IBB, ibb, (const gchar *)data, (guint)len);
+  handle_trans_data(NS_JINGLE_TRANSPORT_IBB, jibb, (const gchar *)data, (guint)len);
   
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 }
@@ -209,19 +212,20 @@ void jingle_ibb_send(const gchar *to, gconstpointer data, gchar *buf, gsize size
 {
   JingleIBB *jibb = (JingleIBB*)data;
   JingleAckHandle *ackhandle;
-  gchar* base64 = g_base64_encode((const guchar *)data, size);
+  gchar *base64 = g_base64_encode((const guchar *)data, size);
+  gchar *seq = g_strdup_printf("%" G_GINT64_FORMAT, jibb->seq);
   
   LmMessage *r = lm_message_new_with_sub_type(to, LM_MESSAGE_TYPE_IQ, LM_MESSAGE_SUB_TYPE_SET);
   LmMessageNode *node = lm_message_get_node(r);
   lm_message_node_add_child(node, "data", NULL);
   node = lm_message_node_get_child(node, "data");
-  lm_message_node_set_attributes(node, "xmlns", NS_TRANSPORT_IBB, "sid", jibb->sid, "seq", jibb->seq, NULL);
+  lm_message_node_set_attributes(node, "xmlns", NS_TRANSPORT_IBB, "sid", jibb->sid, "seq", seq, NULL);
   lm_message_node_set_value(node, base64);
   
   ackhandle = g_new0(JingleAckHandle, 1);
   ackhandle->callback = jingle_ibb_handle_ack_iq_send;
   ackhandle->user_data = NULL;
-  
+  scr_log_print(LPRINT_DEBUG, "%s", lm_message_node_to_string(r->node));
   lm_connection_send_with_reply(lconnection, r,
                                 jingle_new_ack_handler(ackhandle), NULL);
   lm_message_unref(r);

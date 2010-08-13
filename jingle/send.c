@@ -70,12 +70,6 @@ static void jingle_handle_ack_iq_sa(LmMessage *mess, gpointer *data)
   SessionContent *sc;
   
   if(lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_RESULT) {
-    // Go go go! We start jobs!
-    for (child = sess->content; child; child = child->next) {
-      sc = (SessionContent*)child->data;
-      // TODO size!
-      sc->appfuncs->start(sess->sid, sess->from, sc->name, sc->description, 2048);
-    }
     return;
   }
   
@@ -134,6 +128,7 @@ void jingle_send_session_accept(JingleNode *jn)
   }
 
   mess = lm_message_from_jinglesession(sess, JINGLE_SESSION_ACCEPT);
+  scr_log_print(LPRINT_DEBUG, "%s", lm_message_node_to_string(mess->node));
   if (mess) {
     ackhandle = g_new0(JingleAckHandle, 1);
     ackhandle->callback = jingle_handle_ack_iq_sa;
@@ -172,7 +167,8 @@ void jingle_send_session_initiate(JingleSession *js)
   LmMessage *mess = lm_message_from_jinglesession(js, JINGLE_SESSION_INITIATE);
   lm_message_node_set_attribute(lm_message_node_get_child(mess->node, "jingle"),
                                 "initiator", js->from);
-
+scr_log_print(LPRINT_DEBUG, "%s", lm_message_node_to_string(mess->node));
+ 
   if (mess) {
     ackhandle = g_new0(JingleAckHandle, 1);
     ackhandle->callback = jingle_handle_ack_iq_si;

@@ -262,10 +262,9 @@ static void do_sendfile(char *arg)
     jingle_handle_app(sess, "file", NS_JINGLE_APP_FT, jft, recipientjid);
 
     g_free(ressource);
-    //g_checksum_free(md5);
     g_free(sid);
-    g_io_channel_unref(jft->outfile);
-    g_io_channel_shutdown(jft->outfile, TRUE, NULL);
+    //g_io_channel_unref(jft->outfile);
+    //g_io_channel_shutdown(jft->outfile, TRUE, NULL);
   }
 
   free_arg_lst(args);
@@ -333,7 +332,11 @@ void jingle_ft_send(const gchar *sid, const gchar *from, const gchar *name, gcon
   GIOStatus status;
   int count = 0;
   JingleSession *sess = session_find_by_sid(sid, from);
-  // TODO: sess == NULL
+  if (sess == NULL) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: error before transfer");
+    // TODO: send session-terminate / delete session
+    return;
+  }
   
   SessionContent *sc = session_find_sessioncontent(sess, name);
   
@@ -356,7 +359,7 @@ void jingle_ft_send(const gchar *sid, const gchar *from, const gchar *name, gcon
   g_checksum_update(jft->md5, (guchar*)buf, read);
   
   // Call a handle in jingle who will call the trans
-  handle_app_data(sid, name, from, buf, read);
+  handle_app_data(sid, from, name, buf, read);
   
   g_free(buf);
   
@@ -379,13 +382,16 @@ void jingle_ft_start(const gchar *sid, const gchar *from, const gchar *name, gco
   JingleFT *jft = (JingleFT*)data;
   
   JingleSession *sess = session_find_by_sid(sid, from);
-  // TODO: sess == NULL
+  if (sess == NULL) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: error before transfer");
+    return;
+  }
   
   SessionContent *sc = session_find_sessioncontent(sess, name);
 
   jft->md5 = g_checksum_new(G_CHECKSUM_MD5);
   
-  sc->appfuncs->send(sid, name, from, data, size);
+  sc->appfuncs->send(sid, from, name, data, size);
 }
 
 static void jingle_ft_init(void)
