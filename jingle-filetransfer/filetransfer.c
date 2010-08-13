@@ -179,6 +179,12 @@ gboolean jingle_ft_handle_data(gconstpointer jingleft, const gchar *data, guint 
   GIOStatus status;
   gsize bytes_written = 0;
 
+  if (jft->md5 == NULL) {
+    jft->md5 = g_checksum_new(G_CHECKSUM_MD5);
+  }
+  
+  g_checksum_update(jft->md5, (guchar*)data, (gsize)len);
+    
   // TODO: check if the file already exist or if it was created
   // during the call to jingle_ft_check and handle_data
   if (jft->outfile == NULL) {
@@ -404,14 +410,28 @@ void jingle_ft_start(session_content *sc, gsize size)
   
   jft->md5 = g_checksum_new(G_CHECKSUM_MD5);
   
+  scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Transfer start (%s)",
+               jft->name);
+
   sc2->appfuncs->send(sc, size);
 }
 
+// When we got a session-terminate
 void jingle_ft_stop(gconstpointer data)
 {
   JingleFT *jft = (JingleFT*)data;
   
-  scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finish (%s)", jft->name);
+  if (jft->hash != NULL) {
+    if (g_strcmp0(jft->hash, g_checksum_get_string(jft->md5))) {
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: File corrupt (%s)", jft->name);
+    } else {
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finish (%s) and verified", jft->name);
+    }
+  } else {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finish (%s) but not verified", jft->name);
+  }
+  
+  g_checksum_free(jft->md5);
   
   g_io_channel_flush(jft->outfile, NULL);
   

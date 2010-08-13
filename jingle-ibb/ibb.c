@@ -183,10 +183,8 @@ gconstpointer jingle_ibb_new(void)
 int jingle_ibb_check_session(gconstpointer data, gconstpointer session)
 {
   const JingleIBB *ibb1 = data, *ibb2 = session;
-  if(!g_strcmp0(ibb1->sid, ibb2->sid) && ibb1->seq == ibb2->seq + 1) {
-    // TODO: change the seq in the session
+  if(!g_strcmp0(ibb1->sid, ibb2->sid) && ibb1->seq == ibb2->seq + 1)
     return 0;
-  }
   return 1;
 }
 

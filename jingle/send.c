@@ -45,12 +45,10 @@ void jingle_send_session_terminate(JingleSession *js, const gchar *reason)
                                  "action", "session-terminate",
                                  "sid", js->sid,
                                  NULL);
-  lm_message_node_add_child(node, "reason", NULL);
-  node = lm_message_node_get_child(node, "reason");
-  
   if (r == NULL) return;
 
   if (reason != NULL) { 
+    lm_message_node_add_child(node, "reason", NULL);
     node = lm_message_node_get_child(node, "reason");
     lm_message_node_add_child(node, reason, NULL);
   }
