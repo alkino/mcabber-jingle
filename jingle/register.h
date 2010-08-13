@@ -39,6 +39,7 @@ typedef void (*JingleAppToMessage) (gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleAppHandleData) (gconstpointer data, const gchar *data2, guint len);
 typedef void (*JingleAppStart) (session_content *sc, gsize size);
 typedef void (*JingleAppSend) (session_content *sc, gsize size);
+typedef void (*JingleAppStop) (gconstpointer data);
 
 typedef gconstpointer (*JingleTransportCheck) (JingleContent *cn, GError **err);
 typedef void (*JingleTransportToMessage) (gconstpointer data, LmMessageNode *node);
@@ -59,6 +60,8 @@ typedef struct {
   JingleAppStart start;
   
   JingleAppSend send;
+  
+  JingleAppStop stop;
 
 } JingleAppFuncs;
 

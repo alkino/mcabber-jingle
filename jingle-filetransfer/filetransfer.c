@@ -49,7 +49,10 @@ void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node);
 gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len);
 void jingle_ft_start(session_content *sc, gsize size);
 void jingle_ft_send(session_content *sc, gsize size);
+void jingle_ft_stop(gconstpointer data);
+
 static gboolean is_md5_hash(const gchar *hash);
+
 static void jingle_ft_init(void);
 static void jingle_ft_uninit(void);
 
@@ -60,7 +63,8 @@ static JingleAppFuncs funcs = {
   jingle_ft_tomessage,
   jingle_ft_handle_data,
   jingle_ft_start,
-  jingle_ft_send
+  jingle_ft_send,
+  jingle_ft_stop
 };
 
 module_info_t info_jingle_filetransfer = {
@@ -337,7 +341,7 @@ void jingle_ft_send(session_content *sc, gsize size)
   JingleSession *sess = session_find_by_sid(sc->sid, sc->from);
   if (sess == NULL) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: error before transfer");
-    // TODO: send error
+    // We haven't LmMessage: jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
     return;
   }
   
@@ -401,6 +405,17 @@ void jingle_ft_start(session_content *sc, gsize size)
   jft->md5 = g_checksum_new(G_CHECKSUM_MD5);
   
   sc2->appfuncs->send(sc, size);
+}
+
+void jingle_ft_stop(gconstpointer data)
+{
+  JingleFT *jft = (JingleFT*)data;
+  
+  scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finish (%s)", jft->name);
+  
+  g_io_channel_flush(jft->outfile, NULL);
+  
+  g_io_channel_unref(jft->outfile);
 }
 
 static void jingle_ft_init(void)

@@ -385,9 +385,18 @@ void handle_session_accept(JingleNode *jn)
 void handle_session_terminate(JingleNode *jn)
 {
   JingleSession *sess;
+  GSList *el;
+  SessionContent *sc;
+  
   if ((sess = session_find(jn)) == NULL) {
     jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
     return;
+  }
+  
+  for (el = sess->content; el; el = el->next) {
+    sc = (SessionContent*)el->data;
+    sc->appfuncs->stop(sc->description);
+    session_remove_sessioncontent(sess, sc->name);
   }
   session_delete(sess);
   jingle_ack_iq(jn->message);
