@@ -1,0 +1,36 @@
+DOCUMENTATION:
+
+I: Jingle
+Jingle is a module who can't work alone. His meaning of life is make working
+others modules. There is two sorts of modules: applications (File Transfer, Voice)
+and transports (IBB, socks5, ...).
+The "sub-modules" must register in jingle and provide some generic function.
+After the jingle module catch and dispatch all jingle's iqs. And offer an
+interface between apps and trans.
+Jingle module keep a way of all sessions via JingleSession structures.
+This JingleSession got all the informations and a list of SessionContent, which
+are struct containing information about content and 2 gconstpointer. This pointer
+are data from apps and trans.
+
+An application module must provide:
+- check: check if the description of a JingleContent is correct;
+- handle: each application have some options not conventional, so handle is the
+          less option. We give him all the jingle iqs than other function doesn't
+          handle;
+- tomessage: add the gconstpointer to a given node;
+- handle_data: when the peer send data to us, the trans module catch it and
+               give it to jingle. After jingle give it to the apps via this
+               function;
+- start: the session have been accepted we can init our transfer;
+- send: it's call until there is datas to send;
+- stop: we've got a session-terminate, we need to close transfer, files, ...
+
+An transport module must provide:
+- check: the same as application;
+- tomessage: idem;
+- cmp: to know if 2 transports are the same. Use by IBB, when we got
+       a new data jingle must look the gconstpointer to got the ibb-id to know
+       which apps is concerned;
+- xmlns: util when we got only funcs, to know who are we;
+- new: to create a new transport node, with default options;
+-send: to send data given by apps via jingle.

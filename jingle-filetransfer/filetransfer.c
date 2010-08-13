@@ -239,7 +239,7 @@ static void do_sendfile(char *arg)
     return;
   }
   
-  if (!S_ISREG(fileinfo.st_mode)) {
+  if (!S_ISREG(fileinfo.st_mode) && !S_ISLNK(fileinfo.st_mode)) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: File doesn't exist!");
     return;
   }
