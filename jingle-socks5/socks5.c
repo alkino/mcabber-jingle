@@ -78,7 +78,7 @@ static void jingle_socks5_init(void)
 {
   jingle_register_transport(NS_JINGLE_TRANSPORT_SOCKS5, &funcs,
                             JINGLE_TRANSPORT_STREAMING,
-                            JINGLE_TRANSPORT_MEDIUM);
+                            JINGLE_TRANSPORT_HIGH);
   xmpp_add_feature(NS_JINGLE_TRANSPORT_SOCKS5);
 }
 

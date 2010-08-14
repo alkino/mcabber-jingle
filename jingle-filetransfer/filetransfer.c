@@ -168,8 +168,11 @@ gboolean jingle_ft_handle(JingleAction action, gconstpointer data, LmMessageNode
     if (!g_strcmp0(lm_message_node_get_attribute(node, "xmlns"), NS_JINGLE_APP_FT_INFO)
         && !g_strcmp0(node->name, "hash")) {
       ((JingleFT *)data)->hash = lm_message_node_get_value(node);
+      return TRUE;
 	}
+	return FALSE;
   }
+  return FALSE;
 }
 
 static gboolean is_md5_hash(const gchar *hash)

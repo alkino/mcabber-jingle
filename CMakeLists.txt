@@ -40,6 +40,7 @@ include_directories(SYSTEM ${GLIB_INCLUDE_DIRS} ${MCABBER_INCLUDE_DIRS})
 add_subdirectory(jingle)
 add_subdirectory(jingle-filetransfer)
 add_subdirectory(jingle-ibb)
+add_subdirectory(jingle-socks5)
 
 ## Packaging information
 set(CPACK_PACKAGE_NAME mcabber-jingle)
