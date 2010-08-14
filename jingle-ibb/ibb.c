@@ -22,6 +22,7 @@
 #include "config.h"
 
 #include <glib.h>
+#include <string.h>
 
 #include <mcabber/xmpp.h>
 #include <mcabber/modules.h>
@@ -33,6 +34,7 @@
 #include <jingle/jingle.h>
 #include <jingle/check.h>
 #include <jingle/register.h>
+#include <jingle/sessions.h>
 
 #include "ibb.h"
 
@@ -43,7 +45,9 @@ gboolean jingle_ibb_cmp(gconstpointer data1, gconstpointer data2);
 void jingle_ibb_tomessage(gconstpointer data, LmMessageNode *node);
 const gchar* jingle_ibb_xmlns(void);
 gconstpointer jingle_ibb_new(void);
-void jingle_ibb_send(session_content *sc, const gchar *to, gconstpointer data, gchar *buf, gsize size);
+void jingle_ibb_send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
+static void _send_internal(session_content *sc, const gchar *to, gchar *buf,
+                           gsize size, const gchar *sid, gint64 *seq);
 
 static void jingle_ibb_init(void);
 static void jingle_ibb_uninit(void);
@@ -103,10 +107,11 @@ gconstpointer jingle_ibb_check(JingleContent *cn, GError **err)
   if (ibb->blocksize < 0 || ibb->blocksize > IBB_BLOCK_SIZE_MAX) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
                 "block-size is negative");
+    g_free(ibb->sid);
     g_free(ibb);
     return NULL;
   }
-
+  
   return (gconstpointer) ibb;
 }
 
@@ -192,6 +197,7 @@ void jingle_ibb_tomessage(gconstpointer data, LmMessageNode *node)
 {
   JingleIBB *jibb = (JingleIBB*) data;
   gchar *bsize = g_strdup_printf("%i", jibb->blocksize);
+
   if (lm_message_node_get_child(node, "transport") != NULL)
     return;
 
@@ -207,23 +213,39 @@ void jingle_ibb_tomessage(gconstpointer data, LmMessageNode *node)
 static void jingle_ibb_handle_ack_iq_send(LmMessage *mess, gpointer data)
 {
   // TODO: check the sub type (error ??)
-  handle_trans_next((session_content*)data);
+  session_content *sc = (session_content *)data;
+  JingleSession *sess = session_find_by_sid(sc->sid, sc->from);
+  SessionContent *sc2 = session_find_sessioncontent(sess, sc->name);
+
+  JingleIBB *jibb = (JingleIBB *)sc2->transport;
+
+  // We look if there is enough data staying
+  if (jibb->dataleft > jibb->blocksize) {
+    gchar *buf = g_memdup(jibb->buf, jibb->blocksize);
+    jibb->dataleft-=jibb->blocksize;
+    g_memmove(jibb->buf, jibb->buf+jibb->blocksize, jibb->dataleft);
+    _send_internal(sc, sess->to, buf, jibb->blocksize, sess->sid, &jibb->seq);
+    g_free(buf);
+  } else { // ask for more data
+    handle_trans_next(sc);
+  }
 }
 
-void jingle_ibb_send(session_content *sc, const gchar *to, gconstpointer data, gchar *buf, gsize size)
+static void _send_internal(session_content *sc, const gchar *to, gchar *buf,
+                           gsize size, const gchar *sid, gint64 *seq)
 {
-  JingleIBB *jibb = (JingleIBB*)data;
   JingleAckHandle *ackhandle;
-  LmMessageNode *node;
-  gchar *base64 = g_base64_encode((const guchar *)buf, size);
-  gchar *seq = g_strdup_printf("%" G_GINT64_FORMAT, jibb->seq);
+  LmMessage *r = lm_message_new_with_sub_type(to, LM_MESSAGE_TYPE_IQ,
+                                              LM_MESSAGE_SUB_TYPE_SET);
+  LmMessageNode *node = lm_message_get_node(r);
   
-  LmMessage *r = lm_message_new_with_sub_type(to, LM_MESSAGE_TYPE_IQ, LM_MESSAGE_SUB_TYPE_SET);
-  LmMessageNode *node2 = lm_message_get_node(r);
-  node = lm_message_node_add_child(node2, "data", NULL);
+  gchar *base64 = g_base64_encode((const guchar *)buf, size);
+  gchar *strseq = g_strdup_printf("%" G_GINT64_FORMAT, *seq);
+
+  node = lm_message_node_add_child(node, "data", NULL);
   lm_message_node_set_attributes(node, "xmlns", NS_TRANSPORT_IBB,
-                                 "sid", jibb->sid,
-                                 "seq", seq,
+                                 "sid", sid,
+                                 "seq", strseq,
                                  NULL);
   lm_message_node_set_value(node, base64);
   
@@ -236,9 +258,47 @@ void jingle_ibb_send(session_content *sc, const gchar *to, gconstpointer data, g
   lm_message_unref(r);
   
   // The next packet will be seq++
-  jibb->seq++;
+  ++(*seq);
   
   g_free(base64);
+  g_free(strseq);
+}
+
+void jingle_ibb_send(session_content *sc, gconstpointer data, gchar *buf,
+                     gsize size)
+{
+  JingleIBB *jibb = (JingleIBB*)data;
+  
+  if (jibb->size_buf >= size + jibb->dataleft) {
+    g_memmove(jibb->buf + jibb->dataleft, buf, size);
+    jibb->dataleft+=size;
+  } else {
+    jibb->size_buf = size + jibb->dataleft;
+    jibb->buf = g_realloc(jibb->buf, jibb->size_buf);
+    g_memmove(jibb->buf + jibb->dataleft, buf, size);
+    jibb->dataleft = jibb->size_buf;
+  }
+
+  // We need more data
+  if (jibb->dataleft < jibb->blocksize) {
+    handle_trans_next(sc);
+    return;
+  }
+
+  // It's enough
+  {
+    JingleSession *sess = session_find_by_sid(sc->sid, sc->from);
+    
+    gchar *buffer = g_memdup(jibb->buf, jibb->blocksize);
+  
+    jibb->dataleft-=jibb->blocksize;
+  
+    g_memmove(jibb->buf, jibb->buf+jibb->blocksize, jibb->dataleft);
+  
+    _send_internal(sc, sess->to, buffer, jibb->blocksize, sess->sid, &jibb->seq);
+  
+    g_free(buf);
+  }
 }
 
 static void jingle_ibb_unregister_lm_handlers(void)

@@ -11,8 +11,14 @@ typedef struct {
   guint blocksize;
 
   /* The identifiant of the transfer */
-  const gchar *sid;
+  gchar *sid;
 
+  gchar *buf;
+  
+  gint size_buf;
+  
+  gint dataleft;
+  
   gint64 seq;
   
 } JingleIBB;

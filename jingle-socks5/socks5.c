@@ -41,8 +41,8 @@ gboolean jingle_socks5_cmp(gconstpointer data1, gconstpointer data2);
 void jingle_socks5_tomessage(gconstpointer data, LmMessageNode *node);
 const gchar* jingle_socks5_xmlns(void);
 gconstpointer jingle_socks5_new(void);
-void jingle_socks5_send(session_content *sc, const gchar *to,
-                        gconstpointer data, gchar *buf, gsize size);
+void jingle_socks5_send(session_content *sc, gconstpointer data, gchar *buf,
+                        gsize size);
 
 static void jingle_socks5_init(void);
 static void jingle_socks5_uninit(void);
