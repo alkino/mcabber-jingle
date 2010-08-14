@@ -57,11 +57,11 @@ static JingleTransportFuncs funcs = {
   jingle_socks5_send
 };
 
-module_info_t  info_jingle_inbandbytestream = {
+module_info_t  info_jingle_socks5bytestream = {
   .branch          = MCABBER_BRANCH,
   .api             = MCABBER_API_VERSION,
   .version         = PROJECT_VERSION,
-  .description     = "Jingle In Band Bytestream (XEP-0261)\n",
+  .description     = "Jingle Socks5 Bytestream (XEP-0260)\n",
   .requires        = deps,
   .init            = jingle_socks5_init,
   .uninit          = jingle_socks5_uninit,
@@ -73,6 +73,44 @@ const gchar* jingle_socks5_xmlns(void)
 {
   return NS_JINGLE_TRANSPORT_SOCKS5;
 }
+
+gconstpointer jingle_socks5_check(JingleContent *cn, GError **err)
+{
+  JingleSocks5 *js5b = NULL;
+  JingleCandidate *jc;
+  
+  LmMessageNode *node = cn->transport, *node2;
+
+  js5b = g_new0(JingleSocks5, 1);
+  
+  js5b->mode = lm_message_node_get_attribute(node, "mode");
+  js5b->sid  = lm_message_node_get_attribute(node, "sid");
+  
+  if (!js5b->sid) {
+    g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
+                "an attribute of the transport element is missing");
+    g_free(js5b);
+    return NULL;
+  }
+  
+  for (node2 = node->children; node2; node2 = node2->next) {
+    if (!g_strcmp0(node->name, "candidate")) {
+      jc = g_new0(JingleCandidate, 1);
+      jc->cid      = lm_message_node_get_attribute(node2, "cid");
+      jc->host     = lm_message_node_get_attribute(node2, "host");
+      jc->jid      = lm_message_node_get_attribute(node2, "jid");
+      jc->port     = g_ascii_strtoull(lm_message_node_get_attribute(node2, "port"), NULL, 10);
+      jc->priority = g_ascii_strtoull(lm_message_node_get_attribute(node2, "priority"), NULL, 10);
+      //jc->type     =
+      
+      js5b->candidates = g_slist_append(js5b->candidates, jc);
+    }
+  }
+  
+  return (gconstpointer) js5b;
+
+}
+
 
 static void jingle_socks5_init(void)
 {
