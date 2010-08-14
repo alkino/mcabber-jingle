@@ -152,7 +152,7 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
   // check if the md5 hash is valid ([a-fA-F0-9){32})
   if (ft->hash != NULL && (strlen(ft->hash) != 32 || !is_md5_hash(ft->hash))) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
-                "the offered file has an invalid filename");
+                "the offered file has an invalid hash");
     g_free(ft->name);
     g_free(ft);
     return NULL;
@@ -162,12 +162,14 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
   return (gconstpointer) ft;
 }
 
-gboolean jingle_ft_handle(JingleAction action, gconstpointer data, LmMessageNode *node)
+gboolean jingle_ft_handle(JingleAction action, gconstpointer data,
+                          LmMessageNode *node)
 {
   if (action == JINGLE_SESSION_INFO) {
-    if (!g_strcmp0(lm_message_node_get_attribute(node, "xmlns"), NS_JINGLE_APP_FT_INFO)
+    if (!g_strcmp0(lm_message_node_get_attribute(node, "xmlns"),
+                   NS_JINGLE_APP_FT_INFO)
         && !g_strcmp0(node->name, "hash")) {
-      ((JingleFT *)data)->hash = lm_message_node_get_value(node);
+      ((JingleFT *)data)->hash = g_strdup(lm_message_node_get_value(node));
       return TRUE;
 	}
 	return FALSE;
@@ -276,6 +278,7 @@ static void do_sendfile(char *arg)
     jft->desc = g_strdup(args[0]);
     jft->type = JINGLE_FT_OFFER;
     jft->name = g_path_get_basename(filename);
+    // TODO: Transform date to a good format (ios8601)
     jft->date = fileinfo.st_mtime;
     jft->size = fileinfo.st_size;
     jft->outfile = g_io_channel_new_file (filename, "r", NULL);
@@ -435,7 +438,7 @@ void jingle_ft_stop(gconstpointer data)
 {
   JingleFT *jft = (JingleFT*)data;
 
-  if (jft->hash != NULL) {
+  if (jft->hash != NULL && jft->md5 != NULL) {
     if (g_strcmp0(jft->hash, g_checksum_get_string(jft->md5))) {
       scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: File corrupt (%s)", jft->name);
     } else {
@@ -447,9 +450,11 @@ void jingle_ft_stop(gconstpointer data)
 
   g_checksum_free(jft->md5);
 
-  g_io_channel_flush(jft->outfile, NULL);
+  if (jft->outfile != NULL) {
+    g_io_channel_flush(jft->outfile, NULL);
 
-  g_io_channel_unref(jft->outfile);
+    g_io_channel_unref(jft->outfile);
+  }
 }
 
 static void jingle_ft_init(void)

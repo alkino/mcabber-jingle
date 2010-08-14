@@ -46,13 +46,13 @@ typedef struct {
 typedef struct {
   /* "A unique name or identifier for the content type
    *  according to the creator" */
-  const gchar *name;
+  gchar *name;
 
   /* */
   SessionState state;
 
   /* The namespace of the app */
-  const gchar *xmlns_desc;
+  gchar *xmlns_desc;
 
   /* The internal struct of the app module */
   gconstpointer description;
@@ -61,7 +61,7 @@ typedef struct {
   JingleAppFuncs *appfuncs;
 
   /* The namespace of the transport */
-  const gchar *xmlns_trans;
+  gchar *xmlns_trans;
 
   /* The internal struct of the transport module */
   gconstpointer transport;

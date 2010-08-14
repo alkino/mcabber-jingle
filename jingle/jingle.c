@@ -173,7 +173,7 @@ LmMessageHandler *jingle_new_ack_handler(JingleAckHandle *ah)
 gboolean evscallback_jingle(guint evcontext, const gchar *arg,
                             gpointer userdata)
 {
-  JingleNode *jn = userdata;
+  JingleSession *js = (JingleSession*)userdata;
 
   /*
   if (G_UNLIKELY(!jn)) {
@@ -184,33 +184,28 @@ gboolean evscallback_jingle(guint evcontext, const gchar *arg,
 
   if (evcontext == EVS_CONTEXT_TIMEOUT) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s timed out, cancelled.",
-                 jn->initiator);
-    jingle_free_jinglenode(jn);
+                 js->from);
     return FALSE;
   }
   if (evcontext == EVS_CONTEXT_CANCEL) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s cancelled.",
-                 jn->initiator);
-    jingle_free_jinglenode(jn);
+                 js->from);
     return FALSE;
   }
   if (!(evcontext == EVS_CONTEXT_ACCEPT || evcontext == EVS_CONTEXT_REJECT)) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s cancelled.",
-                 jn->initiator);
-    jingle_free_jinglenode(jn);
+                 js->from);
     return FALSE;
   }
   
   if (evcontext == EVS_CONTEXT_ACCEPT) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s accepted.",
-                 jn->initiator);
-    jingle_send_session_accept(jn);
-
+                 js->from);
+    jingle_send_session_accept(js);
   } else {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s cancelled.",
-                 jn->initiator);
-    // TODO: jingle_send_session_terminate(jn, "decline");
-    jingle_free_jinglenode(jn);
+                 js->from);
+    jingle_send_session_terminate(js, "decline");
   }
 
   return FALSE;

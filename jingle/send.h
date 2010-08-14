@@ -9,6 +9,6 @@
 
 void jingle_send_session_terminate(JingleSession *js, const gchar *reason);
 void jingle_send_session_initiate(JingleSession *js);
-void jingle_send_session_accept(JingleNode *jn);
+void jingle_send_session_accept(JingleSession *js);
 
 #endif

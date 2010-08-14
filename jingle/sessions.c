@@ -90,7 +90,7 @@ void session_add_content(JingleSession *sess, const gchar *name,
 {
   SessionContent *sc = g_new0(SessionContent, 1);
   
-  sc->name = name;
+  sc->name = g_strdup(name);
   sc->state = state;
 
   sess->content = g_slist_append(sess->content, sc);
@@ -101,23 +101,24 @@ void session_add_app(JingleSession *sess, const gchar *name,
 {
   SessionContent *sc = session_find_sessioncontent(sess, name);
   
-  sc->xmlns_desc = xmlns;
+  sc->xmlns_desc = g_strdup(xmlns);
   sc->appfuncs = jingle_get_appfuncs(xmlns);
   sc->description = data;
 }
 
 void session_add_trans(JingleSession *sess, const gchar *name,
-                           const gchar *xmlns, gconstpointer data)
+                       const gchar *xmlns, gconstpointer data)
 {
   SessionContent *sc = session_find_sessioncontent(sess, name);
   
-  sc->xmlns_trans = xmlns;
+  sc->xmlns_trans = g_strdup(xmlns);
   sc->transfuncs = jingle_get_transportfuncs(xmlns);
   sc->transport = data;
 }
 
-void session_add_content_from_jinglecontent(JingleSession *sess, JingleContent *cn,
-                         SessionState state)
+void session_add_content_from_jinglecontent(JingleSession *sess,
+                                            JingleContent *cn,
+                                            SessionState state)
 {
   const gchar *xmlns;
   JingleAppFuncs *app_funcs;
@@ -168,8 +169,10 @@ int session_remove_sessioncontent(JingleSession *sess, const gchar *name)
   sc = session_find_sessioncontent(sess, name);
   if(sc == NULL) return;
 
-  if (sc->state == JINGLE_SESSION_STATE_ACTIVE); // We should stop the transfer
-
+  if (sc->state == JINGLE_SESSION_STATE_ACTIVE) {
+    // TODO: stop the transfer
+  }
+  
   sess->content = g_slist_remove(sess->content, sc);
   
   return g_slist_length(sess->content);
@@ -206,8 +209,19 @@ void session_remove(JingleSession *sess)
  */
 void session_free(JingleSession *sess)
 {
+  GSList *el;
+  SessionContent *sc;
+  
   g_free(sess->sid);
   g_free(sess->from);
+  g_free(sess->to);
+  
+  // Remove and free contents
+  for (el = sess->content; el; el = el->next) {
+    sc = (SessionContent*)el->data;
+    session_remove_sessioncontent(sess, sc->name);
+  }
+  
   g_free(sess);
 }
 

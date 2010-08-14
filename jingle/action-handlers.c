@@ -75,6 +75,7 @@ void handle_content_accept(JingleNode *jn)
     cn = (JingleContent *)(child->data);
     session_changestate_sessioncontent(sess, cn->name, JINGLE_SESSION_STATE_ACTIVE);
   }
+  jingle_free_jinglenode(jn);
 }
 
 void handle_content_add(JingleNode *jn)
@@ -172,6 +173,7 @@ void handle_content_add(JingleNode *jn)
       }
     }
   }
+  jingle_free_jinglenode(jn);
 }
 
 void handle_content_reject(JingleNode *jn)
@@ -215,6 +217,7 @@ void handle_content_reject(JingleNode *jn)
     session_delete(sess);
     return;
   }
+  jingle_free_jinglenode(jn);
 }
 
 void handle_content_remove(JingleNode *jn)
@@ -232,18 +235,22 @@ void handle_content_remove(JingleNode *jn)
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
+    jingle_free_jinglenode(jn);
     return;
   }
 
   /* it's better if there is at least one content elem */
   if (g_slist_length(jn->content) < 1) {
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
+    jingle_free_jinglenode(jn);
     return;
   }
   
   // if a session with the same sid doesn't already exists
   if ((sess = session_find(jn)) == NULL) {
+    // TODO: look if it's really that
     jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
+    jingle_free_jinglenode(jn);
     return;
   }
 
@@ -253,6 +260,7 @@ void handle_content_remove(JingleNode *jn)
     cn = (JingleContent *)(child->data);
     session_remove_sessioncontent(sess, cn->name);
   }
+  jingle_free_jinglenode(jn);
 }
 
 void handle_session_initiate(JingleNode *jn)
@@ -264,11 +272,17 @@ void handle_session_initiate(JingleNode *jn)
   GSList *child = NULL;
   LmMessage *r;
   gchar *disp;
+  JingleSession *sess;
+  const gchar *xmlns;
+  JingleAppFuncs *appfuncs;
+  JingleTransportFuncs *transfuncs;
+  gconstpointer description, transport;
   
   // Make sure the request come from an user in our roster
   disp = jidtodisp(lm_message_get_from(jn->message));
   if (!roster_find(disp, jidsearch, 0)) {
-    // jingle_send_session_terminate(jn, "decline");
+    // We say that we doesn't support jingle.
+    jingle_send_iq_error(jn->message, "cancel", "service-unavailable", NULL);
     jingle_free_jinglenode(jn);
     g_free(disp);
     return;
@@ -278,6 +292,7 @@ void handle_session_initiate(JingleNode *jn)
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
+    jingle_free_jinglenode(jn);
     g_free(disp);
     return;
   }
@@ -285,6 +300,7 @@ void handle_session_initiate(JingleNode *jn)
   // a session-initiate message must contains at least one <content> element
   if (g_slist_length(jn->content) < 1) {
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
+    jingle_free_jinglenode(jn);
     g_free(disp);
     return;
   }
@@ -301,6 +317,7 @@ void handle_session_initiate(JingleNode *jn)
   if (!valid_disposition) {
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     g_free(disp);
+    jingle_free_jinglenode(jn);
     return;  
   }
   
@@ -308,23 +325,55 @@ void handle_session_initiate(JingleNode *jn)
   if (session_find(jn) != NULL) {
     jingle_send_iq_error(jn->message, "cancel", "unexpected-request", "out-of-order");
     g_free(disp);
+    jingle_free_jinglenode(jn);
     return;
   }
 
   jingle_ack_iq(jn->message);
 
+  // We create a session
+  sess = session_new_from_jinglenode(jn);
+  
+  for (child = jn->content; child; child = child->next) {
+    cn = (JingleContent *)(child->data);
+    
+    xmlns = lm_message_node_get_attribute(cn->description, "xmlns");
+    appfuncs = jingle_get_appfuncs(xmlns);
+    if (appfuncs == NULL) continue;
+    
+    xmlns = lm_message_node_get_attribute(cn->transport, "xmlns");
+    transfuncs = jingle_get_transportfuncs(xmlns);
+    if (transfuncs == NULL) continue;
+    
+    description = appfuncs->check(cn, &err);
+    if (description == NULL || err != NULL) continue;
+    transport = transfuncs->check(cn, &err);
+    if (transport == NULL || err != NULL) continue;
+    
+    session_add_content_from_jinglecontent(sess, cn,
+                                           JINGLE_SESSION_STATE_PENDING);
+  }
+  
+  if(g_slist_length(sess->content) == 0) {
+    jingle_send_session_terminate(sess, "unsupported-applications");
+    session_delete(sess);
+    return;
+  }
+  
   // Wait that user accept the jingle
   sbuf = g_string_new("");
-  g_string_printf(sbuf, "Received an invitation for a jingle session from <%s>", lm_message_get_from(jn->message));
+  g_string_printf(sbuf, "Received an invitation for a jingle session from <%s>",
+                  lm_message_get_from(jn->message));
 
   scr_WriteIncomingMessage(disp, sbuf->str, 0, HBB_PREFIX_INFO, 0);
   scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf->str);
 
   {
     const char *id;
-    char *desc = g_strdup_printf("<%s> invites you to do a jingle session", lm_message_get_from(jn->message));
+    char *desc = g_strdup_printf("<%s> invites you to do a jingle session",
+                                 lm_message_get_from(jn->message));
 
-    id = evs_new(desc, NULL, 0, evscallback_jingle, jn, NULL);
+    id = evs_new(desc, NULL, 0, evscallback_jingle, sess, NULL);
     g_free(desc);
     if (id)
       g_string_printf(sbuf, "Please use /event %s accept|reject", id);
@@ -334,6 +383,7 @@ void handle_session_initiate(JingleNode *jn)
     scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf->str);
   }
   g_free(disp);
+  jingle_free_jinglenode(jn);
 }
 
 void handle_session_info(JingleNode *jn)
@@ -376,6 +426,7 @@ void handle_session_info(JingleNode *jn)
    * error condition of <unsupported-info/>." */
   jingle_send_iq_error(jn->message, "modify", "feature-not-implemented",
                        "unsupported-info");
+  jingle_free_jinglenode(jn);
 }
 
 void handle_session_accept(JingleNode *jn)
@@ -421,7 +472,7 @@ void handle_session_accept(JingleNode *jn)
     sc2->name = sc->name;
     sc->appfuncs->start(sc2, 2048);
   }
-
+  jingle_free_jinglenode(jn);
 }
 
 void handle_session_terminate(JingleNode *jn)
@@ -444,4 +495,5 @@ void handle_session_terminate(JingleNode *jn)
   }
   session_delete(sess);
   jingle_ack_iq(jn->message);
+  jingle_free_jinglenode(jn);
 }

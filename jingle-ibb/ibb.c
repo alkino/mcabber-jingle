@@ -88,7 +88,7 @@ gconstpointer jingle_ibb_check(JingleContent *cn, GError **err)
   ibb = g_new0(JingleIBB, 1);
   
   blocksize  = lm_message_node_get_attribute(node, "block-size");
-  ibb->sid = lm_message_node_get_attribute(node, "sid");
+  ibb->sid = g_strdup(lm_message_node_get_attribute(node, "sid"));
    
   if (!ibb->sid || !blocksize) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
