@@ -135,7 +135,7 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
 
   jingle_ack_iq(message);
   
-  jibb->sid = lm_message_node_get_attribute(dnode, "sid");
+  jibb->sid = g_strdup(lm_message_node_get_attribute(dnode, "sid"));
   jibb->seq = g_ascii_strtoll(lm_message_node_get_attribute(dnode, "seq"), NULL, 10);
   
   data64 = lm_message_node_get_value(dnode);

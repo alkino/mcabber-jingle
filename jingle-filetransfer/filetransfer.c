@@ -278,7 +278,6 @@ static void do_sendfile(char *arg)
     jft->desc = g_strdup(args[0]);
     jft->type = JINGLE_FT_OFFER;
     jft->name = g_path_get_basename(filename);
-    // TODO: Transform date to a good format (ios8601)
     jft->date = fileinfo.st_mtime;
     jft->size = fileinfo.st_size;
     jft->outfile = g_io_channel_new_file (filename, "r", NULL);
@@ -304,6 +303,7 @@ void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node)
 {
   JingleFT *jft = (JingleFT*) data;
   gchar *size = NULL;
+  gchar date[19];
   
   if (lm_message_node_get_child(node, "description") != NULL)
     return;
@@ -325,6 +325,10 @@ void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node)
   
   if (jft->hash != NULL)
     lm_message_node_set_attribute(node2, "hash", jft->hash);
+
+  if (jft->date)
+    if (!to_iso8601(date, jft->date))
+      lm_message_node_set_attribute(node2, "date", date);
 
   if (jft->desc != NULL)
     lm_message_node_add_child(node2, "desc", jft->desc);

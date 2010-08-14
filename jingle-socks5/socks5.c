@@ -110,7 +110,7 @@ gconstpointer jingle_socks5_check(JingleContent *cn, GError **err)
   js5b = g_new0(JingleSocks5, 1);
   modestr    = lm_message_node_get_attribute(node, "mode");
   js5b->mode = index_in_array(modestr, jingle_s5b_modes);
-  js5b->sid  = lm_message_node_get_attribute(node, "sid");
+  js5b->sid  = g_strdup(lm_message_node_get_attribute(node, "sid"));
 
   if (!js5b->sid) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_MISSING,
@@ -123,9 +123,9 @@ gconstpointer jingle_socks5_check(JingleContent *cn, GError **err)
     if (!g_strcmp0(node->name, "candidate")) {
       const gchar *portstr, *prioritystr, *typestr;
       JingleS5BCandidate *jc = g_new0(JingleS5BCandidate, 1);
-      jc->cid      = lm_message_node_get_attribute(node2, "cid");
-      jc->host     = lm_message_node_get_attribute(node2, "host");
-      jc->jid      = lm_message_node_get_attribute(node2, "jid");
+      jc->cid      = g_strdup(lm_message_node_get_attribute(node2, "cid"));
+      jc->host     = g_strdup(lm_message_node_get_attribute(node2, "host"));
+      jc->jid      = g_strdup(lm_message_node_get_attribute(node2, "jid"));
       portstr      = lm_message_node_get_attribute(node2, "port");
       prioritystr  = lm_message_node_get_attribute(node2, "priority");
       typestr      = lm_message_node_get_attribute(node2, "type");
