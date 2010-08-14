@@ -214,13 +214,13 @@ void jingle_ibb_send(session_content *sc, const gchar *to, gconstpointer data, g
 {
   JingleIBB *jibb = (JingleIBB*)data;
   JingleAckHandle *ackhandle;
+  LmMessageNode *node;
   gchar *base64 = g_base64_encode((const guchar *)buf, size);
   gchar *seq = g_strdup_printf("%" G_GINT64_FORMAT, jibb->seq);
   
   LmMessage *r = lm_message_new_with_sub_type(to, LM_MESSAGE_TYPE_IQ, LM_MESSAGE_SUB_TYPE_SET);
-  LmMessageNode *node = lm_message_get_node(r);
-  lm_message_node_add_child(node, "data", NULL);
-  node = lm_message_node_get_child(node, "data");
+  LmMessageNode *node2 = lm_message_get_node(r);
+  node = lm_message_node_add_child(node2, "data", NULL);
   lm_message_node_set_attributes(node, "xmlns", NS_TRANSPORT_IBB,
                                  "sid", jibb->sid,
                                  "seq", seq,

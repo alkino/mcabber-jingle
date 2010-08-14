@@ -41,7 +41,8 @@ gboolean jingle_socks5_cmp(gconstpointer data1, gconstpointer data2);
 void jingle_socks5_tomessage(gconstpointer data, LmMessageNode *node);
 const gchar* jingle_socks5_xmlns(void);
 gconstpointer jingle_socks5_new(void);
-void jingle_socks5_send(session_content *sc, const gchar *to, gconstpointer data, gchar *buf, gsize size);
+void jingle_socks5_send(session_content *sc, const gchar *to,
+                        gconstpointer data, gchar *buf, gsize size);
 
 static void jingle_socks5_init(void);
 static void jingle_socks5_uninit(void);
@@ -149,6 +150,43 @@ gconstpointer jingle_socks5_check(JingleContent *cn, GError **err)
   return (gconstpointer) js5b;
 }
 
+void jingle_socks5_tomessage(gconstpointer data, LmMessageNode *node)
+{
+  JingleSocks5 *js5 = (JingleSocks5*)data;
+  JingleS5BCandidate *js5c;
+  
+  LmMessageNode *node2, *node3;
+  gchar *port;
+  gchar *priority;
+  GSList *el;
+  
+  if (lm_message_node_get_child(node, "transport") != NULL)
+    return;
+  
+  node2 = lm_message_node_add_child(node, "transport", NULL);
+
+  lm_message_node_set_attributes(node2, "xmlns", NS_JINGLE_TRANSPORT_SOCKS5,
+                                 "sid", js5->sid,
+                                 "mode", jingle_s5b_modes[js5->mode],
+                                 NULL);
+  for (el = js5->candidates; el; el = el->next) {
+    js5c = (JingleS5BCandidate*) el->data;
+    node3 = lm_message_node_add_child(node2, "candidate", NULL);
+    
+    port = g_strdup_printf("%" G_GUINT16_FORMAT, js5c->port);
+    priority = g_strdup_printf("%" G_GUINT64_FORMAT, js5c->priority);
+    
+    lm_message_node_set_attributes(node3, "cid", js5c->cid,
+                                   "host", js5c->host,
+                                   "jid", js5c->jid,
+                                   "port", port,
+                                   "priority", priority,
+                                   "type", jingle_s5b_types[js5c->type],
+                                   NULL);
+    g_free(port);
+    g_free(priority);
+  }
+}
 
 static void jingle_socks5_init(void)
 {

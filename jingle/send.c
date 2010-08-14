@@ -35,21 +35,19 @@
 void jingle_send_session_terminate(JingleSession *js, const gchar *reason)
 {
   JingleAckHandle *ackhandle;
-
+  LmMessageNode *node2;
   LmMessage *r = lm_message_new_with_sub_type(js->to, LM_MESSAGE_TYPE_IQ,
                                               LM_MESSAGE_SUB_TYPE_SET);
   LmMessageNode *node = lm_message_get_node(r);
-  lm_message_node_add_child(node, "jingle", NULL);
-  node = lm_message_node_get_child(node, "jingle");
-  lm_message_node_set_attributes(node, "xmlns", NS_JINGLE,
+  node2 = lm_message_node_add_child(node, "jingle", NULL);
+  lm_message_node_set_attributes(node2, "xmlns", NS_JINGLE,
                                  "action", "session-terminate",
                                  "sid", js->sid,
                                  NULL);
   if (r == NULL) return;
 
   if (reason != NULL) { 
-    lm_message_node_add_child(node, "reason", NULL);
-    node = lm_message_node_get_child(node, "reason");
+    node = lm_message_node_add_child(node2, "reason", NULL);
     lm_message_node_add_child(node, reason, NULL);
   }
 
@@ -62,7 +60,7 @@ void jingle_send_session_terminate(JingleSession *js, const gchar *reason)
   lm_message_unref(r);
 }
 
-static void jingle_handle_ack_iq_sa(LmMessage *mess, gpointer *data)
+static void jingle_handle_ack_iq_sa(LmMessage *mess, gpointer data)
 {
   LmMessageNode *node;
   const gchar *type, *cause;
@@ -133,14 +131,14 @@ void jingle_send_session_accept(JingleNode *jn)
   if (mess) {
     ackhandle = g_new0(JingleAckHandle, 1);
     ackhandle->callback = jingle_handle_ack_iq_sa;
-    ackhandle->user_data = (gpointer*)sess;
+    ackhandle->user_data = (gpointer)sess;
     lm_connection_send_with_reply(lconnection, mess,
                                   jingle_new_ack_handler(ackhandle), NULL);
     lm_message_unref(mess);
   }
 }
 
-static void jingle_handle_ack_iq_si(LmMessage *mess, gpointer *data)
+static void jingle_handle_ack_iq_si(LmMessage *mess, gpointer data)
 {
   LmMessageNode *node;
   const gchar *type, *cause;
@@ -172,7 +170,7 @@ void jingle_send_session_initiate(JingleSession *js)
   if (mess) {
     ackhandle = g_new0(JingleAckHandle, 1);
     ackhandle->callback = jingle_handle_ack_iq_si;
-    ackhandle->user_data = (gpointer*)js;
+    ackhandle->user_data = (gpointer)js;
     lm_connection_send_with_reply(lconnection, mess,
                                   jingle_new_ack_handler(ackhandle), NULL);
     lm_message_unref(mess);

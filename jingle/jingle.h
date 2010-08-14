@@ -108,7 +108,7 @@ struct JingleActionList {
   void (*handler)(JingleNode *);
 };
 
-typedef void (*JingleAckCallback) (LmMessage *, gpointer *);
+typedef void (*JingleAckCallback) (LmMessage *, gpointer);
 
 typedef struct {
   JingleAckCallback callback;
