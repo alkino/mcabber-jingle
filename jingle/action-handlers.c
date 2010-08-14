@@ -437,7 +437,9 @@ void handle_session_terminate(JingleNode *jn)
   
   for (el = sess->content; el; el = el->next) {
     sc = (SessionContent*)el->data;
-    sc->appfuncs->stop(sc->description);
+    if (!g_strcmp0(lm_message_get_from(jn->message),
+             (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to))
+      sc->appfuncs->stop(sc->description);
     session_remove_sessioncontent(sess, sc->name);
   }
   session_delete(sess);

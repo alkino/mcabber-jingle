@@ -1,5 +1,5 @@
 /*
- * filetransfer.c
+ * ibb.c
  *
  * Copyrigth (C) 2010 Nicolas Cornu <nicolas.cornu@ensi-bourges.fr>
  *

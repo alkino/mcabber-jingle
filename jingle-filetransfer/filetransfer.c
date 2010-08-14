@@ -289,8 +289,6 @@ static void do_sendfile(char *arg)
 
     g_free(ressource);
     g_free(sid);
-    //g_io_channel_unref(jft->outfile);
-    //g_io_channel_shutdown(jft->outfile, TRUE, NULL);
   }
 
   free_arg_lst(args);
