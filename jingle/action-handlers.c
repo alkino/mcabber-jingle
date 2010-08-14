@@ -241,11 +241,10 @@ void handle_session_accept(JingleNode *jn)
   // Go go go! We start jobs!
   for (el = sess->content; el; el = el->next) {
     sc = (SessionContent*)el->data;
-    // TODO size!
     sc2->sid = sess->sid;
     sc2->from = (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to;
     sc2->name = sc->name;
-    sc->appfuncs->start(sc2, 2048);
+    sc->appfuncs->start(sc2);
   }
   jingle_free_jinglenode(jn);
 }

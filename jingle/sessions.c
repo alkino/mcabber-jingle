@@ -301,5 +301,8 @@ void handle_app_data(const gchar *sid, const gchar *from, const gchar *name, gch
   sc2->sid = sess->sid;
   sc2->from = (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to;
   sc2->name = sc->name;
-  sc->transfuncs->send(sc2, sc->transport, data, size);
+  if (size != 0)
+    sc->transfuncs->send(sc2, sc->transport, data, size);
+  else
+    sc->transfuncs->end(sc2, sc->transport);
 }

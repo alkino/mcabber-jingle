@@ -46,6 +46,7 @@ void jingle_ibb_tomessage(gconstpointer data, LmMessageNode *node);
 const gchar* jingle_ibb_xmlns(void);
 gconstpointer jingle_ibb_new(void);
 void jingle_ibb_send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
+void jingle_ibb_end(session_content *sc, gconstpointer data);
 static void _send_internal(session_content *sc, const gchar *to, gchar *buf,
                            gsize size, const gchar *sid, gint64 *seq);
 
@@ -63,7 +64,8 @@ static JingleTransportFuncs funcs = {
   jingle_ibb_tomessage,
   jingle_ibb_cmp,
   jingle_ibb_new,
-  jingle_ibb_send
+  jingle_ibb_send,
+  jingle_ibb_end
 };
 
 module_info_t  info_jingle_inbandbytestream = {
@@ -295,10 +297,24 @@ void jingle_ibb_send(session_content *sc, gconstpointer data, gchar *buf,
   
     g_memmove(jibb->buf, jibb->buf+jibb->blocksize, jibb->dataleft);
   
-    _send_internal(sc, sess->to, buffer, jibb->blocksize, sess->sid, &jibb->seq);
+    _send_internal(sc, sess->to, buffer, jibb->blocksize, sess->sid,
+                   &jibb->seq);
   
     g_free(buf);
   }
+}
+
+void jingle_ibb_end(session_content *sc, gconstpointer data)
+{
+  JingleIBB *jibb = (JingleIBB*)data;
+  JingleSession *sess = session_find_by_sid(sc->sid, sc->from);
+  
+  if (jibb->dataleft > 0) {
+    _send_internal(sc, sess->to, jibb->buf, jibb->dataleft, sess->sid,
+                   &jibb->seq);
+  }
+  
+  g_free(jibb->buf);
 }
 
 static void jingle_ibb_unregister_lm_handlers(void)

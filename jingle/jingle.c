@@ -401,7 +401,7 @@ void handle_trans_next(session_content *sc2) {
   SessionContent *sc = session_find_sessioncontent(sess, sc2->name);
   
   // TODO: size!
-  sc->appfuncs->send(sc2, 2048);
+  sc->appfuncs->send(sc2);
   g_free(sc2);
 }
 

@@ -48,8 +48,8 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err);
 gboolean jingle_ft_handle(JingleAction action, gconstpointer data, LmMessageNode *node);
 void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node);
 gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len);
-void jingle_ft_start(session_content *sc, gsize size);
-void jingle_ft_send(session_content *sc, gsize size);
+void jingle_ft_start(session_content *sc);
+void jingle_ft_send(session_content *sc);
 void jingle_ft_stop(gconstpointer data);
 
 static gboolean is_md5_hash(const gchar *hash);
@@ -358,10 +358,10 @@ void jingle_ft_send_hash(gchar *sid, gchar *to, gchar *hash)
   lm_message_unref(r);
 }
 
-void jingle_ft_send(session_content *sc, gsize size)
+void jingle_ft_send(session_content *sc)
 {
   JingleFT *jft;
-  gchar *buf = g_new0(gchar, size);
+  gchar buf[JINGLE_FT_SIZE_READ];
   gsize read;
   GIOStatus status;
   int count = 0;
@@ -378,7 +378,7 @@ void jingle_ft_send(session_content *sc, gsize size)
   
   do {
     count++;
-    status = g_io_channel_read_chars(jft->outfile, (gchar*)buf, size, &read, NULL);
+    status = g_io_channel_read_chars(jft->outfile, (gchar*)buf, JINGLE_FT_SIZE_READ, &read, NULL);
   } while (status == G_IO_STATUS_AGAIN && count < 10);
   
   if (status == G_IO_STATUS_AGAIN) {
@@ -400,6 +400,7 @@ void jingle_ft_send(session_content *sc, gsize size)
   }
   
   if (status == G_IO_STATUS_EOF) {
+    handle_app_data(sc->sid, sc->from, sc->name, NULL, 0);
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finish (%s)", jft->name);
     jft->hash = g_strdup(g_checksum_get_string(jft->md5));
     // Call a function to say state is ended
@@ -415,7 +416,7 @@ void jingle_ft_send(session_content *sc, gsize size)
   }
 }
 
-void jingle_ft_start(session_content *sc, gsize size)
+void jingle_ft_start(session_content *sc)
 {
   JingleFT *jft;
   
@@ -434,7 +435,7 @@ void jingle_ft_start(session_content *sc, gsize size)
   scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Transfer start (%s)",
                jft->name);
 
-  sc2->appfuncs->send(sc, size);
+  sc2->appfuncs->send(sc);
 }
 
 // When we got a session-terminate
