@@ -135,7 +135,6 @@ gchar *jingle_find_compatible_res(const gchar *jid, const gchar *ns[]);
 
 void jingle_ack_iq(LmMessage *m);
 
-LmMessage *lm_message_from_jinglenode(const JingleNode *jn, const gchar *to);
 void jingle_free_jinglenode(JingleNode *jn);
 
 JingleAction jingle_action_from_str(const gchar* string);
@@ -146,5 +145,7 @@ gboolean evscallback_jingle(guint evcontext, const gchar *arg,
 void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data2, guint len);
 
 gchar *jingle_generate_sid(void);
+
+void handle_trans_next(session_content *sc2);
 
 #endif
