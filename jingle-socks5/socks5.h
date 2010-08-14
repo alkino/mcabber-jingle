@@ -10,9 +10,13 @@ typedef enum {
   JINGLE_S5B_TUNNEL
 } JingleS5BType;
 
+typedef enum {
+  JINGLE_S5B_TCP,
+  JINGLE_S5B_UDP
+} JingleS5BModes;
+
 typedef struct {
-  // optional, default: tcp. useful ??
-  const gchar *mode;
+  JingleS5BModes mode;
   
   const gchar *sid;  
    
@@ -26,11 +30,11 @@ typedef struct {
   
   const gchar *jid;
   
-  guint port;
+  guint16 port;
   
   guint64 priority;
   
   JingleS5BType type;
   
-} JingleCandidate;
+} JingleS5BCandidate;
 #endif
