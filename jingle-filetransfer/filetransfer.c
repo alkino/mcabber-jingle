@@ -51,6 +51,7 @@ static gboolean handle_data(gconstpointer data, const gchar *data2, guint len);
 static void start(session_content *sc);
 static void send(session_content *sc);
 static void stop(gconstpointer data);
+static gchar* info(gconstpointer data);
 
 static gboolean is_md5_hash(const gchar *hash);
 
@@ -66,7 +67,8 @@ static JingleAppFuncs funcs = {
   .handle_data  = handle_data,
   .start        = start,
   .send         = send,
-  .stop         = stop
+  .stop         = stop,
+  .info         = info
 };
 
 module_info_t info_jingle_filetransfer = {
@@ -519,6 +521,33 @@ static void stop(gconstpointer data)
 
   g_checksum_free(jft->md5);
 
+}
+
+static gchar *_convert_size(guint64 size)
+{
+  gchar *strsize;
+ 
+  if (size < 1024)
+    strsize = g_strdup_printf("%" G_GUINT64_FORMAT " B", size);
+  else if (size < 1048576)
+    strsize = g_strdup_printf("%.2lf KiB", size/1024.0);
+  else if (size < 1073741824)
+    strsize = g_strdup_printf("%.2lf MiB", size/1048576.0);
+  else if (size < 1099511627776)
+    strsize = g_strdup_printf("%.2lf GiB", size/1073741824.0);
+
+  return strsize;
+}
+
+static gchar* info(gconstpointer data)
+{
+  JingleFT *jft = (JingleFT *)data;
+  gchar *info, *strsize = _convert_size(jft->size);
+  info = g_strdup_printf("JFT: Receive %s (%s)", jft->name, strsize);
+
+  g_free(strsize);
+
+  return info;
 }
 
 static void jingle_ft_init(void)

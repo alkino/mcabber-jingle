@@ -47,6 +47,7 @@ static gconstpointer new(void);
 static void send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
 static void init(session_content *sc, gconstpointer data);
 static void end(session_content *sc, gconstpointer data);
+static gchar *info(gconstpointer data);
 static void _send_internal(session_content *sc, const gchar *to, gchar *buf,
                            gsize size, const gchar *sid, gint64 *seq);
 
@@ -65,7 +66,8 @@ static JingleTransportFuncs funcs = {
   .new       = new,
   .send      = send,
   .init      = init,
-  .end       = end
+  .end       = end,
+  .info      = info
 };
 
 module_info_t  info_jingle_inbandbytestream = {
@@ -363,6 +365,13 @@ static guint jingle_ibb_disconn_hh(const gchar *hname, hk_arg_t *args,
 {
   jingle_ibb_unregister_lm_handlers();
   return HOOK_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
+}
+
+static gchar *info(gconstpointer data)
+{
+  JingleIBB *jibb = (JingleIBB *)data;
+  gchar *info = g_strdup_printf("IBB %i", jibb->blocksize);
+  return info;
 }
 
 static void jingle_ibb_init(void)

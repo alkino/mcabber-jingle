@@ -43,7 +43,7 @@ void handle_session_initiate(JingleNode *jn)
   GError *err = NULL;
   gboolean valid_disposition = FALSE;
   JingleContent *cn;
-  GString *sbuf;
+  gchar *sbuf;
   GSList *child = NULL;
   LmMessage *r;
   gchar *disp;
@@ -131,13 +131,25 @@ void handle_session_initiate(JingleNode *jn)
   }
   
   // Wait that user accept the jingle
-  sbuf = g_string_new("");
-  g_string_printf(sbuf, "Received an invitation for a jingle session from <%s>",
+  sbuf = g_strdup_printf("Received an invitation for a jingle session from <%s>",
                   lm_message_get_from(jn->message));
 
-  scr_WriteIncomingMessage(disp, sbuf->str, 0, HBB_PREFIX_INFO, 0);
-  scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf->str);
-
+  scr_WriteIncomingMessage(disp, sbuf, 0, HBB_PREFIX_INFO, 0);
+  scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf);
+  g_free(sbuf);
+  
+  for (child = sess->content; child; child = child->next) {
+    SessionContent *sc = (SessionContent *)child->data;
+    gchar *app_info = sc->appfuncs->info(sc->description);
+    gchar *trans_info = sc->transfuncs->info(sc->transport);
+    sbuf = g_strdup_printf("%s using %s", app_info, trans_info);
+    scr_WriteIncomingMessage(disp, sbuf, 0, HBB_PREFIX_INFO, 0);
+    scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf);
+    g_free(app_info);
+    g_free(trans_info);
+    g_free(sbuf);
+  }
+  
   {
     const char *id;
     char *desc = g_strdup_printf("<%s> invites you to do a jingle session",
@@ -146,11 +158,12 @@ void handle_session_initiate(JingleNode *jn)
     id = evs_new(desc, NULL, 0, evscallback_jingle, sess, NULL);
     g_free(desc);
     if (id)
-      g_string_printf(sbuf, "Please use /event %s accept|reject", id);
+      sbuf = g_strdup_printf("Please use /event %s accept|reject", id);
     else
-      g_string_printf(sbuf, "Unable to create a new event!");
-    scr_WriteIncomingMessage(disp, sbuf->str, 0, HBB_PREFIX_INFO, 0);
-    scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf->str);
+      sbuf = g_strdup_printf("Unable to create a new event!");
+    scr_WriteIncomingMessage(disp, sbuf, 0, HBB_PREFIX_INFO, 0);
+    scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf);
+    g_free(sbuf);
   }
   g_free(disp);
 }

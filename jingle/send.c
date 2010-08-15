@@ -128,6 +128,8 @@ void jingle_send_session_initiate(JingleSession *js)
 {
   JingleAckHandle *ackhandle;
   GSList *listentry;
+  GError *err;
+  gboolean status;
   
   LmMessage *mess = lm_message_from_jinglesession(js, JINGLE_SESSION_INITIATE);
   lm_message_node_set_attribute(lm_message_node_get_child(mess->node, "jingle"),
@@ -139,8 +141,13 @@ void jingle_send_session_initiate(JingleSession *js)
     ackhandle->user_data = (gpointer)js;
     scr_log_print(LPRINT_DEBUG,
                   "%s", lm_message_node_to_string(mess->node));
-lm_connection_send_with_reply(lconnection, mess,
-                                  jingle_new_ack_handler(ackhandle), NULL);
+    status = lm_connection_send_with_reply(lconnection, mess,
+                                       jingle_new_ack_handler(ackhandle), &err);
+    // TODO: delete the ack_handler
+    if (status == FALSE || err != NULL) {
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle: %s: try again", err->message);
+      session_delete(js);
+    }         
     lm_message_unref(mess);
   }
 }
