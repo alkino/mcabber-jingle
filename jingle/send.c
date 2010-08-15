@@ -97,7 +97,8 @@ void jingle_send_session_accept(JingleSession *js)
     ackhandle = g_new0(JingleAckHandle, 1);
     ackhandle->callback = jingle_handle_ack_iq_sa;
     ackhandle->user_data = (gpointer)js;
-    lm_connection_send_with_reply(lconnection, mess,
+        scr_log_print(LPRINT_DEBUG,
+                  "%s", lm_message_node_to_string(mess->node));lm_connection_send_with_reply(lconnection, mess,
                                   jingle_new_ack_handler(ackhandle), NULL);
     lm_message_unref(mess);
   }
@@ -136,7 +137,9 @@ void jingle_send_session_initiate(JingleSession *js)
     ackhandle = g_new0(JingleAckHandle, 1);
     ackhandle->callback = jingle_handle_ack_iq_si;
     ackhandle->user_data = (gpointer)js;
-    lm_connection_send_with_reply(lconnection, mess,
+    scr_log_print(LPRINT_DEBUG,
+                  "%s", lm_message_node_to_string(mess->node));
+lm_connection_send_with_reply(lconnection, mess,
                                   jingle_new_ack_handler(ackhandle), NULL);
     lm_message_unref(mess);
   }

@@ -58,7 +58,6 @@ void handle_session_initiate(JingleNode *jn)
   if (!roster_find(disp, jidsearch, 0)) {
     // We say that we doesn't support jingle.
     jingle_send_iq_error(jn->message, "cancel", "service-unavailable", NULL);
-    jingle_free_jinglenode(jn);
     g_free(disp);
     return;
   }
@@ -67,7 +66,6 @@ void handle_session_initiate(JingleNode *jn)
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
-    jingle_free_jinglenode(jn);
     g_free(disp);
     return;
   }
@@ -75,7 +73,6 @@ void handle_session_initiate(JingleNode *jn)
   // a session-initiate message must contains at least one <content> element
   if (g_slist_length(jn->content) < 1) {
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
-    jingle_free_jinglenode(jn);
     g_free(disp);
     return;
   }
@@ -92,7 +89,6 @@ void handle_session_initiate(JingleNode *jn)
   if (!valid_disposition) {
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     g_free(disp);
-    jingle_free_jinglenode(jn);
     return;  
   }
   
@@ -100,7 +96,6 @@ void handle_session_initiate(JingleNode *jn)
   if (session_find(jn) != NULL) {
     jingle_send_iq_error(jn->message, "cancel", "unexpected-request", "out-of-order");
     g_free(disp);
-    jingle_free_jinglenode(jn);
     return;
   }
 
@@ -158,7 +153,6 @@ void handle_session_initiate(JingleNode *jn)
     scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf->str);
   }
   g_free(disp);
-  jingle_free_jinglenode(jn);
 }
 
 void handle_session_info(JingleNode *jn)
@@ -201,7 +195,6 @@ void handle_session_info(JingleNode *jn)
    * error condition of <unsupported-info/>." */
   jingle_send_iq_error(jn->message, "modify", "feature-not-implemented",
                        "unsupported-info");
-  jingle_free_jinglenode(jn);
 }
 
 void handle_session_accept(JingleNode *jn)
@@ -210,7 +203,7 @@ void handle_session_accept(JingleNode *jn)
   JingleContent *jc;
   SessionContent *sc;
   session_content *sc2 = g_new0(session_content, 1);
-  
+  GError *err;
   GSList *el;
   const gchar *from = lm_message_get_from(jn->message);
   
@@ -220,33 +213,44 @@ void handle_session_accept(JingleNode *jn)
     jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
     return;
   }
+ 
+  if (!check_contents(jn, &err)) {
+    scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
+                  err->message);
+    jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
+    return;
+  }
   
   jingle_ack_iq(jn->message);
   
+  sc2->sid  = sess->sid;
+  sc2->from = (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to;
+
+  // TODO: it's really bad done!
   for (el = jn->content; el; el = el->next) {
     jc = (JingleContent*)el->data;
+    sc2->name = jc->name;
+    sc = session_find_sessioncontent(sess, jc->name);
     session_changestate_sessioncontent(sess, jc->name,
                                        JINGLE_SESSION_STATE_ACTIVE);
+    sc->transfuncs->init(sc2, sc->transfuncs->check(jc, NULL));
   }
   
-  // We delete content who have been refuse
-  /*for (el = sess->content; el; el = el->next) {
+  // We delete content who haven't been accepted
+  for (el = sess->content; el; el = el->next) {
     sc = (SessionContent*) el->data;
     if (sc->state == JINGLE_SESSION_STATE_PENDING) {
       scr_log_print(LPRINT_DEBUG, "Delete %s!", sc->name);
       session_remove_sessioncontent(sess, sc->name);
     }
-  }*/
+  }
   
   // Go go go! We start jobs!
   for (el = sess->content; el; el = el->next) {
     sc = (SessionContent*)el->data;
-    sc2->sid = sess->sid;
-    sc2->from = (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to;
     sc2->name = sc->name;
     sc->appfuncs->start(sc2);
   }
-  jingle_free_jinglenode(jn);
 }
 
 void handle_session_terminate(JingleNode *jn)
@@ -269,5 +273,4 @@ void handle_session_terminate(JingleNode *jn)
   }
   session_delete(sess);
   jingle_ack_iq(jn->message);
-  jingle_free_jinglenode(jn);
 }

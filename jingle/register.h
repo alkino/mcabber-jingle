@@ -48,6 +48,7 @@ typedef gboolean (*JingleTransportCmp) (gconstpointer data1, gconstpointer data2
 typedef const gchar* (*JingleTransportxmlns) (void);
 typedef gconstpointer (*JingleTransportNew) (void);
 typedef void (*JingleTransportSend) (session_content *sc, gconstpointer data, gchar *buf, gsize size);
+typedef void (*JingleTransportInit) (session_content *sc, gconstpointer data);
 typedef void (*JingleTransportEnd) (session_content *sc, gconstpointer data);
 
 typedef struct {
@@ -84,6 +85,8 @@ typedef struct {
   JingleTransportNew new;
 
   JingleTransportSend send;
+  
+  JingleTransportInit init;
   
   JingleTransportEnd end;
 } JingleTransportFuncs;

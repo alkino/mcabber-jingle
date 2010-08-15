@@ -119,7 +119,8 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
       scr_log_print(LPRINT_DEBUG,
                     "jingle: %s", error->message);
     }
-    g_clear_error(&error);
+    g_error_free(error);
+    jingle_free_jinglenode(jn);
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
 
@@ -127,11 +128,12 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
 
   if (jingle_action_list[jn->action].handler == NULL) {
     jingle_send_iq_error(message, "cancel", "feature-not-implemented", NULL);
+    jingle_free_jinglenode(jn);
     return LM_HANDLER_RESULT_REMOVE_MESSAGE;
   }
 
   jingle_action_list[jn->action].handler(jn);
-
+  jingle_free_jinglenode(jn);
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 }
 

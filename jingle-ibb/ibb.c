@@ -46,6 +46,7 @@ static void tomessage(gconstpointer data, LmMessageNode *node);
 static const gchar* xmlns(void);
 static gconstpointer new(void);
 static void send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
+static void init(session_content *sc, gconstpointer data);
 static void end(session_content *sc, gconstpointer data);
 static void _send_internal(session_content *sc, const gchar *to, gchar *buf,
                            gsize size, const gchar *sid, gint64 *seq);
@@ -65,6 +66,7 @@ static JingleTransportFuncs funcs = {
   .cmp       = cmp,
   .new       = new,
   .send      = send,
+  .init      = init,
   .end       = end
 };
 
@@ -105,8 +107,14 @@ static gconstpointer check(JingleContent *cn, GError **err)
   
   ibb->blocksize = g_ascii_strtoll(blocksize, NULL, 10);
 
-  // the size attribute is a xs:short an therefore can be negative.
-  if (ibb->blocksize < 0 || ibb->blocksize > IBB_BLOCK_SIZE_MAX) {
+  // If block size is too big, we change it
+  if (ibb->blocksize > IBB_BLOCK_SIZE_MAX) {
+    ibb->blocksize = IBB_BLOCK_SIZE_MAX;
+    return NULL;
+  }
+  ibb->blocksize = 2048;
+  // the blocksize attribute is a xs:short an therefore can be negative.
+  if (ibb->blocksize < 0) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
                 "block-size is negative");
     g_free(ibb->sid);
@@ -308,6 +316,16 @@ static void send(session_content *sc, gconstpointer data, gchar *buf,
   
     g_free(buffer);
   }
+}
+
+static void init(session_content *sc, gconstpointer data)
+{
+  JingleIBB *jibb = (JingleIBB*)data;
+  JingleSession *sess = session_find_by_sid(sc->sid, sc->from);
+  SessionContent *sc2 = session_find_sessioncontent(sess, sc->name);
+  JingleIBB *jibb2 = (JingleIBB*)sc2->transport;
+  
+  jibb2->blocksize = (jibb->blocksize < jibb2->blocksize)?jibb->blocksize:jibb2->blocksize;
 }
 
 static void end(session_content *sc, gconstpointer data)
