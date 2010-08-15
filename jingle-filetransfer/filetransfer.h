@@ -24,13 +24,19 @@ typedef struct {
   /* the size, in bytes, of the data to be sent */
   guint64 size;
 
+  /* Data already send/receive*/
+  guint64 transmit;
+  
   /* descriptor to the output file */
   GIOChannel *outfile;
   
+  /* Is it an offer or a request ? */
   JingleFTType type;
   
+  /* A little description of the transfer */
   gchar *desc;
   
+  /* Where we compute the hash */
   GChecksum *md5;
   
 } JingleFT;

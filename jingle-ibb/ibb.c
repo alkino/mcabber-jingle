@@ -43,7 +43,6 @@ static LmMessageHandler* jingle_ibb_handler = NULL;
 static gconstpointer check(JingleContent *cn, GError **err);
 static gboolean cmp(gconstpointer data1, gconstpointer data2);
 static void tomessage(gconstpointer data, LmMessageNode *node);
-static const gchar* xmlns(void);
 static gconstpointer new(void);
 static void send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
 static void init(session_content *sc, gconstpointer data);
@@ -60,7 +59,6 @@ static guint disconn_hid = 0;
 const gchar *deps[] = { "jingle", NULL };
 
 static JingleTransportFuncs funcs = {
-  .xmlns     = xmlns,
   .check     = check,
   .tomessage = tomessage,
   .cmp       = cmp,
@@ -80,12 +78,6 @@ module_info_t  info_jingle_inbandbytestream = {
   .uninit          = jingle_ibb_uninit,
   .next            = NULL,
 };
-
-
-static const gchar* xmlns(void)
-{
-  return NS_JINGLE_TRANSPORT_IBB;
-}
 
 static gconstpointer check(JingleContent *cn, GError **err)
 {

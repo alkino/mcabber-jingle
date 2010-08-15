@@ -39,7 +39,6 @@
 gconstpointer jingle_socks5_check(JingleContent *cn, GError **err);
 gboolean jingle_socks5_cmp(gconstpointer data1, gconstpointer data2);
 void jingle_socks5_tomessage(gconstpointer data, LmMessageNode *node);
-const gchar* jingle_socks5_xmlns(void);
 gconstpointer jingle_socks5_new(void);
 void jingle_socks5_send(session_content *sc, gconstpointer data, gchar *buf,
                         gsize size);
@@ -51,7 +50,6 @@ static void jingle_socks5_uninit(void);
 const gchar *deps[] = { "jingle", NULL };
 
 static JingleTransportFuncs funcs = {
-  jingle_socks5_xmlns,
   jingle_socks5_check,
   jingle_socks5_tomessage,
   jingle_socks5_cmp,
@@ -94,11 +92,6 @@ gint index_in_array(const gchar *str, const gchar **array)
     }
   }
   return -1;
-}
-
-const gchar* jingle_socks5_xmlns(void)
-{
-  return NS_JINGLE_TRANSPORT_SOCKS5;
 }
 
 gconstpointer jingle_socks5_check(JingleContent *cn, GError **err)

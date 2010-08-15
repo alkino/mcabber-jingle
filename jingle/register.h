@@ -45,7 +45,6 @@ typedef void (*JingleAppStop) (gconstpointer data);
 typedef gconstpointer (*JingleTransportCheck) (JingleContent *cn, GError **err);
 typedef void (*JingleTransportToMessage) (gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleTransportCmp) (gconstpointer data1, gconstpointer data2);
-typedef const gchar* (*JingleTransportxmlns) (void);
 typedef gconstpointer (*JingleTransportNew) (void);
 typedef void (*JingleTransportSend) (session_content *sc, gconstpointer data, gchar *buf, gsize size);
 typedef void (*JingleTransportInit) (session_content *sc, gconstpointer data);
@@ -74,8 +73,6 @@ typedef struct {
 } JingleAppFuncs;
 
 typedef struct {
-  JingleTransportxmlns xmlns;
-
   JingleTransportCheck check;
 
   JingleTransportToMessage tomessage;
@@ -102,6 +99,6 @@ JingleAppFuncs *jingle_get_appfuncs(const gchar *xmlns);
 JingleTransportFuncs *jingle_get_transportfuncs(const gchar *xmlns);
 void jingle_unregister_app(const gchar *xmlns);
 void jingle_unregister_transport(const gchar *xmlns);
-JingleTransportFuncs *jingle_transport_for_app(const gchar *appxmlns, GSList **forbid);
+const gchar *jingle_transport_for_app(const gchar *appxmlns, GSList **forbid);
 
 #endif

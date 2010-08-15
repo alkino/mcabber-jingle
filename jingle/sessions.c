@@ -229,14 +229,15 @@ void jingle_handle_app(JingleSession *sess, const gchar *name,
                        const gchar *xmlns_app, gconstpointer app,
                        const gchar *to)
 {
-  JingleTransportFuncs *trans = jingle_transport_for_app(xmlns_app, NULL);
+  const gchar *xmlns = jingle_transport_for_app(xmlns_app, NULL);
+  JingleTransportFuncs *trans = jingle_get_transportfuncs(xmlns);
   
   if (trans == NULL) {
     scr_LogPrint(LPRINT_LOGNORM, "Unable to find a transport for %s", xmlns_app);
     return;
   }
   
-  session_add_trans(sess, name, trans->xmlns(), trans->new());
+  session_add_trans(sess, name, xmlns, trans->new());
 
   jingle_send_session_initiate(sess);
 }
