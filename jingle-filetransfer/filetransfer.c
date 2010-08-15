@@ -396,7 +396,6 @@ void jingle_ft_send(session_content *sc)
     g_checksum_update(jft->md5, (guchar*)buf, read);
     // Call a handle in jingle who will call the trans
     handle_app_data(sc->sid, sc->from, sc->name, buf, read);
-    g_free(buf);
   }
   
   if (status == G_IO_STATUS_EOF) {
