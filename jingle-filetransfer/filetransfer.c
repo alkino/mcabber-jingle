@@ -44,13 +44,13 @@
 #include "filetransfer.h"
 
 
-gconstpointer jingle_ft_check(JingleContent *cn, GError **err);
-gboolean jingle_ft_handle(JingleAction action, gconstpointer data, LmMessageNode *node);
-void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node);
-gboolean jingle_ft_handle_data(gconstpointer data, const gchar *data2, guint len);
-void jingle_ft_start(session_content *sc);
-void jingle_ft_send(session_content *sc);
-void jingle_ft_stop(gconstpointer data);
+static gconstpointer check(JingleContent *cn, GError **err);
+static gboolean handle(JingleAction action, gconstpointer data, LmMessageNode *node);
+static void tomessage(gconstpointer data, LmMessageNode *node);
+static gboolean handle_data(gconstpointer data, const gchar *data2, guint len);
+static void start(session_content *sc);
+static void send(session_content *sc);
+static void stop(gconstpointer data);
 
 static gboolean is_md5_hash(const gchar *hash);
 
@@ -60,13 +60,13 @@ static void jingle_ft_uninit(void);
 const gchar *deps[] = { "jingle", NULL };
 
 static JingleAppFuncs funcs = {
-  .check        = jingle_ft_check,
-  .handle       = jingle_ft_handle,
-  .tomessage    = jingle_ft_tomessage,
-  .handle_data  = jingle_ft_handle_data,
-  .start        = jingle_ft_start,
-  .send         = jingle_ft_send,
-  .stop         = jingle_ft_stop
+  .check        = check,
+  .handle       = handle,
+  .tomessage    = tomessage,
+  .handle_data  = handle_data,
+  .start        = start,
+  .send         = send,
+  .stop         = stop
 };
 
 module_info_t info_jingle_filetransfer = {
@@ -81,7 +81,7 @@ module_info_t info_jingle_filetransfer = {
 };
 
 
-gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
+static gconstpointer check(JingleContent *cn, GError **err)
 {
   JingleFT *ft = NULL;
   LmMessageNode *node;
@@ -162,7 +162,7 @@ gconstpointer jingle_ft_check(JingleContent *cn, GError **err)
   return (gconstpointer) ft;
 }
 
-gboolean jingle_ft_handle(JingleAction action, gconstpointer data,
+static gboolean handle(JingleAction action, gconstpointer data,
                           LmMessageNode *node)
 {
   if (action == JINGLE_SESSION_INFO) {
@@ -189,7 +189,7 @@ static gboolean is_md5_hash(const gchar *hash)
     return FALSE;
 }
 
-gboolean jingle_ft_handle_data(gconstpointer jingleft, const gchar *data, guint len)
+static gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len)
 {
   JingleFT *jft = (JingleFT *) jingleft;
   GError *err = NULL;
@@ -299,7 +299,7 @@ static void do_sendfile(char *arg)
   free_arg_lst(args);
 }
 
-void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node)
+static void tomessage(gconstpointer data, LmMessageNode *node)
 {
   JingleFT *jft = (JingleFT*) data;
   gchar *size = NULL;
@@ -336,7 +336,7 @@ void jingle_ft_tomessage(gconstpointer data, LmMessageNode *node)
   //if (jft->data != 0)
 }
 
-void jingle_ft_send_hash(gchar *sid, gchar *to, gchar *hash)
+static void send_hash(gchar *sid, gchar *to, gchar *hash)
 {
   JingleAckHandle *ackhandle;
   
@@ -358,7 +358,7 @@ void jingle_ft_send_hash(gchar *sid, gchar *to, gchar *hash)
   lm_message_unref(r);
 }
 
-void jingle_ft_send(session_content *sc)
+static void send(session_content *sc)
 {
   JingleFT *jft;
   gchar buf[JINGLE_FT_SIZE_READ];
@@ -405,7 +405,7 @@ void jingle_ft_send(session_content *sc)
     // Call a function to say state is ended
     session_changestate_sessioncontent(sess, sc2->name, JINGLE_SESSION_STATE_ENDED);
     // Send the hash
-    jingle_ft_send_hash(sess->sid, sess->to, jft->hash);
+    send_hash(sess->sid, sess->to, jft->hash);
     g_checksum_free(jft->md5);
     
     if (!session_remove_sessioncontent(sess, sc2->name)) {
@@ -415,7 +415,7 @@ void jingle_ft_send(session_content *sc)
   }
 }
 
-void jingle_ft_start(session_content *sc)
+static void start(session_content *sc)
 {
   JingleFT *jft;
   
@@ -438,7 +438,7 @@ void jingle_ft_start(session_content *sc)
 }
 
 // When we got a session-terminate
-void jingle_ft_stop(gconstpointer data)
+static void stop(gconstpointer data)
 {
   JingleFT *jft = (JingleFT*)data;
 
