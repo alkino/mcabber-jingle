@@ -49,6 +49,7 @@ static void  jingle_uninit(void);
 
 static LmMessageHandler* jingle_iq_handler = NULL;
 static GSList *ack_handlers = NULL;
+static guint ack_timeout_checker = 0;
 static guint connect_hid = 0;
 static guint disconn_hid = 0;
 
@@ -144,27 +145,56 @@ LmHandlerResult jingle_handle_ack_iq(LmMessageHandler *handler,
                                      LmConnection *connection, 
                                      LmMessage *message, gpointer user_data)
 {
-  ack_handlers = g_slist_remove(ack_handlers, handler);
-  lm_message_handler_unref(handler);
-
   // TODO: check subtype
   if (user_data != NULL) {
     JingleAckHandle *ah = user_data;
     if(ah->callback != NULL)
-      ah->callback(message, ah->user_data);
+      ah->callback(JINGLE_ACK_RESPONSE, message, ah->user_data);
 
-    g_free(ah);
+    jingle_ack_handler_free(ah);
   }
 
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 }
 
+gboolean jingle_ack_timeout_checker(gpointer user_data)
+{
+  GSList *el;
+  time_t now = time(NULL);
+  JingleAckHandle *ah;
+
+  for (el = ack_handlers; el; el = g_slist_next(el)) {
+	JingleAckHandle *ah = el->data;
+
+    if (ah->timeout == 0 || ah->_inserted + ah->timeout > now)
+	  continue;
+
+    if(ah->callback != NULL)
+      ah->callback(JINGLE_ACK_TIMEOUT, NULL, ah->user_data);
+
+    lm_message_handler_unref(ah->_handler);
+    jingle_ack_handler_free(ah);
+  }
+  return TRUE;
+}
+
 LmMessageHandler *jingle_new_ack_handler(JingleAckHandle *ah)
 {
-  LmMessageHandler *h = lm_message_handler_new(jingle_handle_ack_iq,
-                                               (gpointer) ah, NULL);
-  ack_handlers = g_slist_append(ack_handlers, h);
-  return h;
+  if(ack_timeout_checker == 0)
+	  ack_timeout_checker = g_timeout_add_seconds(3, jingle_ack_timeout_checker, NULL);
+  
+  ah->_inserted = time(NULL);
+  ah->_handler = lm_message_handler_new(jingle_handle_ack_iq,
+                                        (gpointer) ah, NULL);
+  ack_handlers = g_slist_append(ack_handlers, ah);
+  return ah->_handler;
+}
+
+void jingle_ack_handler_free(JingleAckHandle *ah)
+{
+  lm_message_handler_unref(ah->_handler);
+  ack_handlers = g_slist_remove(ack_handlers, ah);
+  g_free(ah);
 }
 
 /**
@@ -382,6 +412,11 @@ static void jingle_uninit(void)
 
   lm_message_handler_invalidate(jingle_iq_handler);
   lm_message_handler_unref(jingle_iq_handler);
+
+  if (ack_timeout_checker != 0) {
+    GSource *s = g_main_context_find_source_by_id(NULL, ack_timeout_checker);
+    g_source_destroy(s);
+  }
 }
 
 void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data2, guint len)

@@ -108,11 +108,31 @@ struct JingleActionList {
   void (*handler)(JingleNode *);
 };
 
-typedef void (*JingleAckCallback) (LmMessage *, gpointer);
+typedef enum {
+  JINGLE_ACK_RESPONSE,
+  JINGLE_ACK_TIMEOUT
+} JingleAckType;
+
+typedef void (*JingleAckCallback) (JingleAckType type, LmMessage *, gpointer);
 
 typedef struct {
+  /* function to be called when we receive a response to the IQ */
   JingleAckCallback callback;
+
+  /* additional data to pass to callback */
   gpointer *user_data;
+
+  /* if no response was received after timeout seconds, callback
+   * will be called with JINGLE_ACK_TIMEOUT as type */
+  guint timeout;
+
+  /* (private) date at which the handler was inserted using 
+   * jingle_new_ack_handler */
+  time_t _inserted;
+  
+  /* (private) a pointer to the LmMessageHandler created
+   * using jingle_new_ack_handler */
+  LmMessageHandler *_handler;
 } JingleAckHandle;
 
 typedef struct {
@@ -125,6 +145,7 @@ LmHandlerResult jingle_handle_ack_iq(LmMessageHandler *handler,
                                      LmConnection *connection, 
                                      LmMessage *message, gpointer user_data);
 LmMessageHandler *jingle_new_ack_handler(JingleAckHandle *ri);
+void jingle_ack_handler_free(JingleAckHandle *ah);
 
 LmMessage *jingle_new_iq_error(LmMessage *m, const gchar *errtype,
                                const gchar *cond, const gchar *jinglecond);

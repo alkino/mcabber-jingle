@@ -60,18 +60,26 @@ void jingle_send_session_terminate(JingleSession *js, const gchar *reason)
   lm_message_unref(r);
 }
 
-static void jingle_handle_ack_iq_sa(LmMessage *mess, gpointer data)
+static void jingle_handle_ack_iq_sa(JingleAckType acktype, LmMessage *mess,
+                                    gpointer data)
 {
   LmMessageNode *node;
   const gchar *type, *cause;
   GSList *child = NULL;
   JingleSession *sess = (JingleSession*)data;
   SessionContent *sc;
-  
+
+  if (acktype == JINGLE_ACK_TIMEOUT) {
+    // TODO: handle ack timeout...
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle: session-accept %s: %s", type, cause);
+    session_delete(sess);
+    return;
+  }
+
   if(lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_RESULT) {
     return;
   }
-  
+
   if(lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_ERROR) {
     node = lm_message_get_node(mess);
     node = lm_message_node_get_child(node,"error");
@@ -97,22 +105,30 @@ void jingle_send_session_accept(JingleSession *js)
     ackhandle = g_new0(JingleAckHandle, 1);
     ackhandle->callback = jingle_handle_ack_iq_sa;
     ackhandle->user_data = (gpointer)js;
-        scr_log_print(LPRINT_DEBUG,
-                  "%s", lm_message_node_to_string(mess->node));lm_connection_send_with_reply(lconnection, mess,
+    ackhandle->timeout = 60;
+    lm_connection_send_with_reply(lconnection, mess,
                                   jingle_new_ack_handler(ackhandle), NULL);
     lm_message_unref(mess);
   }
 }
 
-static void jingle_handle_ack_iq_si(LmMessage *mess, gpointer data)
+static void jingle_handle_ack_iq_si(JingleAckType acktype, LmMessage *mess,
+                                    gpointer data)
 {
   LmMessageNode *node;
   const gchar *type, *cause;
   JingleSession *sess = (JingleSession*)data;
-  
-  if(lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_RESULT)
+
+  if (acktype == JINGLE_ACK_TIMEOUT) {
+    // TODO: handle ack timeout...
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle: did not receive the ack in time, aborting");
+    session_delete(sess);
     return;
-  if(lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_ERROR) {
+  }
+
+  if (lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_RESULT)
+    return;
+  if (lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_ERROR) {
     node = lm_message_get_node(mess);
     node = lm_message_node_get_child(node,"error");
     type = lm_message_node_get_attribute(node, "type");
@@ -128,7 +144,7 @@ void jingle_send_session_initiate(JingleSession *js)
 {
   JingleAckHandle *ackhandle;
   GSList *listentry;
-  GError *err;
+  GError *err = NULL;
   gboolean status;
   
   LmMessage *mess = lm_message_from_jinglesession(js, JINGLE_SESSION_INITIATE);
@@ -139,8 +155,7 @@ void jingle_send_session_initiate(JingleSession *js)
     ackhandle = g_new0(JingleAckHandle, 1);
     ackhandle->callback = jingle_handle_ack_iq_si;
     ackhandle->user_data = (gpointer)js;
-    scr_log_print(LPRINT_DEBUG,
-                  "%s", lm_message_node_to_string(mess->node));
+    ackhandle->timeout = 60;
     status = lm_connection_send_with_reply(lconnection, mess,
                                        jingle_new_ack_handler(ackhandle), &err);
     // TODO: delete the ack_handler
