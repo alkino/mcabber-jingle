@@ -18,7 +18,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
  * USA
  */
-
 #include "config.h"
 
 #include <glib.h>
@@ -98,6 +97,14 @@ module_info_t info_jingle_filetransfer = {
 };
 
 
+/**
+ * \fn static gconstpointer check(JingleContent *cn, GError **err)
+ * \brief Check if a node description with xmlns of JFT is correct 
+ *
+ * \param cn the jinglecontent a node description
+ * \param err contain an error of the domain JINGLE_CHECK_ERROR
+ * \return a gconstpointer, which is a new allocated JingleFT
+ */
 static gconstpointer check(JingleContent *cn, GError **err)
 {
   JingleFT *ft = NULL;
@@ -188,6 +195,15 @@ static gconstpointer check(JingleContent *cn, GError **err)
   return (gconstpointer) ft;
 }
 
+/**
+ * \fn static gboolean handle(JingleAction action, gconstpointer data, LmMessageNode *node)
+ * \brief handle a function to handle action which are not "current"
+ *
+ * \param action the action which have been received
+ * \param data contain the JingleFT of the content concerned
+ * \param node the node himself
+ * \return a gconstpointer, which is a new allocated JingleFT
+ */
 static gboolean handle(JingleAction action, gconstpointer data,
                           LmMessageNode *node)
 {

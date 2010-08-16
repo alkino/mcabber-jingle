@@ -1,9 +1,9 @@
 #ifndef __JINGLE_H__
 #define __JINGLE_H__ 1
 
-/*!
+/**
  * \file jingle.h
- * \brief Lecteur de musique de base
+ * \brief 
  * \author Nicolas Cornu
  * \version 0.1
  */
