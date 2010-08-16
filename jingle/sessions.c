@@ -85,8 +85,8 @@ JingleSession *session_find(const JingleNode *jn)
   return session_find_by_sid(jn->sid, from);
 }
 
-void session_add_content(JingleSession *sess, const gchar *name,
-                         SessionState state)
+SessionContent* session_add_content(JingleSession *sess, const gchar *name,
+                                    SessionState state)
 {
   SessionContent *sc = g_new0(SessionContent, 1);
   
@@ -94,6 +94,8 @@ void session_add_content(JingleSession *sess, const gchar *name,
   sc->state = state;
 
   sess->content = g_slist_append(sess->content, sc);
+  
+  return sc;
 }
 
 void session_add_app(JingleSession *sess, const gchar *name,
@@ -116,22 +118,48 @@ void session_add_trans(JingleSession *sess, const gchar *name,
   sc->transport = data;
 }
 
-void session_add_content_from_jinglecontent(JingleSession *sess,
+SessionContent* session_add_content_from_jinglecontent(JingleSession *sess,
                                             JingleContent *cn,
-                                            SessionState state)
+                                            SessionState state,
+                                            GError **err)
 {
   const gchar *xmlns;
-  JingleAppFuncs *app_funcs;
-  JingleTransportFuncs *trans_funcs;
-  session_add_content(sess, cn->name, state);
+  JingleAppFuncs *appfuncs;
+  JingleTransportFuncs *transfuncs;
+  GError *error = NULL;
+  SessionContent *sc;
+  gconstpointer data;
   
-  xmlns = lm_message_node_get_attribute(cn->description, "xmlns");
-  app_funcs = jingle_get_appfuncs(xmlns);
-  session_add_app(sess, cn->name, xmlns, app_funcs->check(cn, NULL));
+  sc = session_add_content(sess, cn->name, state);
   
-  xmlns = lm_message_node_get_attribute(cn->transport, "xmlns");
-  trans_funcs = jingle_get_transportfuncs(xmlns);
-  session_add_trans(sess, cn->name, xmlns, trans_funcs->check(cn, NULL));
+  // Check and add the application
+  {
+    xmlns = lm_message_node_get_attribute(cn->description, "xmlns");
+    appfuncs = jingle_get_appfuncs(xmlns);
+    data = appfuncs->check(cn, &error);
+    if (data == NULL || error != NULL) {
+      g_propagate_error(err, error);
+      sess->content = g_slist_remove(sess->content, sc);
+      return NULL;
+    }
+    session_add_app(sess, cn->name, xmlns, data);
+  }
+  
+  // Check and add the transport
+  {
+    xmlns = lm_message_node_get_attribute(cn->transport, "xmlns");
+    transfuncs = jingle_get_transportfuncs(xmlns);
+    data = transfuncs->check(cn, &error);
+    if (data == NULL || error != NULL) {
+      g_propagate_error(err, error);
+      g_free(sc->xmlns_desc);
+      sess->content = g_slist_remove(sess->content, sc);
+      return NULL;
+    }
+    session_add_trans(sess, cn->name, xmlns, data);
+  }
+  
+  return sc;
 }
 
 SessionContent *session_find_sessioncontent(JingleSession *sess,
@@ -147,7 +175,7 @@ SessionContent *session_find_sessioncontent(JingleSession *sess,
   return NULL;
 }
 
-SessionContent *session_find_transport(const gchar *xmlns_trans, gconstpointer data)
+SessionContent *session_find_transport(gconstpointer data)
 {
   GSList *el, *el1;
   JingleSession *sess;
@@ -156,7 +184,7 @@ SessionContent *session_find_transport(const gchar *xmlns_trans, gconstpointer d
     sess = (JingleSession*) el1->data;
     for (el = sess->content; el; el = el->next) {
       sc = (SessionContent*) el->data;
-      if (!g_strcmp0(sc->xmlns_trans, xmlns_trans) && sc->transfuncs->cmp(sc->transport, data))
+      if (data == sc->transport)
         return sc;
     }
   }

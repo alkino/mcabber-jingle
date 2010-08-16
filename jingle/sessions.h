@@ -75,16 +75,17 @@ JingleSession *session_new(const gchar *sid, const gchar *from,
 JingleSession *session_new_from_jinglenode(JingleNode *jn);
 JingleSession *session_find_by_sid(const gchar *sid, const gchar *from);
 JingleSession *session_find(const JingleNode *jn);
-void session_add_content(JingleSession *sess, const gchar *name,
-                         SessionState state);
+SessionContent* session_add_content(JingleSession *sess, const gchar *name,
+                                    SessionState state);
 void session_add_app(JingleSession *sess, const gchar *name,
                            const gchar *xmlns, gconstpointer data);
 void session_add_trans(JingleSession *sess, const gchar *name,
                            const gchar *xmlns, gconstpointer data);
-void session_add_content_from_jinglecontent(JingleSession *sess, JingleContent *cn,
-                         SessionState state);
-SessionContent *session_find_sessioncontent(JingleSession *sess, const gchar *name);
-SessionContent *session_find_transport(const gchar *xmlns_trans, gconstpointer data);
+SessionContent* session_add_content_from_jinglecontent(JingleSession *sess,
+                           JingleContent *cn, SessionState state, GError **err);
+SessionContent *session_find_transport(gconstpointer data);
+SessionContent *session_find_sessioncontent(JingleSession *sess,
+                                            const gchar *name);
 int session_remove_sessioncontent(JingleSession *sess, const gchar *name);
 void session_changestate_sessioncontent(JingleSession *sess, const gchar *name,
                                         SessionState state);

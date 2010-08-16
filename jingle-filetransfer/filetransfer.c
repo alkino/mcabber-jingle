@@ -59,11 +59,21 @@ static void jingle_ft_init(void);
 static void jingle_ft_uninit(void);
 // Return must be free
 static gchar *_convert_size(guint64 size);
+static int _next_index(void);
+static void _free(gconstpointer data);
 
 const gchar *deps[] = { "jingle", NULL };
 
 static GSList *info_list = NULL;
 static guint jft_cid = 0;
+
+const gchar* strstate[] = {
+  "PENDING",
+  "STARTING",
+  "ENDING",
+  "REJECT",
+  "ERROR"
+};
 
 static JingleAppFuncs funcs = {
   .check        = check,
@@ -122,7 +132,6 @@ static gconstpointer check(JingleContent *cn, GError **err)
   ft->name = (gchar *) lm_message_node_get_attribute(node, "name");
   sizestr  = lm_message_node_get_attribute(node, "size");
   ft->transmit = 0;
-  
   ft->dir = JINGLE_FT_INCOMING;
   
   if (!ft->name || !sizestr) {
@@ -168,6 +177,13 @@ static gconstpointer check(JingleContent *cn, GError **err)
     return NULL;
   }
   ft->hash = g_strndup(ft->hash, 32);
+
+  {
+    JingleFTInfo *jfti = g_new0(JingleFTInfo, 1);
+    jfti->index = _next_index();
+    jfti->jft = ft;
+    info_list = g_slist_append(info_list, jfti);
+  }
 
   return (gconstpointer) ft;
 }
@@ -226,6 +242,7 @@ static gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len
       g_error_free(err);
       return FALSE;
 	}
+	jft->state = JINGLE_FT_STARTING;
 	status = g_io_channel_set_encoding(jft->outfile, NULL, &err);
 	if (status != G_IO_STATUS_NORMAL || err != NULL) {
      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: %s %s", err->message,
@@ -234,7 +251,9 @@ static gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len
      return FALSE;
    }
   }
-
+  
+  jft->state = JINGLE_FT_STARTING;
+	
   status = g_io_channel_write_chars(jft->outfile, data, (gssize) len,
                                     &bytes_written, &err);
   if (status != G_IO_STATUS_NORMAL || err != NULL) {
@@ -261,7 +280,7 @@ static gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len
 }
 
 
-static int _next_index()
+static int _next_index(void)
 {
   static int a = 0;
   return a++;
@@ -296,7 +315,7 @@ static void do_sendfile(char *arg)
 	  }
 	  
 	  scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Trying to send %s",
-		            args[0]);
+		            args[1]);
 
 	  {
 		 JingleSession *sess;
@@ -330,6 +349,7 @@ static void do_sendfile(char *arg)
 		 jft->date = fileinfo.st_mtime;
 		 jft->size = fileinfo.st_size;
 		 jft->transmit = 0;
+		 jft->state = JINGLE_FT_PENDING;
 		 jft->dir = JINGLE_FT_OUTGOING;
 		 jft->outfile = g_io_channel_new_file (filename, "r", &err);
 		 if (jft->outfile == NULL || err != NULL) {
@@ -370,19 +390,50 @@ static void do_sendfile(char *arg)
       scr_LogPrint(LPRINT_LOGNORM, "JFT: no file");
 
     for (el = info_list; el; el = el->next) {
-      JingleFTInfo* jftio = el->data;
+      JingleFTInfo *jftio = el->data;
       gchar *strsize = _convert_size(jftio->jft->size);
-      scr_LogPrint(LPRINT_LOGNORM, "[%i]%s %s %s %.2f%%: %s", jftio->index, 
+      scr_LogPrint(LPRINT_LOGNORM, "[%i]%s %s %s %.2f%%: %s %s", jftio->index, 
                    (jftio->jft->dir == JINGLE_FT_INCOMING)?"<==":"-->",
                    jftio->jft->name, strsize,
                    (gfloat)jftio->jft->transmit/(gfloat)jftio->jft->size * 100,
-                   jftio->jft->desc);
+                   jftio->jft->desc?jftio->jft->desc:"",
+                   strstate[jftio->jft->state]);
       g_free(strsize);
     }
-  
+  } else if (!g_strcmp0(args[0], "flush")) {
+    GSList *el, *el2 = NULL;
+    int count = 0;
+    for (el = info_list; el; el = el -> next) {
+      JingleFTInfo *jftio = el->data;
+      if (jftio->jft->state == JINGLE_FT_ERROR ||
+          jftio->jft->state == JINGLE_FT_REJECT ||
+          jftio->jft->state == JINGLE_FT_ENDING) {
+        g_slist_free_1(el2);
+        count++;
+        _free(jftio->jft);
+        info_list = g_slist_remove(info_list, jftio);
+        el2 = el;
+      }
+    }
+    g_slist_free_1(el2);
+    scr_LogPrint(LPRINT_LOGNORM, "JFT: %i files removed", count);
+  } else {
+    scr_LogPrint(LPRINT_LOGNORM, "/jft: %s is not a correct option.", args[1]);
   }
   
   free_arg_lst(args);
+}
+
+static void _free(gconstpointer data)
+{
+  JingleFT *jft = (JingleFT *)data;
+  g_free(jft->hash);
+  g_free(jft->name);
+  g_free(jft->desc);
+  g_io_channel_unref(jft->outfile);
+  if (jft->dir == JINGLE_FT_INCOMING)
+    g_checksum_free(jft->md5);
+  g_free(jft);
 }
 
 static void tomessage(gconstpointer data, LmMessageNode *node)
@@ -424,7 +475,7 @@ static void tomessage(gconstpointer data, LmMessageNode *node)
   //if (jft->data != 0)
 }
 
-static void send_hash(gchar *sid, gchar *to, gchar *hash)
+static void send_hash(const gchar *sid, const gchar *to, const gchar *hash)
 {
   JingleAckHandle *ackhandle;
   GError *err = NULL;
@@ -540,7 +591,7 @@ static void start(session_content *sc)
   SessionContent *sc2 = session_find_sessioncontent(sess, sc->name);
 
   jft = (JingleFT*)sc2->description;
-  
+  jft->state = JINGLE_FT_STARTING;
   jft->md5 = g_checksum_new(G_CHECKSUM_MD5);
   
   scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Transfer start (%s)",
@@ -556,14 +607,14 @@ static void stop(gconstpointer data)
   GError *err = NULL;
   GIOStatus status;
   
+  jft->state = JINGLE_FT_ENDING;
   if (jft->outfile != NULL) {
-    status = g_io_channel_flush(jft->outfile, &err);
+    status = g_io_channel_shutdown(jft->outfile, TRUE, &err);
     if (status != G_IO_STATUS_NORMAL || err != NULL) {
       scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: %s",
                    err->message);
       g_error_free(err);
     }
-    g_io_channel_unref(jft->outfile);
   }
 
   if (jft->hash != NULL && jft->md5 != NULL) {
@@ -578,9 +629,6 @@ static void stop(gconstpointer data)
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finished (%s)"
                  " but not verified", jft->name);
   }
-
-  g_checksum_free(jft->md5);
-
 }
 
 static gchar *_convert_size(guint64 size)
@@ -619,6 +667,7 @@ static void jingle_ft_init(void)
     compl_add_category_word(jft_cid, "send");
     //compl_add_category_word(jft_cid, "request");
     compl_add_category_word(jft_cid, "info");
+    compl_add_category_word(jft_cid, "flush");
   }
   /* Add command */
   cmd_add("jft", "Manage file transfer", jft_cid, 0, do_sendfile, NULL);
@@ -626,6 +675,7 @@ static void jingle_ft_init(void)
 
 static void jingle_ft_uninit(void)
 {
+  g_slist_free(info_list);
   xmpp_del_feature(NS_JINGLE_APP_FT);
   jingle_unregister_app(NS_JINGLE_APP_FT);
   cmd_del("file");

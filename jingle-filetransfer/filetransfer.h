@@ -15,6 +15,15 @@ typedef enum {
   JINGLE_FT_INCOMING,
   JINGLE_FT_OUTGOING
 } JingleFTDirection;
+
+typedef enum {
+  JINGLE_FT_PENDING,
+  JINGLE_FT_STARTING,
+  JINGLE_FT_ENDING,
+  JINGLE_FT_REJECT,
+  JINGLE_FT_ERROR
+} JingleFTState;
+
 typedef struct {
   /* the last modification of the file, optional */
   time_t date;
@@ -39,6 +48,9 @@ typedef struct {
   
   /* Is it if the file is incoming or outgoing */
   JingleFTDirection dir;
+  
+  /* The state of the file (PENDING, STARTING, ...) */
+  JingleFTState state;
   
   /* A little description of the transfer */
   gchar *desc;

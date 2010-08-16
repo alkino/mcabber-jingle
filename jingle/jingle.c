@@ -236,6 +236,7 @@ gboolean evscallback_jingle(guint evcontext, const gchar *arg,
     scr_LogPrint(LPRINT_LOGNORM, "Jingle event from %s cancelled.",
                  js->from);
     jingle_send_session_terminate(js, "decline");
+    
   }
 
   return FALSE;
@@ -419,9 +420,9 @@ static void jingle_uninit(void)
   }
 }
 
-void handle_trans_data(const gchar *xmlns, gconstpointer data, const gchar *data2, guint len)
+void handle_trans_data(gconstpointer data, const gchar *data2, guint len)
 {
-  SessionContent *sc = session_find_transport(xmlns, data);
+  SessionContent *sc = session_find_transport(data);
   if (sc == NULL) {
     return;  
   }

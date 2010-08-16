@@ -105,6 +105,7 @@ void handle_session_initiate(JingleNode *jn)
   sess = session_new_from_jinglenode(jn);
   
   for (child = jn->content; child; child = child->next) {
+    SessionContent *sc;
     cn = (JingleContent *)(child->data);
     
     xmlns = lm_message_node_get_attribute(cn->description, "xmlns");
@@ -115,15 +116,15 @@ void handle_session_initiate(JingleNode *jn)
     transfuncs = jingle_get_transportfuncs(xmlns);
     if (transfuncs == NULL) continue;
     
-    description = appfuncs->check(cn, &err);
-    if (description == NULL || err != NULL) continue;
-    transport = transfuncs->check(cn, &err);
-    if (transport == NULL || err != NULL) continue;
-    
-    session_add_content_from_jinglecontent(sess, cn,
-                                           JINGLE_SESSION_STATE_PENDING);
+    sc = session_add_content_from_jinglecontent(sess, cn,
+                                                JINGLE_SESSION_STATE_PENDING,
+                                                &err);
+    if (err != NULL || sc == NULL) {
+      scr_LogPrint(LPRINT_LOGNORM, "Cannot add a content: %s", err->message);
+      g_error_free(err);
+    }
   }
-  
+
   if(g_slist_length(sess->content) == 0) {
     jingle_send_session_terminate(sess, "unsupported-applications");
     session_delete(sess);

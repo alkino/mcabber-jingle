@@ -41,16 +41,16 @@
 static LmMessageHandler* jingle_ibb_handler = NULL;
 
 static gconstpointer check(JingleContent *cn, GError **err);
-static gboolean cmp(gconstpointer data1, gconstpointer data2);
 static void tomessage(gconstpointer data, LmMessageNode *node);
 static gconstpointer new(void);
 static void send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
 static void init(session_content *sc, gconstpointer data);
 static void end(session_content *sc, gconstpointer data);
 static gchar *info(gconstpointer data);
+
 static void _send_internal(session_content *sc, const gchar *to, gchar *buf,
                            gsize size, const gchar *sid, gint64 *seq);
-
+                           
 static void jingle_ibb_init(void);
 static void jingle_ibb_uninit(void);
 
@@ -63,7 +63,6 @@ const gchar *deps[] = { "jingle", NULL };
 static JingleTransportFuncs funcs = {
   .check     = check,
   .tomessage = tomessage,
-  .cmp       = cmp,
   .new       = new,
   .send      = send,
   .init      = init,
@@ -84,7 +83,6 @@ module_info_t  info_jingle_inbandbytestream = {
 
 /* Hash-Table of all emited JingleIBB struct */
 static GHashTable *JingleIBBs = NULL;
-
 
 static gconstpointer check(JingleContent *cn, GError **err)
 {
@@ -128,7 +126,7 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
                                  gpointer user_data)
 {
   const gchar *data64;
-  JingleIBB *jibb = g_new0(JingleIBB, 1);
+  JingleIBB *jibb = g_new0(JingleIBB, 1), *jibb2;
   gsize len;
   guchar *data;
   
@@ -144,7 +142,12 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
 
   if (g_strcmp0(lm_message_node_get_attribute(dnode, "xmlns"),
                 NS_TRANSPORT_IBB))
-    return LM_HANDLER_RESULT_REMOVE_MESSAGE;
+    return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
+
+  jibb2 = g_hash_table_lookup(JingleIBBs,
+                              lm_message_node_get_attribute(dnode, "sid"));
+  if (jibb2 == NULL)
+    return LM_HANDLER_RESULT_ALLOW_MORE_HANDLERS;
 
   jingle_ack_iq(message);
   
@@ -154,19 +157,10 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
   data64 = lm_message_node_get_value(dnode);
   
   data = g_base64_decode(data64, &len);
-  
-  handle_trans_data(NS_JINGLE_TRANSPORT_IBB, jibb, (const gchar *)data, (guint)len);
+
+  handle_trans_data(jibb2, (const gchar *)data, (guint)len);
   
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
-}
-
-
-static gboolean cmp(gconstpointer data1, gconstpointer data2)
-{
-  const JingleIBB *ibb1 = data1, *ibb2 = data2;
-  if(g_strcmp0(ibb1->sid, ibb2->sid))
-    return FALSE;
-  return TRUE;
 }
 
 static gchar *new_ibb_sid(void)
