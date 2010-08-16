@@ -159,21 +159,27 @@ LmHandlerResult jingle_handle_ack_iq(LmMessageHandler *handler,
 
 gboolean jingle_ack_timeout_checker(gpointer user_data)
 {
-  GSList *el;
+  GSList *el, *prev;
   time_t now = time(NULL);
   JingleAckHandle *ah;
 
-  for (el = ack_handlers; el; el = g_slist_next(el)) {
-	JingleAckHandle *ah = el->data;
+  el = ack_handlers;
+  while(el) {
+    JingleAckHandle *ah = el->data;
 
-    if (ah->timeout == 0 || ah->_inserted + ah->timeout > now)
-	  continue;
+    if (ah->timeout != 0 && ah->_inserted + ah->timeout <= now) {
+      if (ah->callback != NULL) {
+        ah->callback(JINGLE_ACK_TIMEOUT, NULL, ah->user_data);
+      }
 
-    if(ah->callback != NULL)
-      ah->callback(JINGLE_ACK_TIMEOUT, NULL, ah->user_data);
+      jingle_ack_handler_free(ah);
+      if (ack_handlers == NULL)
+        break;
 
-    lm_message_handler_unref(ah->_handler);
-    jingle_ack_handler_free(ah);
+      el = prev;
+    }
+    prev = el;
+    el = el->next;
   }
   return TRUE;
 }

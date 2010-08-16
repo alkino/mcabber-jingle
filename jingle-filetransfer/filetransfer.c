@@ -421,7 +421,7 @@ static void do_sendfile(char *arg)
       el2 = el;
       el = el->next;
     }
-    scr_LogPrint(LPRINT_LOGNORM, "JFT: %i files removed", count);
+    scr_LogPrint(LPRINT_LOGNORM, "JFT: %i file%s removed", count, (count>1) ? "s" : "");
   } else {
     scr_LogPrint(LPRINT_LOGNORM, "/jft: %s is not a correct option.", args[1]);
   }
@@ -568,6 +568,7 @@ static void send(session_content *sc)
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finish (%s)",
                  jft->name);
     jft->hash = g_strdup(g_checksum_get_string(jft->md5));
+    jft->state = JINGLE_FT_ENDING;
     // Call a function to say state is ended
     session_changestate_sessioncontent(sess, sc2->name, 
                                        JINGLE_SESSION_STATE_ENDED);

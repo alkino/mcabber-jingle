@@ -117,7 +117,7 @@ const gchar *jingle_transport_for_app(const gchar *appxmlns,
   JingleTransportPriority bestprio = JINGLE_TRANSPORT_NONE;
   JingleTransportType requestedtype;
 
-  if (entry == NULL)
+  if (app == NULL)
     return NULL;
 
   requestedtype = app->transtype;
@@ -139,7 +139,7 @@ const gchar *jingle_transport_for_app(const gchar *appxmlns,
   if (forbid != NULL)
     *forbid = g_slist_append(*forbid, besttransport->xmlns);
   
-  return besttransport != NULL?besttransport->xmlns:NULL;
+  return besttransport != NULL ? besttransport->xmlns : NULL;
 }
 
 /**
