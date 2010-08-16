@@ -60,7 +60,7 @@ static void jingle_ft_uninit(void);
 // Return must be free
 static gchar *_convert_size(guint64 size);
 static int _next_index(void);
-static void _free(gconstpointer data);
+static void _free(JingleFT *jft);
 
 const gchar *deps[] = { "jingle", NULL };
 
@@ -401,21 +401,26 @@ static void do_sendfile(char *arg)
       g_free(strsize);
     }
   } else if (!g_strcmp0(args[0], "flush")) {
-    GSList *el, *el2 = NULL;
+    GSList *el, *el2 = info_list;
     int count = 0;
-    for (el = info_list; el; el = el -> next) {
-      JingleFTInfo *jftio = el->data;
-      if (jftio->jft->state == JINGLE_FT_ERROR ||
-          jftio->jft->state == JINGLE_FT_REJECT ||
-          jftio->jft->state == JINGLE_FT_ENDING) {
-        g_slist_free_1(el2);
+    el = info_list;
+    while (el) {
+      JingleFTInfo *jftinf;
+      jftinf = el->data;
+      if (jftinf->jft->state == JINGLE_FT_ERROR ||
+          jftinf->jft->state == JINGLE_FT_REJECT ||
+          jftinf->jft->state == JINGLE_FT_ENDING) {
         count++;
-        _free(jftio->jft);
-        info_list = g_slist_remove(info_list, jftio);
-        el2 = el;
+        _free(jftinf->jft);
+        info_list = g_slist_delete_link(info_list, el);
+        if (info_list == NULL)
+          break;
+        el = el2;
+        continue;
       }
+      el2 = el;
+      el = el->next;
     }
-    g_slist_free_1(el2);
     scr_LogPrint(LPRINT_LOGNORM, "JFT: %i files removed", count);
   } else {
     scr_LogPrint(LPRINT_LOGNORM, "/jft: %s is not a correct option.", args[1]);
@@ -424,9 +429,8 @@ static void do_sendfile(char *arg)
   free_arg_lst(args);
 }
 
-static void _free(gconstpointer data)
+static void _free(JingleFT *jft)
 {
-  JingleFT *jft = (JingleFT *)data;
   g_free(jft->hash);
   g_free(jft->name);
   g_free(jft->desc);
