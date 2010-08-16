@@ -54,6 +54,7 @@ static void _send_internal(session_content *sc, const gchar *to, gchar *buf,
 static void jingle_ibb_init(void);
 static void jingle_ibb_uninit(void);
 
+
 static guint connect_hid = 0;
 static guint disconn_hid = 0;
 
@@ -80,6 +81,10 @@ module_info_t  info_jingle_inbandbytestream = {
   .uninit          = jingle_ibb_uninit,
   .next            = NULL,
 };
+
+/* Hash-Table of all emited JingleIBB struct */
+static GHashTable *JingleIBBs = NULL;
+
 
 static gconstpointer check(JingleContent *cn, GError **err)
 {
@@ -115,7 +120,8 @@ static gconstpointer check(JingleContent *cn, GError **err)
     g_free(ibb);
     return NULL;
   }
-  
+
+  g_hash_table_insert(JingleIBBs, ibb->sid, ibb);
   return (gconstpointer) ibb;
 }
 
@@ -214,7 +220,8 @@ static void tomessage(gconstpointer data, LmMessageNode *node)
   g_free(bsize);
 }
 
-static void jingle_ibb_handle_ack_iq_send(LmMessage *mess, gpointer data)
+static void jingle_ibb_handle_ack_iq_send(JingleAckType type, LmMessage *mess,
+                                          gpointer data)
 {
   // TODO: check the sub type (error ??)
   session_content *sc = (session_content *)data;
@@ -248,7 +255,7 @@ static void _send_internal(session_content *sc, const gchar *to, gchar *buf,
   LmMessage *r = lm_message_new_with_sub_type(to, LM_MESSAGE_TYPE_IQ,
                                               LM_MESSAGE_SUB_TYPE_SET);
   LmMessageNode *node = lm_message_get_node(r);
-  
+
   gchar *base64 = g_base64_encode((const guchar *)buf, size);
   gchar *strseq = g_strdup_printf("%" G_GINT64_FORMAT, *seq);
 
@@ -258,18 +265,18 @@ static void _send_internal(session_content *sc, const gchar *to, gchar *buf,
                                  "seq", strseq,
                                  NULL);
   lm_message_node_set_value(node, base64);
-  
+
   ackhandle = g_new0(JingleAckHandle, 1);
   ackhandle->callback = jingle_ibb_handle_ack_iq_send;
   ackhandle->user_data = (gpointer)sc;
- 
+
   lm_connection_send_with_reply(lconnection, r,
                                 jingle_new_ack_handler(ackhandle), NULL);
   lm_message_unref(r);
-  
+
   // The next packet will be seq++
   ++(*seq);
-  
+
   g_free(base64);
   g_free(strseq);
 }
@@ -374,6 +381,12 @@ static gchar *info(gconstpointer data)
   return info;
 }
 
+static void free_ibb(gpointer data)
+{
+  JingleIBB *jibb = (JingleIBB *)data;
+  g_free(jibb);
+}
+
 static void jingle_ibb_init(void)
 {
   jingle_ibb_handler = lm_message_handler_new(jingle_ibb_handle_iq, NULL, NULL);
@@ -388,6 +401,7 @@ static void jingle_ibb_init(void)
                             JINGLE_TRANSPORT_STREAMING,
                             JINGLE_TRANSPORT_LOW);
   xmpp_add_feature(NS_JINGLE_TRANSPORT_IBB);
+  JingleIBBs = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, free_ibb);
 }
 
 static void jingle_ibb_uninit(void)
