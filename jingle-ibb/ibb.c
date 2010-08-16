@@ -107,11 +107,9 @@ static gconstpointer check(JingleContent *cn, GError **err)
   ibb->blocksize = g_ascii_strtoll(blocksize, NULL, 10);
 
   // If block size is too big, we change it
-  if (ibb->blocksize > IBB_BLOCK_SIZE_MAX) {
+  if (ibb->blocksize > IBB_BLOCK_SIZE_MAX)
     ibb->blocksize = IBB_BLOCK_SIZE_MAX;
-    return NULL;
-  }
-  ibb->blocksize = 2048;
+  
   // the blocksize attribute is a xs:short an therefore can be negative.
   if (ibb->blocksize < 0) {
     g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,

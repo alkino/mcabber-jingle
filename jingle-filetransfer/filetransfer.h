@@ -11,6 +11,10 @@ typedef enum {
   JINGLE_FT_REQUEST,
 } JingleFTType;
 
+typedef enum {
+  JINGLE_FT_INCOMING,
+  JINGLE_FT_OUTGOING
+} JingleFTDirection;
 typedef struct {
   /* the last modification of the file, optional */
   time_t date;
@@ -33,6 +37,9 @@ typedef struct {
   /* Is it an offer or a request ? */
   JingleFTType type;
   
+  /* Is it if the file is incoming or outgoing */
+  JingleFTDirection dir;
+  
   /* A little description of the transfer */
   gchar *desc;
   
@@ -41,4 +48,9 @@ typedef struct {
   
 } JingleFT;
 
+typedef struct {
+  int index;
+  
+  JingleFT *jft;
+} JingleFTInfo;
 #endif
