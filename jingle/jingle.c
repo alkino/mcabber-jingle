@@ -161,9 +161,8 @@ gboolean jingle_ack_timeout_checker(gpointer user_data)
 {
   GSList *el, *prev;
   time_t now = time(NULL);
-  JingleAckHandle *ah;
 
-  el = ack_handlers;
+  el = prev = ack_handlers;
   while(el) {
     JingleAckHandle *ah = el->data;
 

@@ -1,0 +1,16 @@
+mcabber-jingle is a set of modules implementing:
+* Jingle (XEP-0166), a XMPP extension for managing peer-to-peer sessions
+* Jingle File Transfert (XEP-0234), a Jingle application type for transferring
+  files between two entities.
+* Jingle In-Band Bytestreams (XEP-261), a Jingle transport method that sends data
+  using the In-Band Bytestreams (IBB) protocol (XEP-0047).
+  
+====INSTALLATION====
+To build the modules, you will need loudmouth and mcabber headers files along
+with cmake. On Debian/Ubuntu, cmake is provided by the "cmake" package and the
+loudmouth header files in "loudmouth-dev".
+Once you have installed them, you can simply run "cmake .", then "make install"
+as root. This should install the 3 modules in /usr/lib/mcabber.
+To load them, type "/module load jingle", "/module load jingle-ft" and "module
+load jingle-ibb". You can also load them automatically by putting those three
+lines in your mcabberrc without the leading slash.

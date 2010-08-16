@@ -104,7 +104,6 @@ static JingleContent *check_content(LmMessageNode *node, GError **err)
   JingleContent *cn = g_new0(JingleContent, 1);
   const gchar *creatorstr, *sendersstr;
   gint tmp, tmp2;
-  LmMessageNode *tmpnode = NULL;
 
   creatorstr      = lm_message_node_get_attribute(node, "creator");
   cn->disposition = lm_message_node_get_attribute(node, "disposition");

@@ -38,7 +38,7 @@ include_directories(SYSTEM ${GLIB_INCLUDE_DIRS} ${MCABBER_INCLUDE_DIRS})
 
 ## Target definitions
 add_subdirectory(jingle)
-add_subdirectory(jingle-filetransfer)
+add_subdirectory(jingle-ft)
 add_subdirectory(jingle-ibb)
 add_subdirectory(jingle-socks5)
 
