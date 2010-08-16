@@ -30,13 +30,27 @@ An application module must provide:
 - start: the session have been accepted we can init our transfer;
 - send: it's call until there is datas to send;
 - stop: we've got a session-terminate, we need to close transfer, files, ...
+- info: give printable informations to show before accept content.
 
 An transport module must provide:
 - check: the same as application;
 - tomessage: idem;
-- cmp: to know if 2 transports are the same. Use by IBB, when we got
-       a new data jingle must look the gconstpointer to got the ibb-id to know
-       which apps is concerned;
 - xmlns: util when we got only funcs, to know who are we;
 - new: to create a new transport node, with default options;
--send: to send data given by apps via jingle.
+- send: to send data given by apps via jingle;
+- info: give printable informations to show before accept content.
+
+More over the sub-modules can handle jingle.
+The applications modules would handle jingle to send theirs data and the
+transports modules to say they handle data.
+
+II: Jingle File Transfer (JFT)
+JFT is an application module design for the file transfer (XEP 234).
+It provides 1 commande (/jft) with several options.
+Options are :
+- send: to send a file.
+- info: to see a list of files incoming and outgoing.
+- flush: to remove error / rejected / ended file.
+
+III: Jingle In Band Bytestream (JIBB)
+Nothing to say on this module. He send and got data.
