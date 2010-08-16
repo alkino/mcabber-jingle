@@ -1,6 +1,13 @@
 #ifndef __JINGLE_H__
 #define __JINGLE_H__ 1
 
+/*!
+ * \file jingle.h
+ * \brief Lecteur de musique de base
+ * \author Nicolas Cornu
+ * \version 0.1
+ */
+
 #include <glib.h>
 #include <loudmouth/loudmouth.h>
 
@@ -8,7 +15,10 @@
 #define NS_JINGLE "urn:xmpp:jingle:1"
 #define NS_JINGLE_ERRORS "urn:xmpp:jingle:errors:1"
 
-
+/**
+ * \enum JingleAction
+ * \brief Jingle actions constants
+ */
 typedef enum {
   JINGLE_UNKNOWN_ACTION,
   JINGLE_CONTENT_ACCEPT,
@@ -70,36 +80,48 @@ typedef struct {
 } JingleNode;
 
 typedef struct {
-  /* pointer to the <content> element */
+  /**
+   * pointer to the <content> element
+   */
   LmMessageNode *node;
 
-  /* which party originally generated the content type.
+  /** which party originally generated the content type.
    * the defined values are "initiator" and "responder"
-   * (where the default is "initiator"). required. */
+   * (where the default is "initiator"). required.
+   */
   JingleCreator creator;
 
-  /* how the content definition is to be interpreted by the recipient.
-   * optional, the default value is "session". */
+  /** how the content definition is to be interpreted by the recipient.
+   * optional, the default value is "session".
+   */
   const gchar *disposition; // optional, default=session
 
-  /* A unique name or identifier for the content type
-   * according to the creator. required.*/
+  /**
+   * A unique name or identifier for the content type
+   * according to the creator. required.
+   */
   const gchar *name;
 
-  /* which parties in the session will be generating content.
+  /**
+   * which parties in the session will be generating content.
    * allowable values are both, initiator, none, responder.
    * default is both.
-   * required for content-modify, optional otherwise */
+   * required for content-modify, optional otherwise
+   */
   JingleSenders senders;
 
-  /* each content element (must) contain one description
+  /**
+   * each content element (must) contain one description
    * child element that specifies a desired application.
-   * the connt of this node is app specific. */
+   * the connt of this node is app specific.
+   */
   LmMessageNode *description;
 
-  /* each content element (must) contain one transport
+  /**
+   * each content element (must) contain one transport
    * child element that specifies a potential transport
-   * method */
+   * method
+   */
   LmMessageNode *transport;
 } JingleContent;
 
@@ -116,22 +138,36 @@ typedef enum {
 typedef void (*JingleAckCallback) (JingleAckType type, LmMessage *, gpointer);
 
 typedef struct {
-  /* function to be called when we receive a response to the IQ */
+  /**
+   * function to be called when we receive a response to the IQ
+   */
   JingleAckCallback callback;
 
-  /* additional data to pass to callback */
+  /**
+   * additional data to pass to callback
+   */
   gpointer *user_data;
 
-  /* if no response was received after timeout seconds, callback
-   * will be called with JINGLE_ACK_TIMEOUT as type */
+  /** 
+   * if no response was received after timeout seconds, callback
+   * will be called with JINGLE_ACK_TIMEOUT as type
+   */
   guint timeout;
 
-  /* (private) date at which the handler was inserted using 
-   * jingle_new_ack_handler */
+  /**
+   * \private
+   * 
+   * date at which the handler was inserted using 
+   * jingle_new_ack_handler
+   */
   time_t _inserted;
   
-  /* (private) a pointer to the LmMessageHandler created
-   * using jingle_new_ack_handler */
+  /**
+   * \private
+   * 
+   * a pointer to the LmMessageHandler created
+   * using jingle_new_ack_handler
+   */
   LmMessageHandler *_handler;
 } JingleAckHandle;
 
