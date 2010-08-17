@@ -70,7 +70,7 @@ static JingleTransportFuncs funcs = {
   .info      = info
 };
 
-module_info_t  info_jingle_inbandbytestream = {
+module_info_t  info_jingle_ibb = {
   .branch          = MCABBER_BRANCH,
   .api             = MCABBER_API_VERSION,
   .version         = PROJECT_VERSION,

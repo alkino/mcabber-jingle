@@ -86,7 +86,7 @@ static JingleAppFuncs funcs = {
   .info         = info
 };
 
-module_info_t info_jingle_filetransfer = {
+module_info_t info_jingle_ft = {
   .branch          = MCABBER_BRANCH,
   .api             = MCABBER_API_VERSION,
   .version         = PROJECT_VERSION,
@@ -300,7 +300,7 @@ static gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len
 static int _next_index(void)
 {
   static int a = 0;
-  return a++;
+  return ++a;
 }
 
 static void do_sendfile(char *arg)
@@ -414,7 +414,8 @@ static void do_sendfile(char *arg)
       const gchar *state = strstate[jftio->jft->state];
       const gchar *desc = jftio->jft->desc?jftio->jft->desc:"";
       const gchar *hash = "";
-      if (jftio->jft->state==JINGLE_FT_ENDING) {
+      if (jftio->jft->dir == JINGLE_FT_INCOMING &&
+          jftio->jft->state == JINGLE_FT_ENDING) {
         if (_check_hash(jftio->jft->hash,jftio->jft->md5) == FALSE)
           hash = "corrupt";
         else
