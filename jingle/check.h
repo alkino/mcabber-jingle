@@ -1,3 +1,10 @@
+/**
+ * @file check.h
+ * @brief check.c header file
+ * @author Nicolas Cornu
+ * @version 0.1
+ */
+
 #ifndef __JINGLE_CHECK_H__
 #define __JINGLE_CHECK_H__ 1
 
@@ -19,8 +26,6 @@ typedef enum {
 gboolean check_jingle(LmMessage *message, LmMessageNode *node,
                       JingleNode *jn, GError **err);
 gboolean check_contents(JingleNode *jn, GError **err);
-
-gboolean check_transport(const gchar *xmlns, gconstpointer *data);
 
 GQuark jingle_check_error_quark(void);
 

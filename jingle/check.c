@@ -49,7 +49,13 @@ const gchar *jingle_content_senders[] = {
 
 
 /**
- * Populate a jingle_data struct from a <jingle> element.
+ * @param message The incoming message
+ * @param node    The <jingle> node in message
+ * @param jn      The JingleNode to populate
+ * @param err     A GError* to store the error
+ * @return        TRUE if successfull, FALSE if an error happened
+ * 
+ * Populate a JingleNode struct from a <jingle> element.
  * Check if the element is in compliance with the XEP.
  */
 gboolean check_jingle(LmMessage *message, LmMessageNode *node,
@@ -154,8 +160,11 @@ static JingleContent *check_content(LmMessageNode *node, GError **err)
 }
 
 /**
- * Check <content> elements if there is any.
- * Add them to the JingleNode struct.
+ * @param jn  The JingleNode to populate
+ * @param err A GError* to store the error
+ * @return    TRUE if successfull, FALSE if an error happened
+ * 
+ * Check all <content> element and add them to the JingleNode::content linked list.
  */
 gboolean check_contents(JingleNode *jn, GError **err)
 {

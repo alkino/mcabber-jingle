@@ -90,6 +90,9 @@ module_info_t info_jingle = {
 };
 
 
+/**
+ * @brief Handle all incoming IQs containing a <jingle> node
+ */
 LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
                                  LmConnection *connection, LmMessage *message,
                                  gpointer user_data)
@@ -139,7 +142,7 @@ LmHandlerResult jingle_handle_iq(LmMessageHandler *handler,
 }
 
 /**
- * Handle incoming ack iq (type result or error).
+ * @brief Handle incoming ack iq (type result or error).
  */
 LmHandlerResult jingle_handle_ack_iq(LmMessageHandler *handler,
                                      LmConnection *connection, 
@@ -183,6 +186,14 @@ gboolean jingle_ack_timeout_checker(gpointer user_data)
   return TRUE;
 }
 
+/**
+ * @param ah A JingleAckHandle struct
+ * @return   The LmMessageHandler to use when sending a message
+ *           with lm_connection_send_with_reply
+ * 
+ * jingle_new_ack_handler allow to easily create new LmMessageHandler to
+ * be called back when a message we sent was acknowledged by its recipient.
+ */
 LmMessageHandler *jingle_new_ack_handler(JingleAckHandle *ah)
 {
   if(ack_timeout_checker == 0)
@@ -248,9 +259,12 @@ gboolean evscallback_jingle(guint evcontext, const gchar *arg,
 }
 
 /**
+ * @brief Acknowledge the receipt of a message.
+ * @param m The LmMessage to ack
+ * 
  * According to the specifications:
  * "An entity that receives an IQ request of type "get" or "set" MUST
- * reply with an IQ response of type "result" or "error"."
+ * reply with an IQ response of type "result" or "error"."\n
  * For Jingle's IQ, we have to reply with an empty "result" IQ to acknowledge
  * receipt.
  */
@@ -264,7 +278,18 @@ void jingle_ack_iq(LmMessage *m)
 }
 
 /**
- * Create an error IQ.
+ * @brief Create a new jingle IQ with an error.
+ * @param m          The message to reply to
+ * @param errtype    The error type (the type attribute of <error>)
+ * @param cond       The error condition
+ * @param jinglecond The jingle error condition
+ * 
+ * Error types are defined <a href="http://tools.ietf.org/html/
+ * draft-ietf-xmpp-3920bis-12#section-8.3.2">section 8.3.2 of RFC 3920bis</a>.\n
+ * Error conditions are defined <a href="http://tools.ietf.org/html/
+ * draft-ietf-xmpp-3920bis-12#section-8.3.3">section 8.3.3 of RFC 3920bis</a>.\n
+ * Jingle Error conditions are defined <a href="http://xmpp.org/extensions/
+ * xep-0166.html#errors">section 10 of XEP-0166</a>.
  */
 LmMessage *jingle_new_iq_error(LmMessage *m, const gchar *errtype,
                                const gchar *cond, const gchar *jinglecond)
@@ -276,13 +301,11 @@ LmMessage *jingle_new_iq_error(LmMessage *m, const gchar *errtype,
   err = lm_message_node_add_child(r->node, "error", NULL);
   lm_message_node_set_attribute(err, "type", errtype);
 
-  // error condition as defined by RFC 3920bis section 8.3.3
   if (cond != NULL) {
     tmpnode = lm_message_node_add_child(err, cond, NULL);
     lm_message_node_set_attribute(tmpnode, "xmlns", NS_XMPP_STANZAS);
   }
 
-  // jingle error condition as defined by XEP-0166 section 10
   if (jinglecond != NULL) {
     tmpnode = lm_message_node_add_child(err, jinglecond, NULL);
     lm_message_node_set_attribute(tmpnode, "xmlns", NS_JINGLE_ERRORS);
@@ -292,7 +315,13 @@ LmMessage *jingle_new_iq_error(LmMessage *m, const gchar *errtype,
 }
 
 /**
- * Reply to a Jingle IQ with an error.
+ * @brief Reply to a jingle IQ with an error
+ * @param m          The message to reply to
+ * @param errtype    The error type (the type attribute of <error>)
+ * @param cond       The error condition
+ * @param jinglecond The jingle error condition
+ * 
+ * Use jingle_new_iq_error internally to generate a LmMessage.
  */
 void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
                           const gchar *cond, const gchar *jinglecond)
@@ -304,9 +333,15 @@ void jingle_send_iq_error(LmMessage *m, const gchar *errtype,
 }
 
 /**
- * Find the best resource to initiate a jingle session.
- * Test every ressource for a given jid and return the one
+ * @brief Find the best resource to initiate a jingle session with
+ * @param jid The jid of the buddy
+ * @param ns  The an array of namespaces we are looking for
+ * @return    A ressource supporting all namespaces in ns or NULL
+ *            if we couldn't find any
+ * 
+ * Test every ressource for the given jid and return the one
  * who support all namespaces in ns.
+ * Note that you should free the string returned by this function.
  */
 gchar *jingle_find_compatible_res(const gchar *jid, const gchar *ns[])
 {
@@ -336,7 +371,10 @@ gchar *jingle_find_compatible_res(const gchar *jid, const gchar *ns[])
 }
 
 /**
- * Find the jingle_action corresponding to a string
+ * @brief Find the JingleAction corresponding to a string
+ * @param string The string to lockup
+ * @return       The #JingleAction or JINGLE_UNKNOWN_ACTION if
+ *               string is not a jingle action
  */
 JingleAction jingle_action_from_str(const gchar *string)
 {
@@ -349,12 +387,11 @@ JingleAction jingle_action_from_str(const gchar *string)
 }
 
 /**
- * This function should not be called if jn->message was created
- * using lm_message_from_jinglenode because loudmouth strdup
- * strings we insert as attributes. the pointers in the LmMessage
- * and the JingleNode would not refer to the same addresses and
- * a call to lm_message_unref would not free the data from the
- * JingleNode.
+ * @brief Free a JingleNode struct
+ * 
+ * Since the JingleNode contains only pointers to the attributes
+ * and nodes of the LmMessage, we only have to unref the LmMessage
+ * and free() the struct itself to destroy it.
  */
 void jingle_free_jinglenode(JingleNode *jn)
 {
@@ -364,6 +401,9 @@ void jingle_free_jinglenode(JingleNode *jn)
   g_free(jn);
 }
 
+/**
+ * @brief Unregister our IQ handler to loudmouth.
+ */
 static void jingle_unregister_lm_handlers(void)
 {
   if (lconnection) {
@@ -372,6 +412,9 @@ static void jingle_unregister_lm_handlers(void)
   }
 }
 
+/**
+ * @brief Register our IQ handler to loudmouth.
+ */
 static void jingle_register_lm_handlers(void)
 {
   jingle_unregister_lm_handlers();
