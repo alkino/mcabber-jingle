@@ -102,12 +102,11 @@ module_info_t info_jingle_ft = {
 
 
 /**
- * \fn static gconstpointer check(JingleContent *cn, GError **err)
- * \brief Check if a node description with xmlns of JFT is correct 
+ * @brief Check if a node description with xmlns of JFT is correct 
  *
- * \param cn the jinglecontent a node description
- * \param err contain an error of the domain JINGLE_CHECK_ERROR
- * \return a gconstpointer, which is a new allocated JingleFT
+ * @param cn the jinglecontent a node description
+ * @param err contain an error of the domain JINGLE_CHECK_ERROR
+ * @return a gconstpointer, which is a new allocated JingleFT
  */
 static gconstpointer check(JingleContent *cn, GError **err)
 {
@@ -200,16 +199,14 @@ static gconstpointer check(JingleContent *cn, GError **err)
 }
 
 /**
- * \fn static gboolean handle(JingleAction action, gconstpointer data, LmMessageNode *node)
- * \brief handle a function to handle action which are not "current"
- *
- * \param action the action which have been received
- * \param data contain the JingleFT of the content concerned
- * \param node the node himself
- * \return a gconstpointer, which is a new allocated JingleFT
+ * @brief A function to handle incoming jingle action
+ * @param action The action which have been received
+ * @param data   Contain the JingleFT of the content concerned
+ * @param node   The node himself
+ * @return       TRUE if the action was handled, FALSE otherwise
  */
 static gboolean handle(JingleAction action, gconstpointer data,
-                          LmMessageNode *node)
+                       LmMessageNode *node)
 {
   if (action == JINGLE_SESSION_INFO) {
     if (!g_strcmp0(lm_message_node_get_attribute(node, "xmlns"),
