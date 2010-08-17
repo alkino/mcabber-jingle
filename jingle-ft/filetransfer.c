@@ -60,6 +60,7 @@ static void jingle_ft_uninit(void);
 static gchar *_convert_size(guint64 size);
 static int _next_index(void);
 static void _free(JingleFT *jft);
+static gboolean _check_hash(const gchar *hash1, GChecksum *md5);
 
 const gchar *deps[] = { "jingle", NULL };
 
@@ -408,12 +409,20 @@ static void do_sendfile(char *arg)
     for (el = info_list; el; el = el->next) {
       JingleFTInfo *jftio = el->data;
       gchar *strsize = _convert_size(jftio->jft->size);
-      scr_LogPrint(LPRINT_LOGNORM, "[%i]%s %s %s %.2f%%: %s %s", jftio->index, 
-                   (jftio->jft->dir == JINGLE_FT_INCOMING)?"<==":"-->",
-                   jftio->jft->name, strsize,
-                   (gfloat)jftio->jft->transmit/(gfloat)jftio->jft->size * 100,
-                   jftio->jft->desc?jftio->jft->desc:"",
-                   strstate[jftio->jft->state]);
+      const gchar *dir = (jftio->jft->dir == JINGLE_FT_INCOMING) ? "<==" : "-->";
+      gfloat percent = (gfloat)jftio->jft->transmit/(gfloat)jftio->jft->size*100;
+      const gchar *state = strstate[jftio->jft->state];
+      const gchar *desc = jftio->jft->desc?jftio->jft->desc:"";
+      const gchar *hash = "";
+      if (jftio->jft->state==JINGLE_FT_ENDING) {
+        if (_check_hash(jftio->jft->hash,jftio->jft->md5) == FALSE)
+          hash = "corrupt";
+        else
+          hash = "checked";
+      }
+      
+      scr_LogPrint(LPRINT_LOGNORM, "[%i]%s %s %s %.2f%%: %s %s %s", jftio->index, 
+                   dir, jftio->jft->name, strsize, percent, desc, state, hash);
       g_free(strsize);
     }
   } else if (!g_strcmp0(args[0], "flush")) {
@@ -621,6 +630,21 @@ static void start(session_content *sc)
   sc2->appfuncs->send(sc);
 }
 
+static gboolean _check_hash(const gchar *hash1, GChecksum *md5)
+{
+  const gchar *hash2;
+  
+  if (!hash1 || !md5)
+    return FALSE;
+
+  hash2 = g_checksum_get_string(md5);
+  
+  if (g_ascii_strncasecmp(hash1, hash2, 32))
+    return FALSE;
+  
+  return TRUE;
+}
+
 // When we got a session-terminate
 static void stop(gconstpointer data)
 {
@@ -639,7 +663,7 @@ static void stop(gconstpointer data)
   }
 
   if (jft->hash != NULL && jft->md5 != NULL) {
-    if (g_strcmp0(jft->hash, g_checksum_get_string(jft->md5))) {
+    if (_check_hash(jft->hash, jft->md5) == FALSE) {
       scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: File corrupt (%s)",
                    jft->name);
     } else {
@@ -662,7 +686,7 @@ static gchar *_convert_size(guint64 size)
     strsize = g_strdup_printf("%.2lf KiB", size/1024.0);
   else if (size < 1073741824)
     strsize = g_strdup_printf("%.2lf MiB", size/1048576.0);
-  else if (size < 1099511627776)
+  else
     strsize = g_strdup_printf("%.2lf GiB", size/1073741824.0);
 
   return strsize;
