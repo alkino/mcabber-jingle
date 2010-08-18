@@ -64,6 +64,7 @@ static gboolean _is_md5_hash(const gchar *hash);
 static void _jft_send(char **args);
 static void _jft_info(char **args);
 static void _jft_flush(char **args);
+static JingleFT* _new(const gchar *name);
 
 const gchar *deps[] = { "jingle", NULL };
 
@@ -357,53 +358,84 @@ static void _jft_flush(char **args)
   scr_LogPrint(LPRINT_LOGNORM, "JFT: %i file%s removed", count, (count>1) ? "s" : "");
 }
 
-static void _jft_send(char **args)
+static JingleFT* _new(const gchar *name)
 {
-  gchar *filename;
   struct stat fileinfo;
-  
-  if (!args[1]) {
-  scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: give me a name!");
-  free_arg_lst(args);
-    return;
-  }
-
-  filename = expand_filename(args[1]); // expand ~ to HOME
-
+  GError *err = NULL;
+  gchar *filename = expand_filename(name); // expand ~ to HOME
+  JingleFT *jft = g_new0(JingleFT, 1);
+    
   if (g_stat(filename, &fileinfo) != 0) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: unable to stat %s",
-                 args[1]);
-    free_arg_lst(args);
-    return;
+                 filename);
+    g_free(jft);
+    return NULL;
   }
 
-  if (!S_ISREG(fileinfo.st_mode) && !S_ISLNK(fileinfo.st_mode)) {
+  if (!S_ISREG(fileinfo.st_mode) || S_ISLNK(fileinfo.st_mode)) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: File doesn't exist!");
-    free_arg_lst(args);
+    g_free(jft);
+    return NULL;
+  }
+  
+  jft->desc = g_strdup(name);
+  jft->type = JINGLE_FT_OFFER;
+  jft->name = g_path_get_basename(filename);
+  jft->date = fileinfo.st_mtime;
+  jft->size = fileinfo.st_size;
+  jft->transmit = 0;
+  jft->state = JINGLE_FT_PENDING;
+  jft->dir = JINGLE_FT_OUTGOING;
+  jft->outfile = g_io_channel_new_file(filename, "r", &err);
+  if (jft->outfile == NULL || err != NULL) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: %s %s", err->message,
+                 name);
+    g_error_free(err);
+    g_free(jft);
+    return NULL;
+  }
+
+  g_io_channel_set_encoding(jft->outfile, NULL, &err);
+  if (jft->outfile == NULL || err != NULL) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: %s %s", err->message,
+                 name);
+    g_error_free(err);
+    g_free(jft);
+    return NULL;
+  }
+  
+  return jft;
+}
+
+static void _jft_send(char **args)
+{
+  JingleFT *jft;
+
+  if (!args[1]) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: give me a name!");
     return;
   }
 
   scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Trying to send %s",
                args[1]);
 
+  if ((jft = _new(args[1])) == NULL)
+    return;
+  
   {
     JingleSession *sess;
     gchar *sid = jingle_generate_sid();
     gchar *ressource, *recipientjid;
     const gchar *namespaces[] = {NS_JINGLE, NS_JINGLE_APP_FT, NULL};
     const gchar *myjid = g_strdup(lm_connection_get_jid(lconnection));
-    JingleFT *jft = g_new0(JingleFT, 1);
-    GError *err = NULL;
 
     if (CURRENT_JID == NULL) { // CURRENT_JID = the jid of the user which has focus
       scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Please, choose a valid JID in the roster");
-      free_arg_lst(args);
       return;
     }
     ressource = jingle_find_compatible_res(CURRENT_JID, namespaces);
     if (ressource == NULL) {
       scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Cannot send file, because there is no ressource available");
-      free_arg_lst(args);
       return;
     }
 
@@ -411,32 +443,6 @@ static void _jft_send(char **args)
 
     sess = session_new(sid, myjid, recipientjid, JINGLE_SESSION_OUTGOING);
     session_add_content(sess, "file", JINGLE_SESSION_STATE_PENDING);
-
-    jft->desc = g_strdup(args[1]);
-    jft->type = JINGLE_FT_OFFER;
-    jft->name = g_path_get_basename(filename);
-    jft->date = fileinfo.st_mtime;
-    jft->size = fileinfo.st_size;
-    jft->transmit = 0;
-    jft->state = JINGLE_FT_PENDING;
-    jft->dir = JINGLE_FT_OUTGOING;
-    jft->outfile = g_io_channel_new_file (filename, "r", &err);
-    if (jft->outfile == NULL || err != NULL) {
-      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: %s %s", err->message,
-                   args[1]);
-      g_error_free(err);
-      free_arg_lst(args);
-      return;
-    }
-
-    g_io_channel_set_encoding(jft->outfile, NULL, &err);
-    if (jft->outfile == NULL || err != NULL) {
-      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: %s %s", err->message,
-                   args[1]);
-      g_error_free(err);
-      free_arg_lst(args);
-      return;
-    }
 
     session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
 
@@ -592,7 +598,7 @@ static void send(session_content *sc)
   }
 
   if (status == G_IO_STATUS_ERROR || err != NULL) {
-    jft->statut = JINGLE_FT_ERROR;
+    jft->state = JINGLE_FT_ERROR;
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: %s", err->message);
     g_error_free(err);
     return;
