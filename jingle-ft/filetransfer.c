@@ -313,15 +313,16 @@ static void _jft_info(char **args)
 
   for (el = info_list; el; el = el->next) {
     JingleFTInfo *jftio = el->data;
-    gchar *strsize = _convert_size(jftio->jft->size);
-    const gchar *dir = (jftio->jft->dir == JINGLE_FT_INCOMING) ? "<==" : "-->";
-    gfloat percent = (gfloat)jftio->jft->transmit/(gfloat)jftio->jft->size*100;
-    const gchar *state = strstate[jftio->jft->state];
-    const gchar *desc = jftio->jft->desc?jftio->jft->desc:"";
+    JingleFT *jft = jftio->jft;
+    gchar *strsize = _convert_size(jft->size);
+    const gchar *dir = (jft->dir == JINGLE_FT_INCOMING) ? "<==" : "-->";
+    gfloat percent = ((gfloat)jft->transmit / (gfloat)jft->size) * 100;
+    const gchar *state = strstate[jft->state];
+    const gchar *desc = jft->desc ? jft->desc : "";
     const gchar *hash = "";
-    if (jftio->jft->dir == JINGLE_FT_INCOMING &&
-        jftio->jft->state == JINGLE_FT_ENDING) {
-      if (_check_hash(jftio->jft->hash,jftio->jft->md5) == FALSE)
+    if (jft->dir == JINGLE_FT_INCOMING &&
+        jft->state == JINGLE_FT_ENDING) {
+      if (_check_hash(jft->hash, jft->md5) == FALSE)
         hash = "corrupt";
       else
         hash = "checked";
@@ -384,6 +385,8 @@ static JingleFT* _new(const gchar *name)
   jft->date = fileinfo.st_mtime;
   jft->size = fileinfo.st_size;
   jft->transmit = 0;
+  jft->hash = NULL;
+  jft->md5 = NULL;
   jft->state = JINGLE_FT_PENDING;
   jft->dir = JINGLE_FT_OUTGOING;
   jft->outfile = g_io_channel_new_file(filename, "r", &err);
