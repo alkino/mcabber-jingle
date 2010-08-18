@@ -2,7 +2,6 @@
  * @file check.h
  * @brief check.c header file
  * @author Nicolas Cornu
- * @version 0.1
  */
 
 #ifndef __JINGLE_CHECK_H__

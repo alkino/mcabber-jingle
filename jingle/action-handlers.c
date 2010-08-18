@@ -45,13 +45,11 @@ void handle_session_initiate(JingleNode *jn)
   JingleContent *cn;
   gchar *sbuf;
   GSList *child = NULL;
-  LmMessage *r;
   gchar *disp;
   JingleSession *sess;
   const gchar *xmlns;
   JingleAppFuncs *appfuncs;
   JingleTransportFuncs *transfuncs;
-  gconstpointer description, transport;
   
   // Make sure the request come from an user in our roster
   disp = jidtodisp(lm_message_get_from(jn->message));

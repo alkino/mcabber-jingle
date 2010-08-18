@@ -37,7 +37,6 @@
 #include "socks5.h"
 
 gconstpointer jingle_socks5_check(JingleContent *cn, GError **err);
-gboolean jingle_socks5_cmp(gconstpointer data1, gconstpointer data2);
 void jingle_socks5_tomessage(gconstpointer data, LmMessageNode *node);
 gconstpointer jingle_socks5_new(void);
 void jingle_socks5_send(session_content *sc, gconstpointer data, gchar *buf,
@@ -50,11 +49,10 @@ static void jingle_socks5_uninit(void);
 const gchar *deps[] = { "jingle", NULL };
 
 static JingleTransportFuncs funcs = {
-  jingle_socks5_check,
-  jingle_socks5_tomessage,
-  jingle_socks5_cmp,
-  jingle_socks5_new,
-  jingle_socks5_send
+  .check     = jingle_socks5_check,
+  .tomessage = jingle_socks5_tomessage,
+  .new       = jingle_socks5_new,
+  .send      = jingle_socks5_send
 };
 
 module_info_t  info_jingle_socks5bytestream = {
@@ -185,7 +183,7 @@ static void jingle_socks5_init(void)
 {
   jingle_register_transport(NS_JINGLE_TRANSPORT_SOCKS5, &funcs,
                             JINGLE_TRANSPORT_STREAMING,
-                            JINGLE_TRANSPORT_HIGH);
+                            JINGLE_TRANSPORT_PRIO_HIGH);
   xmpp_add_feature(NS_JINGLE_TRANSPORT_SOCKS5);
 }
 

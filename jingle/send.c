@@ -65,13 +65,11 @@ static void jingle_handle_ack_iq_sa(JingleAckType acktype, LmMessage *mess,
 {
   LmMessageNode *node;
   const gchar *type, *cause;
-  GSList *child = NULL;
   JingleSession *sess = (JingleSession*)data;
-  SessionContent *sc;
 
   if (acktype == JINGLE_ACK_TIMEOUT) {
     // TODO: handle ack timeout...
-    scr_LogPrint(LPRINT_LOGNORM, "Jingle: session-accept %s: %s", type, cause);
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle: did not receive the accept ack in time, aborting");
     session_delete(sess);
     return;
   }
@@ -86,6 +84,8 @@ static void jingle_handle_ack_iq_sa(JingleAckType acktype, LmMessage *mess,
     type = lm_message_node_get_attribute(node, "type");
     if(node->children != NULL)
       cause = node->children->name;
+    else
+      cause = "?";
     scr_LogPrint(LPRINT_LOGNORM, "Jingle: session-accept %s: %s", type, cause);
   }
   // We delete the session, there was an error
@@ -121,7 +121,7 @@ static void jingle_handle_ack_iq_si(JingleAckType acktype, LmMessage *mess,
 
   if (acktype == JINGLE_ACK_TIMEOUT) {
     // TODO: handle ack timeout...
-    scr_LogPrint(LPRINT_LOGNORM, "Jingle: did not receive the ack in time, aborting");
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle: did not receive the initiate ack in time, aborting");
     session_delete(sess);
     return;
   }
@@ -134,6 +134,8 @@ static void jingle_handle_ack_iq_si(JingleAckType acktype, LmMessage *mess,
     type = lm_message_node_get_attribute(node, "type");
     if(node->children != NULL)
       cause = node->children->name;
+    else
+      cause = "?";
     scr_LogPrint(LPRINT_LOGNORM, "Jingle: session-initiate %s: %s", type, cause);
   }
   // We delete the session, there was an error
@@ -143,7 +145,6 @@ static void jingle_handle_ack_iq_si(JingleAckType acktype, LmMessage *mess,
 void jingle_send_session_initiate(JingleSession *js)
 {
   JingleAckHandle *ackhandle;
-  GSList *listentry;
   GError *err = NULL;
   gboolean status;
   

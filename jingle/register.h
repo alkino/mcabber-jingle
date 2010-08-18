@@ -1,3 +1,9 @@
+/**
+ * @file register.h
+ * @brief register.c header file
+ * @author Nicolas Cornu
+ */
+
 #ifndef __JINGLE_REGISTER_H__
 #define __JINGLE_REGISTER_H__
 
@@ -7,31 +13,39 @@
 #define NS_JINGLE_TRANSPORT_PREFIX "urn:xmpp:jingle:transports:"
 
 
+/**
+ * @brief A transport can be either of type "streaming" or "datagram"
+ */
 typedef enum {
-  /* A datagram transport has one or more components with which to exchange
+  /**
+   * A datagram transport has one or more components with which to exchange
    * packets with UDP-like behavior. Packets might be of arbitrary length,
    * might be received out of order, and might not be received at all
-   * (i.e., the transport is lossy). */
+   * (i.e., the transport is lossy).
+   */
   JINGLE_TRANSPORT_STREAMING,
   
-  /* A streaming transport has one or more components with which to exchange
+  /**
+   * A streaming transport has one or more components with which to exchange
    * bidirectional bytestreams with TCP-like behavior. Bytes are received
    * reliably and in order, and applications MUST NOT rely on a stream being
-   * chunked in any specific way. */
+   * chunked in any specific way.
+   */
   JINGLE_TRANSPORT_DATAGRAM
 } JingleTransportType;
 
 /**
+ * @brief A way for transport modules to rank themselves.
+ * 
  * We need to rank transports to determine which one to choose.
- * With this system, In-Band Bytestreams could have a low priority, SOCKS5
- * Bytestream a normal priority, and some stream transport method that allow
- * direct connection would have a high priority, since it would be the fastest.
+ * With this system, In-Band Bytestreams could have a low priority,
+ * SOCKS5 Bytestreams a normal priority.\n
+ * 0 will always be an invalid priority.
  */
 typedef enum {
-  JINGLE_TRANSPORT_NONE,
-  JINGLE_TRANSPORT_LOW,
-  JINGLE_TRANSPORT_NORMAL,
-  JINGLE_TRANSPORT_HIGH
+  JINGLE_TRANSPORT_PRIO_LOW = 1,
+  JINGLE_TRANSPORT_PRIO_NORMAL,
+  JINGLE_TRANSPORT_PRIO_HIGH
 } JingleTransportPriority;
 
 typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err);
@@ -51,18 +65,31 @@ typedef void (*JingleTransportInit) (session_content *sc, gconstpointer data);
 typedef void (*JingleTransportEnd) (session_content *sc, gconstpointer data);
 typedef gchar* (*JingleTransportInfo) (gconstpointer data);
 
+/**
+ * @brief Struct containing functions provided by an app module.
+ */
 typedef struct {
-  /* check if the description of a JingleContent is correct */
+  /**
+   * @brief Check if the description node of a JingleContent is correct
+   */
   JingleAppCheck check;
 
-  /* handle an incoming jingle message (session-info, description-info...).
+  /**
+   * @brief Handle an incoming jingle message (session-info, description-info...)
+   * 
    * If the function could not handle the incoming data, the caller should
-   * reply to the incoming message with an error iq */
+   * reply to the incoming message with an error iq.
+   */
   JingleAppHandle handle;
 
-  /* Insert data from the gconstpointer to the node given as an argument */
+  /**
+   * @brief Insert data from the gconstpointer to the node given as an argument
+   */
   JingleAppToMessage tomessage;
 
+  /**
+   * @brief Handle incoming data
+   */
   JingleAppHandleData handle_data;
 
   JingleAppStart start;
@@ -70,24 +97,30 @@ typedef struct {
   JingleAppSend send;
 
   JingleAppStop stop;
-  
+
   JingleAppInfo info;
 
 } JingleAppFuncs;
 
 typedef struct {
+  /**
+   * @brief Check if the transport node of a JingleContent is correct
+   */
   JingleTransportCheck check;
 
+  /**
+   * @brief Insert data from the gconstpointer to the node given as an argument
+   */
   JingleTransportToMessage tomessage;
 
   JingleTransportNew new;
 
   JingleTransportSend send;
-  
+
   JingleTransportInit init;
-  
+
   JingleTransportEnd end;
-  
+
   JingleTransportInfo info;
   
 } JingleTransportFuncs;

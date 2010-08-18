@@ -26,6 +26,7 @@
 #include <jingle/jingle.h>
 #include <jingle/sessions.h>
 #include <jingle/register.h>
+#include <jingle/send.h>
 
 static GSList *sessions;
 
@@ -191,11 +192,11 @@ SessionContent *session_find_transport(gconstpointer data)
   return NULL;
 }
 
-int session_remove_sessioncontent(JingleSession *sess, const gchar *name)
+gint session_remove_sessioncontent(JingleSession *sess, const gchar *name)
 {
   SessionContent *sc;
   sc = session_find_sessioncontent(sess, name);
-  if(sc == NULL) return;
+  if(sc == NULL) return 0;
 
   if (sc->state == JINGLE_SESSION_STATE_ACTIVE) {
     // TODO: stop the transfer
@@ -275,7 +276,7 @@ LmMessage *lm_message_from_jinglesession(const JingleSession *js,
 {
   LmMessage* m; 
   LmMessageNode *jnode;
-  const gchar *actionstr, *recipient;
+  const gchar *recipient;
   
   recipient = (js->origin == JINGLE_SESSION_INCOMING) ? js->from : js->to;
 
@@ -285,11 +286,8 @@ LmMessage *lm_message_from_jinglesession(const JingleSession *js,
   jnode = lm_message_node_add_child(m->node, "jingle", NULL);
 
   lm_message_node_set_attribute(jnode, "xmlns", NS_JINGLE);
-  
-  if (actionstr = jingle_action_list[action].name)
-    lm_message_node_set_attribute(jnode, "action", actionstr);
-  else
-    return NULL;
+
+  lm_message_node_set_attribute(jnode, "action", jingle_action_list[action].name);
 
   if (js->sid)
     lm_message_node_set_attribute(jnode, "sid", js->sid);
@@ -302,9 +300,6 @@ LmMessage *lm_message_from_jinglesession(const JingleSession *js,
 
 static void lm_insert_sessioncontent(gpointer data, gpointer userdata)
 {
-  const gchar *xmlns;
-  JingleTransportFuncs *tfunc;
-  JingleAppFuncs *afunc;
   SessionContent *content = (SessionContent*) data;
   LmMessageNode *jnode = (LmMessageNode*) userdata;
   LmMessageNode *node = lm_message_node_add_child(jnode, "content", NULL);

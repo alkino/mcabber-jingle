@@ -114,7 +114,7 @@ const gchar *jingle_transport_for_app(const gchar *appxmlns,
   AppHandlerEntry *app = jingle_find_app(appxmlns);
   GSList *entry;
   TransportHandlerEntry *thistransport, *besttransport = NULL;
-  JingleTransportPriority bestprio = JINGLE_TRANSPORT_NONE;
+  JingleTransportPriority bestprio = 0;
   JingleTransportType requestedtype;
 
   if (app == NULL)

@@ -391,7 +391,7 @@ static void jingle_ibb_init(void)
   
   jingle_register_transport(NS_JINGLE_TRANSPORT_IBB, &funcs,
                             JINGLE_TRANSPORT_STREAMING,
-                            JINGLE_TRANSPORT_LOW);
+                            JINGLE_TRANSPORT_PRIO_LOW);
   xmpp_add_feature(NS_JINGLE_TRANSPORT_IBB);
   JingleIBBs = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, free_ibb);
 }

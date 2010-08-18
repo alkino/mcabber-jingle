@@ -2,7 +2,6 @@
  * @file jingle.h
  * @brief jingle.c header file
  * @author Nicolas Cornu
- * @version 0.1
  */
 
 #ifndef __JINGLE_H__
@@ -53,7 +52,6 @@ typedef enum {
 } JingleSenders;
 
 /**
- * @struct JingleNode
  * @brief Represent an incoming jingle IQ
  * 
  * This struct is used to represent an incoming jingle IQ.
@@ -105,7 +103,6 @@ typedef struct {
 } JingleNode;
 
 /**
- * @struct JingleContent
  * @brief Struct used to represent a <content> element of an incoming Jingle IQ
  */
 typedef struct {
@@ -157,8 +154,6 @@ typedef struct {
 } JingleContent;
 
 /**
- * @struct JingleActionList
- * 
  * Represent a jingle action and the "handler"
  * (defined in action-handlers.c) for that action.
  */
