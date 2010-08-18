@@ -592,6 +592,7 @@ static void send(session_content *sc)
   }
 
   if (status == G_IO_STATUS_ERROR || err != NULL) {
+    jft->statut = JINGLE_FT_ERROR;
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: %s", err->message);
     g_error_free(err);
     return;
@@ -667,8 +668,7 @@ static void stop(gconstpointer data)
   JingleFT *jft = (JingleFT*)data;
   GError *err = NULL;
   GIOStatus status;
-  
-  jft->state = JINGLE_FT_ENDING;
+
   if (jft->outfile != NULL) {
     status = g_io_channel_shutdown(jft->outfile, TRUE, &err);
     if (status != G_IO_STATUS_NORMAL || err != NULL) {
@@ -677,6 +677,19 @@ static void stop(gconstpointer data)
       g_error_free(err);
     }
   }
+  
+  if (jft->transmit < jft->size) {
+    jft->state = JINGLE_FT_ERROR;
+    if (jft->dir == JINGLE_FT_INCOMING)
+      scr_LogPrint(LPRINT_LOGNORM, "JFT: session have been closed before we"
+                   "receive all the file: %s", jft->name);
+    else
+      scr_LogPrint(LPRINT_LOGNORM, "JFT: session have been closed before we"
+                   "send all the file: %s", jft->name);
+    return;
+  }
+  
+  jft->state = JINGLE_FT_ENDING;
 
   if (jft->hash != NULL && jft->md5 != NULL) {
     if (_check_hash(jft->hash, jft->md5) == FALSE) {
