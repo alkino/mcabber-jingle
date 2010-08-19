@@ -22,6 +22,7 @@
 #include "config.h"
 
 #include <glib.h>
+#include <gio/gio.h>
 
 #include <mcabber/xmpp.h>
 #include <mcabber/modules.h>
@@ -36,12 +37,13 @@
 
 #include "socks5.h"
 
-gconstpointer jingle_socks5_check(JingleContent *cn, GError **err);
-void jingle_socks5_tomessage(gconstpointer data, LmMessageNode *node);
-gconstpointer jingle_socks5_new(void);
-void jingle_socks5_send(session_content *sc, gconstpointer data, gchar *buf,
-                        gsize size);
+static gconstpointer check(JingleContent *cn, GError **err);
+static void tomessage(gconstpointer data, LmMessageNode *node);
+static void send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
+static void init(session_content *sc, gconstpointer data);
+static void end(session_content *sc, gconstpointer data);
 
+static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data);
 static void jingle_socks5_init(void);
 static void jingle_socks5_uninit(void);
 
@@ -49,10 +51,12 @@ static void jingle_socks5_uninit(void);
 const gchar *deps[] = { "jingle", NULL };
 
 static JingleTransportFuncs funcs = {
-  .check     = jingle_socks5_check,
-  .tomessage = jingle_socks5_tomessage,
-  .new       = jingle_socks5_new,
-  .send      = jingle_socks5_send
+  .check     = check,
+  .tomessage = tomessage,
+  .new       = NULL,
+  .send      = send,
+  .init      = init,
+  .end       = end
 };
 
 module_info_t  info_jingle_socks5bytestream = {
@@ -81,7 +85,7 @@ static const gchar *jingle_s5b_modes[] = {
 };
 
 
-gint index_in_array(const gchar *str, const gchar **array)
+static gint index_in_array(const gchar *str, const gchar **array)
 {
   gint i;
   for (i = 0; array[i]; i++) {
@@ -92,13 +96,13 @@ gint index_in_array(const gchar *str, const gchar **array)
   return -1;
 }
 
-gconstpointer jingle_socks5_check(JingleContent *cn, GError **err)
+static gconstpointer check(JingleContent *cn, GError **err)
 {
-  JingleSocks5 *js5b;
+  JingleS5B *js5b;
   LmMessageNode *node = cn->transport, *node2;
   const gchar *modestr;
 
-  js5b = g_new0(JingleSocks5, 1);
+  js5b = g_new0(JingleS5B, 1);
   modestr    = lm_message_node_get_attribute(node, "mode");
   js5b->mode = index_in_array(modestr, jingle_s5b_modes);
   js5b->sid  = g_strdup(lm_message_node_get_attribute(node, "sid"));
@@ -113,7 +117,7 @@ gconstpointer jingle_socks5_check(JingleContent *cn, GError **err)
   for (node2 = node->children; node2; node2 = node2->next) {
     if (!g_strcmp0(node->name, "candidate")) {
       const gchar *portstr, *prioritystr, *typestr;
-      JingleS5BCandidate *jc = g_new0(JingleS5BCandidate, 1);
+      S5BCandidate *jc = g_new0(S5BCandidate, 1);
       jc->cid      = g_strdup(lm_message_node_get_attribute(node2, "cid"));
       jc->host     = g_strdup(lm_message_node_get_attribute(node2, "host"));
       jc->jid      = g_strdup(lm_message_node_get_attribute(node2, "jid"));
@@ -141,10 +145,10 @@ gconstpointer jingle_socks5_check(JingleContent *cn, GError **err)
   return (gconstpointer) js5b;
 }
 
-void jingle_socks5_tomessage(gconstpointer data, LmMessageNode *node)
+static void tomessage(gconstpointer data, LmMessageNode *node)
 {
-  JingleSocks5 *js5 = (JingleSocks5*)data;
-  JingleS5BCandidate *js5c;
+  JingleS5B *js5 = (JingleS5B *)data;
+  S5BCandidate *js5c;
   
   LmMessageNode *node2, *node3;
   gchar *port;
@@ -161,7 +165,7 @@ void jingle_socks5_tomessage(gconstpointer data, LmMessageNode *node)
                                  "mode", jingle_s5b_modes[js5->mode],
                                  NULL);
   for (el = js5->candidates; el; el = el->next) {
-    js5c = (JingleS5BCandidate*) el->data;
+    js5c = (S5BCandidate*) el->data;
     node3 = lm_message_node_add_child(node2, "candidate", NULL);
     
     port = g_strdup_printf("%" G_GUINT16_FORMAT, js5c->port);
@@ -176,6 +180,58 @@ void jingle_socks5_tomessage(gconstpointer data, LmMessageNode *node)
                                    NULL);
     g_free(port);
     g_free(priority);
+  }
+}
+
+static void init(session_content *sc, gconstpointer data)
+{
+  JingleS5B *js5 = (JingleS5B *)data;
+  GInetAddress *addr;
+  GSocketAddress *saddr;
+  GSource *socksource;
+  GError *err = NULL;
+  g_assert(js5->sock == NULL);
+
+  addr = g_inet_address_new_from_string("127.0.0.1");
+  js5->sock = g_socket_new(g_inet_address_get_family(addr), G_SOCKET_TYPE_STREAM,
+                           G_SOCKET_PROTOCOL_TCP, &err);
+  if (js5->sock == NULL) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle SOCKS5: Error while creating a new socket: %s",
+                 err->message != NULL ? err->message : "(no message)");
+    return; // TODO: we need a way to return errors...
+  }
+  g_socket_set_blocking(js5->sock, FALSE);
+  socksource = g_socket_create_source(js5->sock, ~0, NULL);
+
+  g_source_set_callback(socksource, (GSourceFunc)handle_sock_io, NULL, NULL);
+  g_source_attach(socksource, NULL);
+  g_source_unref(socksource);
+
+  saddr = g_inet_socket_address_new(addr, 31337);
+  if (!g_socket_connect(js5->sock, saddr, NULL, &err)) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle SOCKS5: Error while connecting to the host: %s",
+                 err->message != NULL ? err->message : "(no message)");
+    return;
+  }
+
+}
+
+/**
+ * Handle any event on a sock
+ */
+static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data)
+{
+  switch (cond) {
+    case G_IO_IN:
+      break;
+    case G_IO_OUT:
+      break;
+    case G_IO_ERR:
+      break;
+    case G_IO_HUP:
+      break;
+    default:
+      // ?!
   }
 }
 

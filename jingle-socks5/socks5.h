@@ -17,24 +17,26 @@ typedef enum {
 
 typedef struct {
   JingleS5BModes mode;
-  
+
   const gchar *sid;  
-   
+
+  GSocket *sock;
+
   GSList *candidates;
-} JingleSocks5;
+} JingleS5B;
  
 typedef struct {
   const gchar *cid;
-  
+
   const gchar *host;
-  
+
   const gchar *jid;
-  
+
   guint16 port;
-  
+
   guint64 priority;
-  
+
   JingleS5BType type;
-  
-} JingleS5BCandidate;
+} S5BCandidate;
+
 #endif
