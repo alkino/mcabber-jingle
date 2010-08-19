@@ -470,7 +470,7 @@ static void jingle_uninit(void)
 
 void handle_trans_data(gconstpointer data, const gchar *data2, guint len)
 {
-  SessionContent *sc = session_find_transport(data);
+  SessionContent *sc = session_find_by_transport(data);
   if (sc == NULL) {
     return;  
   }

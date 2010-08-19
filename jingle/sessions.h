@@ -83,7 +83,8 @@ void session_add_trans(JingleSession *sess, const gchar *name,
                            const gchar *xmlns, gconstpointer data);
 SessionContent* session_add_content_from_jinglecontent(JingleSession *sess,
                            JingleContent *cn, SessionState state, GError **err);
-SessionContent *session_find_transport(gconstpointer data);
+SessionContent *session_find_by_transport(gconstpointer data);
+SessionContent *session_find_by_app(gconstpointer data);
 SessionContent *session_find_sessioncontent(JingleSession *sess,
                                             const gchar *name);
 int session_remove_sessioncontent(JingleSession *sess, const gchar *name);

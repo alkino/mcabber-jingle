@@ -316,7 +316,9 @@ static void _jft_info(char **args)
     JingleFT *jft = jftio->jft;
     gchar *strsize = _convert_size(jft->size);
     const gchar *dir = (jft->dir == JINGLE_FT_INCOMING) ? "<==" : "-->";
-    gfloat percent = ((gfloat)jft->transmit / (gfloat)jft->size) * 100;
+    gfloat percent = (gfloat)jft->size ? 
+                       ((gfloat)jft->transmit / (gfloat)jft->size) * 100 :
+                       0;
     const gchar *state = strstate[jft->state];
     const gchar *desc = jft->desc ? jft->desc : "";
     const gchar *hash = "";
@@ -365,36 +367,46 @@ static JingleFT* _new(const gchar *name)
   GError *err = NULL;
   gchar *filename = expand_filename(name); // expand ~ to HOME
   JingleFT *jft = g_new0(JingleFT, 1);
-    
-  if (g_stat(filename, &fileinfo) != 0) {
-    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: unable to stat %s",
-                 filename);
-    g_free(jft);
-    return NULL;
-  }
-
-  if (!S_ISREG(fileinfo.st_mode) || S_ISLNK(fileinfo.st_mode)) {
-    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: File doesn't exist!");
-    g_free(jft);
-    return NULL;
-  }
   
   jft->desc = g_strdup(name);
   jft->type = JINGLE_FT_OFFER;
   jft->name = g_path_get_basename(filename);
-  jft->date = fileinfo.st_mtime;
-  jft->size = fileinfo.st_size;
   jft->transmit = 0;
   jft->hash = NULL;
   jft->md5 = NULL;
   jft->state = JINGLE_FT_PENDING;
   jft->dir = JINGLE_FT_OUTGOING;
+  jft->date = 0;
+  jft->size = 0;
+  
+  // Add the jft to the list
+  JingleFTInfo *jftinf = g_new0(JingleFTInfo, 1);
+  jftinf->index = _next_index();
+  jftinf->jft = jft;
+  info_list = g_slist_append(info_list, jftinf);
+
+  if (g_stat(filename, &fileinfo) != 0) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: unable to stat %s",
+                 filename);
+    jft->state = JINGLE_FT_ERROR;
+    return NULL;
+  }
+
+  if (!S_ISREG(fileinfo.st_mode) || S_ISLNK(fileinfo.st_mode)) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: File doesn't exist!");
+    jft->state = JINGLE_FT_ERROR;
+    return NULL;
+  }
+
+  jft->date = fileinfo.st_mtime;
+  jft->size = fileinfo.st_size;
+  
   jft->outfile = g_io_channel_new_file(filename, "r", &err);
   if (jft->outfile == NULL || err != NULL) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: %s %s", err->message,
                  name);
     g_error_free(err);
-    g_free(jft);
+    jft->state = JINGLE_FT_ERROR;
     return NULL;
   }
 
@@ -403,7 +415,7 @@ static JingleFT* _new(const gchar *name)
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: %s %s", err->message,
                  name);
     g_error_free(err);
-    g_free(jft);
+    jft->state = JINGLE_FT_ERROR;
     return NULL;
   }
   

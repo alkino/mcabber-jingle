@@ -176,7 +176,7 @@ SessionContent *session_find_sessioncontent(JingleSession *sess,
   return NULL;
 }
 
-SessionContent *session_find_transport(gconstpointer data)
+SessionContent *session_find_by_transport(gconstpointer data)
 {
   GSList *el, *el1;
   JingleSession *sess;
@@ -186,6 +186,22 @@ SessionContent *session_find_transport(gconstpointer data)
     for (el = sess->content; el; el = el->next) {
       sc = (SessionContent*) el->data;
       if (data == sc->transport)
+        return sc;
+    }
+  }
+  return NULL;
+}
+
+SessionContent *session_find_by_app(gconstpointer data)
+{
+  GSList *el, *el1;
+  JingleSession *sess;
+  SessionContent *sc;
+  for (el1 = sessions; el1; el1 = el1->next) {
+    sess = (JingleSession*) el1->data;
+    for (el = sess->content; el; el = el->next) {
+      sc = (SessionContent*) el->data;
+      if (data == sc->description)
         return sc;
     }
   }

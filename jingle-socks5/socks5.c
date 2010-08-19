@@ -231,6 +231,7 @@ static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data)
     case G_IO_HUP:
       break;
     default:
+      ;
       // ?!
   }
 }
