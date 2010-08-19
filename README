@@ -1,6 +1,6 @@
 mcabber-jingle is a set of modules implementing:
 * Jingle (XEP-0166), a XMPP extension for managing peer-to-peer sessions
-* Jingle File Transfert (XEP-0234), a Jingle application type for transferring
+* Jingle File Transfer (XEP-0234), a Jingle application type for transferring
   files between two entities.
 * Jingle In-Band Bytestreams (XEP-261), a Jingle transport method that sends data
   using the In-Band Bytestreams (IBB) protocol (XEP-0047).
@@ -14,3 +14,12 @@ as root. This should install the 3 modules in /usr/lib/mcabber.
 To load them, type "/module load jingle", "/module load jingle-ft" and "module
 load jingle-ibb". You can also load them automatically by putting those three
 lines in your mcabberrc without the leading slash.
+
+=======USAGE=======
+The Jingle File Transfer module provide a /jft command.
+This command has three modes:
+* "send" to send files. e.g:
+  /jft send /tmp/some_file_i_share
+  Note that like in a shell, ~ refer to your home dir.
+* "info" to list transfers.
+* "flush" to remove finished transfers.
