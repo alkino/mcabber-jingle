@@ -22,6 +22,7 @@
 #include <glib.h>
 
 #include <mcabber/logprint.h>
+#include <mcabber/xmpp.h>
 
 #include <jingle/jingle.h>
 #include <jingle/sessions.h>
@@ -176,7 +177,39 @@ SessionContent *session_find_sessioncontent(JingleSession *sess,
   return NULL;
 }
 
-SessionContent *session_find_by_transport(gconstpointer data)
+JingleSession *session_find_by_transport(gconstpointer data)
+{
+  GSList *el, *el1;
+  JingleSession *sess;
+  SessionContent *sc;
+  for (el1 = sessions; el1; el1 = el1->next) {
+    sess = (JingleSession*) el1->data;
+    for (el = sess->content; el; el = el->next) {
+      sc = (SessionContent*) el->data;
+      if (data == sc->transport)
+        return sess;
+    }
+  }
+  return NULL;
+}
+
+JingleSession *session_find_by_app(gconstpointer data)
+{
+  GSList *el, *el1;
+  JingleSession *sess;
+  SessionContent *sc;
+  for (el1 = sessions; el1; el1 = el1->next) {
+    sess = (JingleSession*) el1->data;
+    for (el = sess->content; el; el = el->next) {
+      sc = (SessionContent*) el->data;
+      if (data == sc->description)
+        return sess;
+    }
+  }
+  return NULL;
+}
+
+SessionContent *sessioncontent_find_by_transport(gconstpointer data)
 {
   GSList *el, *el1;
   JingleSession *sess;
@@ -192,7 +225,7 @@ SessionContent *session_find_by_transport(gconstpointer data)
   return NULL;
 }
 
-SessionContent *session_find_by_app(gconstpointer data)
+SessionContent *sessioncontent_find_by_app(gconstpointer data)
 {
   GSList *el, *el1;
   JingleSession *sess;
@@ -203,6 +236,22 @@ SessionContent *session_find_by_app(gconstpointer data)
       sc = (SessionContent*) el->data;
       if (data == sc->description)
         return sc;
+    }
+  }
+  return NULL;
+}
+
+JingleSession *session_find_by_sessioncontent(SessionContent *data)
+{
+  GSList *el, *el1;
+  JingleSession *sess;
+  SessionContent *sc;
+  for (el1 = sessions; el1; el1 = el1->next) {
+    sess = (JingleSession*) el1->data;
+    for (el = sess->content; el; el = el->next) {
+      sc = (SessionContent*) el->data;
+      if (data == sc)
+        return sess;
     }
   }
   return NULL;
@@ -270,10 +319,11 @@ void session_free(JingleSession *sess)
   g_free(sess);
 }
 
-void jingle_handle_app(JingleSession *sess, const gchar *name,
+void jingle_handle_app(const gchar *name,
                        const gchar *xmlns_app, gconstpointer app,
                        const gchar *to)
 {
+  JingleSession *sess = session_find_by_app(app);
   const gchar *xmlns = jingle_transport_for_app(xmlns_app, NULL);
   JingleTransportFuncs *trans = jingle_get_transportfuncs(xmlns);
   
@@ -345,4 +395,22 @@ void handle_app_data(const gchar *sid, const gchar *from, const gchar *name, gch
     sc->transfuncs->send(sc2, sc->transport, data, size);
   else
     sc->transfuncs->end(sc2, sc->transport);
+}
+
+void new_session_with_apps(const gchar *recipientjid, const gchar **names,
+                           gconstpointer *datas, const gchar **ns)
+{
+  const gchar *myjid = g_strdup(lm_connection_get_jid(lconnection));
+  gchar *sid = jingle_generate_sid();
+  JingleSession *sess = session_new(sid, myjid, recipientjid, JINGLE_SESSION_OUTGOING);
+  const gchar **name, **el1 = ns;
+  gconstpointer *data1 = datas;
+
+  for (name = names; name; ++name) {
+    session_add_content(sess, *name, JINGLE_SESSION_STATE_PENDING);
+    session_add_app(sess, *name, *el1, *data1);
+    if (!++data1 || !++el1)
+      break;
+  }
+  g_free(sid);
 }

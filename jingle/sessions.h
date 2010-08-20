@@ -83,8 +83,9 @@ void session_add_trans(JingleSession *sess, const gchar *name,
                            const gchar *xmlns, gconstpointer data);
 SessionContent* session_add_content_from_jinglecontent(JingleSession *sess,
                            JingleContent *cn, SessionState state, GError **err);
-SessionContent *session_find_by_transport(gconstpointer data);
-SessionContent *session_find_by_app(gconstpointer data);
+SessionContent *sessioncontent_find_by_transport(gconstpointer data);
+SessionContent *sessioncontent_find_by_app(gconstpointer data);
+JingleSession *session_find_by_sessioncontent(SessionContent *sc);
 SessionContent *session_find_sessioncontent(JingleSession *sess,
                                             const gchar *name);
 int session_remove_sessioncontent(JingleSession *sess, const gchar *name);
@@ -94,7 +95,7 @@ void session_delete(JingleSession *sess);
 void session_remove(JingleSession *sess);
 void session_free(JingleSession *sess);
 
-void jingle_handle_app(JingleSession *sess, const gchar *name,
+void jingle_handle_app(const gchar *name,
                        const gchar *xmlns_app, gconstpointer app,
                        const gchar *to);
 LmMessage *lm_message_from_jinglesession(const JingleSession *js,
@@ -102,4 +103,5 @@ LmMessage *lm_message_from_jinglesession(const JingleSession *js,
 
 void handle_app_data(const gchar *sid, const gchar* from, const gchar *name, gchar *data, gsize size);
 
+void new_session_with_apps(const gchar *recipientjid, const gchar **name, gconstpointer *datas, const gchar **ns);
 #endif

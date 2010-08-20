@@ -32,7 +32,6 @@
 #include <mcabber/compl.h>
 #include <mcabber/commands.h>
 #include <mcabber/roster.h>
-#include <mcabber/utils.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
@@ -438,11 +437,8 @@ static void _jft_send(char **args)
     return;
   
   {
-    JingleSession *sess;
-    gchar *sid = jingle_generate_sid();
     gchar *ressource, *recipientjid;
     const gchar *namespaces[] = {NS_JINGLE, NS_JINGLE_APP_FT, NULL};
-    const gchar *myjid = g_strdup(lm_connection_get_jid(lconnection));
 
     if (CURRENT_JID == NULL) { // CURRENT_JID = the jid of the user which has focus
       scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Please, choose a valid JID in the roster");
@@ -450,28 +446,21 @@ static void _jft_send(char **args)
     }
     ressource = jingle_find_compatible_res(CURRENT_JID, namespaces);
     if (ressource == NULL) {
-      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Cannot send file, because there is no ressource available");
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Cannot send file,"
+                                   " because there is no ressource available");
       return;
     }
 
     recipientjid = g_strdup_printf("%s/%s", CURRENT_JID, ressource);
 
-    sess = session_new(sid, myjid, recipientjid, JINGLE_SESSION_OUTGOING);
-    session_add_content(sess, "file", JINGLE_SESSION_STATE_PENDING);
+    new_session_with_apps(recipientjid, (const gchar*[]){"file", NULL},
+                          (gconstpointer[]){jft, NULL},
+                          (const gchar*[]){NS_JINGLE_APP_FT, NULL});
 
-    session_add_app(sess, "file", NS_JINGLE_APP_FT, jft);
-
-    {
-      JingleFTInfo *jfti = g_new0(JingleFTInfo, 1);
-      jfti->index = _next_index();
-      jfti->jft = jft;
-      info_list = g_slist_append(info_list, jfti);
-    }
-
-    jingle_handle_app(sess, "file", NS_JINGLE_APP_FT, jft, recipientjid);
-
+    jingle_handle_app("file", NS_JINGLE_APP_FT, jft, recipientjid);
+    
+    g_free(recipientjid);
     g_free(ressource);
-    g_free(sid);
   }
 }
 
