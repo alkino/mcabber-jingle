@@ -70,38 +70,55 @@ typedef struct {
   JingleTransportFuncs *transfuncs;
 } SessionContent;
 
+
+// Manage sessions:
+//    Inititiator:
+void new_session_with_apps(const gchar *recipientjid, const gchar **name,
+                           gconstpointer *datas, const gchar **ns);
+
+//    Responder:
+JingleSession *session_new_from_jinglenode(JingleNode *jn);
+SessionContent *session_add_content_from_jinglecontent(JingleSession *sess,
+                           JingleContent *cn, SessionState state, GError **err);
+
+//    Both:
 JingleSession *session_new(const gchar *sid, const gchar *from,
                            const gchar *to, SessionOrigin origin);
-JingleSession *session_new_from_jinglenode(JingleNode *jn);
-JingleSession *session_find_by_sid(const gchar *sid, const gchar *from);
-JingleSession *session_find(const JingleNode *jn);
-SessionContent* session_add_content(JingleSession *sess, const gchar *name,
+void session_delete(JingleSession *sess);
+void session_remove(JingleSession *sess);
+void session_free(JingleSession *sess);
+SessionContent *session_add_content(JingleSession *sess, const gchar *name,
                                     SessionState state);
+
+// Manage contents:
+int session_remove_sessioncontent(JingleSession *sess, const gchar *name);
+void session_changestate_sessioncontent(JingleSession *sess, const gchar *name,
+                                        SessionState state);
 void session_add_app(JingleSession *sess, const gchar *name,
                            const gchar *xmlns, gconstpointer data);
 void session_add_trans(JingleSession *sess, const gchar *name,
                            const gchar *xmlns, gconstpointer data);
-SessionContent* session_add_content_from_jinglecontent(JingleSession *sess,
-                           JingleContent *cn, SessionState state, GError **err);
+
+
+// Search:
+//   Session:
+JingleSession *session_find_by_sid(const gchar *sid, const gchar *from);
+JingleSession *session_find(const JingleNode *jn);
+JingleSession *session_find_by_sessioncontent(SessionContent *sc);
+SessionContent *sessioncontent_find_by_app(gconstpointer data);
+SessionContent *sessioncontent_find_by_transport(gconstpointer data);
+
+//   Content:
 SessionContent *sessioncontent_find_by_transport(gconstpointer data);
 SessionContent *sessioncontent_find_by_app(gconstpointer data);
-JingleSession *session_find_by_sessioncontent(SessionContent *sc);
 SessionContent *session_find_sessioncontent(JingleSession *sess,
                                             const gchar *name);
-int session_remove_sessioncontent(JingleSession *sess, const gchar *name);
-void session_changestate_sessioncontent(JingleSession *sess, const gchar *name,
-                                        SessionState state);
-void session_delete(JingleSession *sess);
-void session_remove(JingleSession *sess);
-void session_free(JingleSession *sess);
 
+// API:
 void jingle_handle_app(const gchar *name,
                        const gchar *xmlns_app, gconstpointer app,
                        const gchar *to);
 LmMessage *lm_message_from_jinglesession(const JingleSession *js,
                                          JingleAction action);
-
 void handle_app_data(const gchar *sid, const gchar* from, const gchar *name, gchar *data, gsize size);
-
-void new_session_with_apps(const gchar *recipientjid, const gchar **name, gconstpointer *datas, const gchar **ns);
 #endif
