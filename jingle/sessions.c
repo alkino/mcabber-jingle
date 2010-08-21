@@ -403,12 +403,13 @@ void new_session_with_apps(const gchar *recipientjid, const gchar **names,
   const gchar *myjid = g_strdup(lm_connection_get_jid(lconnection));
   gchar *sid = jingle_generate_sid();
   JingleSession *sess = session_new(sid, myjid, recipientjid, JINGLE_SESSION_OUTGOING);
-  const gchar **name, **el1 = ns;
+  const gchar **el1 = ns;
   gconstpointer *data1 = datas;
-
-  for (name = names; name; ++name) {
-    session_add_content(sess, *name, JINGLE_SESSION_STATE_PENDING);
-    session_add_app(sess, *name, *el1, *data1);
+  int i;
+  
+  for (i = 0; names[i]; ++i) {
+    session_add_content(sess, names[i], JINGLE_SESSION_STATE_PENDING);
+    session_add_app(sess, names[i], *el1, *data1);
     if (!++data1 || !++el1)
       break;
   }
