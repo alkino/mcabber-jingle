@@ -1,0 +1,11 @@
+add_library(jingle-s5b MODULE socks5.c socks5.h)
+set_target_properties(jingle-s5b PROPERTIES COMPILE_FLAGS "-Wall -O2 -g")
+pkg_check_modules(GOBJECT REQUIRED gobject-2.0)
+pkg_check_modules(GTHREAD REQUIRED gthread-2.0)
+pkg_check_modules(GIO REQUIRED gio-2.0)
+link_directories(${GOBJECT_LIBRARY_DIRS} ${GIO_LIBRARY_DIRS})
+include_directories(SYSTEM ${GOBJECT_SOURCE_DIR} ${GIO_SOURCE_DIR})
+target_link_libraries(jingle-s5b -lgio-2.0)#${GLIB_LIBRARIES} ${LM_LIBRARIES}
+                      #${GIO_LIBRARIES} ${GOBJECT_LIBRARIES} ${GTHREAD_LIBRARIES})
+include_directories(${CMAKE_SOURCE_DIR})
+install(TARGETS jingle-s5b DESTINATION lib/mcabber)

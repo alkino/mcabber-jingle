@@ -24,6 +24,11 @@
 #include <glib.h>
 #include <gio/gio.h>
 
+#include <sys/types.h>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netinet/in.h>
+
 #include <mcabber/xmpp.h>
 #include <mcabber/modules.h>
 #include <mcabber/utils.h>
@@ -39,11 +44,12 @@
 
 static gconstpointer check(JingleContent *cn, GError **err);
 static void tomessage(gconstpointer data, LmMessageNode *node);
-static void send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
+// static void _send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
 static void init(session_content *sc, gconstpointer data);
 static void end(session_content *sc, gconstpointer data);
 
 static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data);
+static GSList *get_all_local_ips();
 static void jingle_socks5_init(void);
 static void jingle_socks5_uninit(void);
 
@@ -54,16 +60,16 @@ static JingleTransportFuncs funcs = {
   .check     = check,
   .tomessage = tomessage,
   .new       = NULL,
-  .send      = send,
+  .send      = NULL,
   .init      = init,
   .end       = end
 };
 
-module_info_t  info_jingle_socks5bytestream = {
+module_info_t  info_jingle_s5b = {
   .branch          = MCABBER_BRANCH,
   .api             = MCABBER_API_VERSION,
   .version         = PROJECT_VERSION,
-  .description     = "Jingle Socks5 Bytestream (XEP-0260)\n",
+  .description     = "Jingle SOCKS5 Bytestream (XEP-0260)\n",
   .requires        = deps,
   .init            = jingle_socks5_init,
   .uninit          = jingle_socks5_uninit,
@@ -84,6 +90,11 @@ static const gchar *jingle_s5b_modes[] = {
   NULL
 };
 
+/**
+ * @brief Linked list of candidates to send on session-initiate
+ */
+GSList *local_candidates = NULL;
+
 
 static gint index_in_array(const gchar *str, const gchar **array)
 {
@@ -94,6 +105,18 @@ static gint index_in_array(const gchar *str, const gchar **array)
     }
   }
   return -1;
+}
+
+static gint prioritycmp(gconstpointer a, gconstpointer b)
+{
+  S5BCandidate *s1 = (S5BCandidate *)a, *s2 = (S5BCandidate *)b;
+  if (s1->priority < s2->priority) {
+    return 1;
+  } else if (s1->priority > s2->priority) {
+    return -1;
+  } else {
+    return 0;
+  }
 }
 
 static gconstpointer check(JingleContent *cn, GError **err)
@@ -128,7 +151,7 @@ static gconstpointer check(JingleContent *cn, GError **err)
       if (!jc->cid || !jc->host || !jc->jid || !prioritystr) {
         g_free(jc);
         continue;
-	  }
+      }
       jc->port     = g_ascii_strtoull(portstr, NULL, 10);
       jc->priority = g_ascii_strtoull(prioritystr, NULL, 10);
       jc->type     = index_in_array(typestr, jingle_s5b_types);
@@ -136,10 +159,11 @@ static gconstpointer check(JingleContent *cn, GError **err)
       if (jc->type == -1) {
         g_free(jc);
         continue;
-	  }
+      }
 
-      js5b->candidates = g_slist_append(js5b->candidates, jc);
+      js5b->candidates = g_slist_prepend(js5b->candidates, jc);
     }
+    js5b->candidates = g_slist_sort(js5b->candidates, prioritycmp);
   }
 
   return (gconstpointer) js5b;
@@ -192,7 +216,7 @@ static void init(session_content *sc, gconstpointer data)
   GError *err = NULL;
   g_assert(js5->sock == NULL);
 
-  addr = g_inet_address_new_from_string("127.0.0.1");
+  addr = g_inet_address_new_from_string(((S5BCandidate *)js5->candidates->data)->host);
   js5->sock = g_socket_new(g_inet_address_get_family(addr), G_SOCKET_TYPE_STREAM,
                            G_SOCKET_PROTOCOL_TCP, &err);
   if (js5->sock == NULL) {
@@ -236,16 +260,62 @@ static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data)
   }
 }
 
+/**
+ * @brief Discover all IPs of this computer
+ * @return A linked list of GInetAddress
+ */
+static GSList *get_all_local_ips() {
+  GSList *addresses = NULL;
+  GInetAddress *thisaddr;
+  GSocketFamily family;
+  struct ifaddrs *first, *ifaddr;
+  struct sockaddr_in *native;
+  struct sockaddr_in6 *native6;
+  const guint8 *addrdata;
+  int rval;
+
+  rval = getifaddrs(&first);
+
+  for (ifaddr = first; ifaddr; ifaddr = ifaddr->ifa_next) {
+    if (!(ifaddr->ifa_flags & IFF_UP) || ifaddr->ifa_flags & IFF_LOOPBACK)
+      continue;
+
+    if (ifaddr->ifa_addr->sa_family == AF_INET) {
+      native = (struct sockaddr_in *)ifaddr->ifa_addr;
+      addrdata = (const guint8 *)&native->sin_addr.s_addr;
+      family = G_SOCKET_FAMILY_IPV4;
+    } else if (ifaddr->ifa_addr->sa_family == AF_INET6) {
+      native6 = (struct sockaddr_in6 *)ifaddr->ifa_addr;
+      addrdata = (const guint8 *)&native6->sin6_addr.s6_addr;
+      family = G_SOCKET_FAMILY_IPV6;
+    } else
+      continue;
+
+    thisaddr = g_inet_address_new_from_bytes(addrdata, family);
+    if (g_inet_address_get_is_link_local(thisaddr)) {
+      g_object_unref(thisaddr);
+      continue;
+    }/* else if (g_inset_address_get_is_site_local(thisaddr)) {
+      // TODO: should we offer a way the offer of LAN ips ?
+    } */
+    addresses = g_slist_prepend(addresses, thisaddr);
+  }
+  return addresses;
+}
+
 static void jingle_socks5_init(void)
 {
+  g_type_init();
   jingle_register_transport(NS_JINGLE_TRANSPORT_SOCKS5, &funcs,
                             JINGLE_TRANSPORT_STREAMING,
                             JINGLE_TRANSPORT_PRIO_HIGH);
   xmpp_add_feature(NS_JINGLE_TRANSPORT_SOCKS5);
+  local_candidates = get_all_local_ips();
 }
 
 static void jingle_socks5_uninit(void)
 {
   xmpp_del_feature(NS_JINGLE_TRANSPORT_SOCKS5);
   jingle_unregister_transport(NS_JINGLE_TRANSPORT_SOCKS5);
+  g_slist_foreach(local_candidates, (GFunc)g_object_unref, NULL);
 }

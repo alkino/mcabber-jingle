@@ -1,4 +1,5 @@
 add_library(jingle-ft MODULE filetransfer.c)
 set_target_properties(jingle-ft PROPERTIES COMPILE_FLAGS "-Wall -O2 -g")
 include_directories(${CMAKE_SOURCE_DIR})
+target_link_libraries(jingle-ft ${GLIB_LIBRARIES} ${LM_LIBRARIES})
 install(TARGETS jingle-ft DESTINATION lib/mcabber)

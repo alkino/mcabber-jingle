@@ -30,7 +30,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(GLIB REQUIRED glib-2.0)
 pkg_check_modules(LM REQUIRED loudmouth-1.0)
 pkg_check_modules(MCABBER REQUIRED mcabber)
-link_directories(${GLIB_LIBRARY_DIRS} ${MCABBER_LIBRARY_DIRS})
+link_directories(${GLIB_LIBRARY_DIRS} ${LM_LIBRARY_DIRS} ${MCABBER_LIBRARY_DIRS})
 
 ## Compiler setup
 configure_file(config.h.in config.h)
@@ -40,7 +40,7 @@ include_directories(SYSTEM ${GLIB_INCLUDE_DIRS} ${MCABBER_INCLUDE_DIRS})
 add_subdirectory(jingle)
 add_subdirectory(jingle-ft)
 add_subdirectory(jingle-ibb)
-add_subdirectory(jingle-socks5)
+add_subdirectory(jingle-s5b)
 
 ## Packaging information
 set(CPACK_PACKAGE_NAME mcabber-jingle)
