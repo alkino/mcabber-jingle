@@ -141,7 +141,7 @@ static JingleHandleStatus handle(JingleAction action, gconstpointer data,
       blocksize = g_ascii_strtoll(blocksizestr, NULL, 10);
       jibb->blocksize = (blocksize < jibb->blocksize) ? blocksize : jibb->blocksize; 
       return JINGLE_STATUS_HANDLED;
-	}
+    }
   }
   return JINGLE_STATUS_NOT_HANDLED;
 }
@@ -188,17 +188,16 @@ LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
   return LM_HANDLER_RESULT_REMOVE_MESSAGE;
 }
 
-static gchar *new_ibb_sid(void)
+static gchar *gen_ibb_sid(void)
 {
   gchar *sid;
-  gchar car[] = "azertyuiopqsdfghjklmwxcvbn1234567890AZERTYUIOPQSDFGHJKLMWXCVBN";
+  gchar car[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   int i;
   sid = g_new0(gchar, 7);
   for (i = 0; i < 6; i++)
     sid[i] = car[g_random_int_range(0, sizeof(car)/sizeof(car[0]))];
 
   sid[6] = '\0';
-  
   return sid;
 }
 
@@ -206,7 +205,7 @@ static gconstpointer new(void)
 {
   JingleIBB *ibb = g_new0(JingleIBB, 1);
   ibb->blocksize = IBB_BLOCK_SIZE_MAX;
-  ibb->sid = new_ibb_sid();
+  ibb->sid = gen_ibb_sid();
   ibb->seq = 0;
   
   return ibb;

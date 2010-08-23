@@ -22,7 +22,16 @@ typedef struct {
 
   GSocket *sock;
 
+  /**
+   * This is the list of the other client's candidates.
+   */
   GSList *candidates;
+
+  /**
+   * This is our list of candidates, the one we sent during a
+   * session-initiate or session-accept.
+   */
+  GSList *ourcandidates;
 } JingleS5B;
  
 typedef struct {

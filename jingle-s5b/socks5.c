@@ -33,6 +33,7 @@
 #include <mcabber/modules.h>
 #include <mcabber/utils.h>
 #include <mcabber/xmpp_helper.h>
+#include <mcabber/settings.h>
 #include <mcabber/logprint.h>
 #include <mcabber/hooks.h>
 
@@ -43,13 +44,17 @@
 #include "socks5.h"
 
 static gconstpointer newfrommessage(JingleContent *cn, GError **err);
+static JingleHandleStatus handle(JingleAction action, gconstpointer data,
+                                 LmMessageNode *node, GError **err);
 static void tomessage(gconstpointer data, LmMessageNode *node);
+static gconstpointer new(void);
 // static void _send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
 static void init(session_content *sc);
 static void end(session_content *sc, gconstpointer data);
 
 static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data);
 static GSList *get_all_local_ips();
+static gchar *gen_random_cid(void);
 static void jingle_socks5_init(void);
 static void jingle_socks5_uninit(void);
 
@@ -58,8 +63,9 @@ const gchar *deps[] = { "jingle", NULL };
 
 static JingleTransportFuncs funcs = {
   .newfrommessage = newfrommessage,
+  .handle         = handle,
   .tomessage      = tomessage,
-  .new            = NULL,
+  .new            = new,
   .send           = NULL,
   .init           = init,
   .end            = end
@@ -90,10 +96,15 @@ static const gchar *jingle_s5b_modes[] = {
   NULL
 };
 
+typedef struct {
+  GInetAddress *address;
+  guint32       priority;
+} LocalCandidate;
+
 /**
  * @brief Linked list of candidates to send on session-initiate
  */
-GSList *local_candidates = NULL;
+static GSList *local_candidates = NULL;
 
 
 static gint index_in_array(const gchar *str, const gchar **array)
@@ -169,6 +180,38 @@ static gconstpointer newfrommessage(JingleContent *cn, GError **err)
   return (gconstpointer) js5b;
 }
 
+static gconstpointer new(void)
+{
+  JingleS5B *js5b = g_new0(JingleS5B, 1);
+  GSList *entry;
+  gint port = settings_opt_get_int("jingle_s5b_dir");
+  if (port < 1024 && port > (guint16)~0) {
+    port = g_random_int_range(1024, (guint16)~0);
+  }
+  
+  for (entry = local_candidates; entry; entry = entry->next) {
+    LocalCandidate *lcand = (LocalCandidate *)entry->data;
+    S5BCandidate *cand = g_new0(S5BCandidate, 1);
+    cand->cid      = gen_random_cid();
+    cand->host     = g_inet_address_to_string(lcand->address);
+    cand->jid      = g_strdup(lm_connection_get_jid(lconnection));
+    cand->port     = port;
+    cand->priority = lcand->priority;
+
+    js5b->candidates = g_slist_prepend(js5b->candidates, cand);
+  }
+  return js5b;
+}
+
+static JingleHandleStatus handle(JingleAction action, gconstpointer data,
+                                 LmMessageNode *node, GError **err)
+{
+  if (action == JINGLE_SESSION_ACCEPT) {
+    return JINGLE_STATUS_HANDLED;
+  }
+  return JINGLE_STATUS_NOT_HANDLED;
+}
+
 static void tomessage(gconstpointer data, LmMessageNode *node)
 {
   JingleS5B *js5 = (JingleS5B *)data;
@@ -240,6 +283,10 @@ static void init(session_content *sc)
 
 }
 
+static void end(session_content *sc, gconstpointer data) {
+  return;
+}
+
 /**
  * Handle any event on a sock
  */
@@ -272,9 +319,12 @@ static GSList *get_all_local_ips() {
   struct sockaddr_in *native;
   struct sockaddr_in6 *native6;
   const guint8 *addrdata;
-  int rval;
+  guint16 ifacecounter = 0; // for lack of a better method
+  LocalCandidate *candidate;
 
-  rval = getifaddrs(&first);
+  gint rval = getifaddrs(&first);
+  if (!rval)
+    return NULL;
 
   for (ifaddr = first; ifaddr; ifaddr = ifaddr->ifa_next) {
     if (!(ifaddr->ifa_flags & IFF_UP) || ifaddr->ifa_flags & IFF_LOOPBACK)
@@ -298,9 +348,28 @@ static GSList *get_all_local_ips() {
     }/* else if (g_inset_address_get_is_site_local(thisaddr)) {
       // TODO: should we offer a way to filter the offer of LAN ips ?
     } */
-    addresses = g_slist_prepend(addresses, thisaddr);
+    candidate = g_new0(LocalCandidate, 1);
+    candidate->address  = thisaddr;
+    candidate->priority = (1<<16)*126+ifacecounter;
+    addresses = g_slist_prepend(addresses, candidate);
+    ++ifacecounter;
   }
+  freeifaddrs(first);
+
   return addresses;
+}
+
+static gchar *gen_random_cid(void)
+{
+  gchar *sid;
+  gchar car[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  int i;
+  sid = g_new0(gchar, 8);
+  for (i = 0; i < 6; i++)
+    sid[i] = car[g_random_int_range(0, sizeof(car)/sizeof(car[0]))];
+
+  sid[6] = '\0';
+  return sid;
 }
 
 static void jingle_socks5_init(void)
