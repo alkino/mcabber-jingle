@@ -42,8 +42,9 @@
 #include "filetransfer.h"
 
 
-static gconstpointer check(JingleContent *cn, GError **err);
-static gboolean handle(JingleAction action, gconstpointer data, LmMessageNode *node);
+static gconstpointer newfrommessage(JingleContent *cn, GError **err);
+static JingleHandleStatus handle(JingleAction action, gconstpointer data,
+                                 LmMessageNode *node, GError **err);
 static void tomessage(gconstpointer data, LmMessageNode *node);
 static gboolean handle_data(gconstpointer data, const gchar *data2, guint len);
 static void start(session_content *sc);
@@ -79,14 +80,14 @@ const gchar* strstate[] = {
 };
 
 static JingleAppFuncs funcs = {
-  .check        = check,
-  .handle       = handle,
-  .tomessage    = tomessage,
-  .handle_data  = handle_data,
-  .start        = start,
-  .send         = send,
-  .stop         = stop,
-  .info         = info
+  .newfrommessage   = newfrommessage,
+  .handle           = handle,
+  .tomessage        = tomessage,
+  .handle_data      = handle_data,
+  .start            = start,
+  .send             = send,
+  .stop             = stop,
+  .info             = info
 };
 
 module_info_t info_jingle_ft = {
@@ -108,7 +109,7 @@ module_info_t info_jingle_ft = {
  * @param err contain an error of the domain JINGLE_CHECK_ERROR
  * @return a gconstpointer, which is a new allocated JingleFT
  */
-static gconstpointer check(JingleContent *cn, GError **err)
+static gconstpointer newfrommessage(JingleContent *cn, GError **err)
 {
   JingleFT *ft = NULL;
   LmMessageNode *node;
@@ -205,19 +206,19 @@ static gconstpointer check(JingleContent *cn, GError **err)
  * @param node   The node himself
  * @return       TRUE if the action was handled, FALSE otherwise
  */
-static gboolean handle(JingleAction action, gconstpointer data,
-                       LmMessageNode *node)
+static JingleHandleStatus handle(JingleAction action, gconstpointer data,
+                                 LmMessageNode *node, GError **err)
 {
   if (action == JINGLE_SESSION_INFO) {
     if (!g_strcmp0(lm_message_node_get_attribute(node, "xmlns"),
                    NS_JINGLE_APP_FT_INFO)
         && !g_strcmp0(node->name, "hash")) {
       ((JingleFT *)data)->hash = g_strdup(lm_message_node_get_value(node));
-      return TRUE;
+      return JINGLE_STATUS_HANDLED;
 	}
-	return FALSE;
+	return JINGLE_STATUS_NOT_HANDLED;
   }
-  return FALSE;
+  return JINGLE_STATUS_NOT_HANDLED;
 }
 
 static gboolean _is_md5_hash(const gchar *hash)
@@ -258,10 +259,10 @@ static gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len
     //TODO: propagate the GError ?
       g_error_free(err);
       return FALSE;
-	}
-	jft->state = JINGLE_FT_STARTING;
-	status = g_io_channel_set_encoding(jft->outfile, NULL, &err);
-	if (status != G_IO_STATUS_NORMAL || err != NULL) {
+    }
+    jft->state = JINGLE_FT_STARTING;
+    status = g_io_channel_set_encoding(jft->outfile, NULL, &err);
+    if (status != G_IO_STATUS_NORMAL || err != NULL) {
      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: %s %s", err->message,
                   jft->name);
      g_error_free(err);
@@ -270,7 +271,7 @@ static gboolean handle_data(gconstpointer jingleft, const gchar *data, guint len
   }
   
   jft->state = JINGLE_FT_STARTING;
-	
+
   status = g_io_channel_write_chars(jft->outfile, data, (gssize) len,
                                     &bytes_written, &err);
   if (status != G_IO_STATUS_NORMAL || err != NULL) {
@@ -706,11 +707,11 @@ static void stop(gconstpointer data)
       scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: File corrupt (%s)",
                    jft->name);
     } else {
-      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finished (%s)"
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Transfer finished (%s)"
                    " and verified", jft->name);
     }
   } else {
-    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: transfer finished (%s)"
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Transfer finished (%s)"
                  " but not verified", jft->name);
   }
 }

@@ -97,8 +97,6 @@ void jingle_send_session_accept(JingleSession *js)
   LmMessage *mess;
   JingleAckHandle *ackhandle;
 
-
-
   mess = lm_message_from_jinglesession(js, JINGLE_SESSION_ACCEPT);
  
   if (mess) {

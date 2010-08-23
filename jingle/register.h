@@ -48,8 +48,17 @@ typedef enum {
   JINGLE_TRANSPORT_PRIO_HIGH
 } JingleTransportPriority;
 
-typedef gconstpointer (*JingleAppCheck) (JingleContent *cn, GError **err);
-typedef gboolean (*JingleAppHandle) (JingleAction action, gconstpointer data, LmMessageNode *node);
+/**
+ * @brief Type returned by JingleAppFuncs and JingleTransportFuncs ->handle
+ */
+typedef enum {
+  JINGLE_STATUS_HANDLED,
+  JINGLE_STATUS_NOT_HANDLED,
+  JINGLE_STATUS_HANDLE_ERROR
+} JingleHandleStatus;
+
+typedef gconstpointer (*JingleAppNewFromMsg) (JingleContent *cn, GError **err);
+typedef JingleHandleStatus (*JingleAppHandle) (JingleAction action, gconstpointer data, LmMessageNode *node, GError **err);
 typedef void (*JingleAppToMessage) (gconstpointer data, LmMessageNode *node);
 typedef gboolean (*JingleAppHandleData) (gconstpointer data, const gchar *data2, guint len);
 typedef void (*JingleAppStart) (session_content *sc);
@@ -57,11 +66,12 @@ typedef void (*JingleAppSend) (session_content *sc);
 typedef void (*JingleAppStop) (gconstpointer data);
 typedef gchar* (*JingleAppInfo) (gconstpointer data);
 
-typedef gconstpointer (*JingleTransportCheck) (JingleContent *cn, GError **err);
+typedef gconstpointer (*JingleTransportNewFromMsg) (JingleContent *cn, GError **err);
+typedef JingleHandleStatus (*JingleTransportHandle) (JingleAction action, gconstpointer data, LmMessageNode *node, GError **err);
 typedef void (*JingleTransportToMessage) (gconstpointer data, LmMessageNode *node);
 typedef gconstpointer (*JingleTransportNew) (void);
 typedef void (*JingleTransportSend) (session_content *sc, gconstpointer data, gchar *buf, gsize size);
-typedef void (*JingleTransportInit) (session_content *sc, gconstpointer data);
+typedef void (*JingleTransportInit) (session_content *sc);
 typedef void (*JingleTransportEnd) (session_content *sc, gconstpointer data);
 typedef gchar* (*JingleTransportInfo) (gconstpointer data);
 
@@ -70,9 +80,14 @@ typedef gchar* (*JingleTransportInfo) (gconstpointer data);
  */
 typedef struct {
   /**
-   * @brief Check if the description node of a JingleContent is correct
+   * @brief Check a description node, store its content in an internal
+   *        struct, then return it as a gconstpointer
+   * 
+   * This function will only called when receiving a session-initiate.
+   * It should store the content of the <description> node into an
+   * internal struct and return this struct as a gconstpointer.
    */
-  JingleAppCheck check;
+  JingleAppNewFromMsg newfrommessage;
 
   /**
    * @brief Handle an incoming jingle message (session-info, description-info...)
@@ -88,7 +103,13 @@ typedef struct {
   JingleAppToMessage tomessage;
 
   /**
-   * @brief Handle incoming data
+   * @brief Handle incoming Jingle IQs.
+   * 
+   * e.g.: decription-info, content-info... etc
+   * The first argument is the IQ type (a JingleAction). If the function
+   * doesn't want to handle the IQ, it simply returns JINGLE_NOT_HANDLED,
+   * if it has handled the IQ, it returns JINGLE_HANDLED, if it has handled
+   * the IQ and an error happened, it returns JINGLE_HANDLE_ERROR.
    */
   JingleAppHandleData handle_data;
 
@@ -104,9 +125,15 @@ typedef struct {
 
 typedef struct {
   /**
-   * @brief Check if the transport node of a JingleContent is correct
+   * @brief Check a transport node, store its content in an internal
+   *        struct, then return it as a gconstpointer
+   * 
+   * It basically does the same thins as a JingleAppNewFroMsg function,
+   * but for a <transport> node.
    */
-  JingleTransportCheck check;
+  JingleTransportNewFromMsg newfrommessage;
+
+  JingleTransportHandle handle;
 
   /**
    * @brief Insert data from the gconstpointer to the node given as an argument

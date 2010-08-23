@@ -196,7 +196,7 @@ void handle_session_info(JingleNode *jn)
       continue;
 
     if (sc->appfuncs->handle(JINGLE_SESSION_INFO, sc->description,
-                             jn->node->children)) {
+                             jn->node->children, NULL)) {
       jingle_ack_iq(jn->message);
       return;
 	}
@@ -234,7 +234,7 @@ void handle_session_accept(JingleNode *jn)
   }
   
   jingle_ack_iq(jn->message);
-  
+
   sc2->sid  = sess->sid;
   sc2->from = (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to;
 
@@ -245,9 +245,10 @@ void handle_session_accept(JingleNode *jn)
     sc = session_find_sessioncontent(sess, jc->name);
     session_changestate_sessioncontent(sess, jc->name,
                                        JINGLE_SESSION_STATE_ACTIVE);
-    sc->transfuncs->init(sc2, sc->transfuncs->check(jc, NULL));
+    sc->transfuncs->handle(JINGLE_SESSION_ACCEPT, sc->transport, jn->node, NULL);
+    sc->transfuncs->init(sc2);
   }
-  
+
   // We delete content who haven't been accepted
   for (el = sess->content; el; el = el->next) {
     sc = (SessionContent*) el->data;
@@ -256,7 +257,7 @@ void handle_session_accept(JingleNode *jn)
       session_remove_sessioncontent(sess, sc->name);
     }
   }
-  
+
   // Go go go! We start jobs!
   for (el = sess->content; el; el = el->next) {
     sc = (SessionContent*)el->data;

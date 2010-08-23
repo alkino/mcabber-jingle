@@ -42,10 +42,10 @@
 
 #include "socks5.h"
 
-static gconstpointer check(JingleContent *cn, GError **err);
+static gconstpointer newfrommessage(JingleContent *cn, GError **err);
 static void tomessage(gconstpointer data, LmMessageNode *node);
 // static void _send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
-static void init(session_content *sc, gconstpointer data);
+static void init(session_content *sc);
 static void end(session_content *sc, gconstpointer data);
 
 static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data);
@@ -57,12 +57,12 @@ static void jingle_socks5_uninit(void);
 const gchar *deps[] = { "jingle", NULL };
 
 static JingleTransportFuncs funcs = {
-  .check     = check,
-  .tomessage = tomessage,
-  .new       = NULL,
-  .send      = NULL,
-  .init      = init,
-  .end       = end
+  .newfrommessage = newfrommessage,
+  .tomessage      = tomessage,
+  .new            = NULL,
+  .send           = NULL,
+  .init           = init,
+  .end            = end
 };
 
 module_info_t  info_jingle_s5b = {
@@ -119,7 +119,7 @@ static gint prioritycmp(gconstpointer a, gconstpointer b)
   }
 }
 
-static gconstpointer check(JingleContent *cn, GError **err)
+static gconstpointer newfrommessage(JingleContent *cn, GError **err)
 {
   JingleS5B *js5b;
   LmMessageNode *node = cn->transport, *node2;
@@ -207,16 +207,16 @@ static void tomessage(gconstpointer data, LmMessageNode *node)
   }
 }
 
-static void init(session_content *sc, gconstpointer data)
+static void init(session_content *sc)
 {
-  JingleS5B *js5 = (JingleS5B *)data;
+  JingleS5B *js5 = NULL;
   GInetAddress *addr;
   GSocketAddress *saddr;
   GSource *socksource;
   GError *err = NULL;
   g_assert(js5->sock == NULL);
 
-  addr = g_inet_address_new_from_string(((S5BCandidate *)js5->candidates->data)->host);
+  addr = g_inet_address_new_from_string("127.0.0.1");
   js5->sock = g_socket_new(g_inet_address_get_family(addr), G_SOCKET_TYPE_STREAM,
                            G_SOCKET_PROTOCOL_TCP, &err);
   if (js5->sock == NULL) {
@@ -296,7 +296,7 @@ static GSList *get_all_local_ips() {
       g_object_unref(thisaddr);
       continue;
     }/* else if (g_inset_address_get_is_site_local(thisaddr)) {
-      // TODO: should we offer a way the offer of LAN ips ?
+      // TODO: should we offer a way to filter the offer of LAN ips ?
     } */
     addresses = g_slist_prepend(addresses, thisaddr);
   }

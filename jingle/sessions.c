@@ -138,7 +138,7 @@ SessionContent* session_add_content_from_jinglecontent(JingleSession *sess,
   {
     xmlns = lm_message_node_get_attribute(cn->description, "xmlns");
     appfuncs = jingle_get_appfuncs(xmlns);
-    data = appfuncs->check(cn, &error);
+    data = appfuncs->newfrommessage(cn, &error);
     if (data == NULL || error != NULL) {
       g_propagate_error(err, error);
       sess->content = g_slist_remove(sess->content, sc);
@@ -151,7 +151,7 @@ SessionContent* session_add_content_from_jinglecontent(JingleSession *sess,
   {
     xmlns = lm_message_node_get_attribute(cn->transport, "xmlns");
     transfuncs = jingle_get_transportfuncs(xmlns);
-    data = transfuncs->check(cn, &error);
+    data = transfuncs->newfrommessage(cn, &error);
     if (data == NULL || error != NULL) {
       g_propagate_error(err, error);
       g_free(sc->xmlns_desc);

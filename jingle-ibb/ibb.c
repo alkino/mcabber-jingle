@@ -40,11 +40,13 @@
 
 static LmMessageHandler* jingle_ibb_handler = NULL;
 
-static gconstpointer check(JingleContent *cn, GError **err);
+static gconstpointer newfrommessage(JingleContent *cn, GError **err);
+static JingleHandleStatus handle(JingleAction action, gconstpointer data,
+                                 LmMessageNode *node, GError **err);
 static void tomessage(gconstpointer data, LmMessageNode *node);
 static gconstpointer new(void);
 static void send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
-static void init(session_content *sc, gconstpointer data);
+static void init(session_content *sc);
 static void end(session_content *sc, gconstpointer data);
 static gchar *info(gconstpointer data);
 
@@ -61,13 +63,14 @@ static guint disconn_hid = 0;
 const gchar *deps[] = { "jingle", NULL };
 
 static JingleTransportFuncs funcs = {
-  .check     = check,
-  .tomessage = tomessage,
-  .new       = new,
-  .send      = send,
-  .init      = init,
-  .end       = end,
-  .info      = info
+  .newfrommessage = newfrommessage,
+  .handle         = handle,
+  .tomessage      = tomessage,
+  .new            = new,
+  .send           = send,
+  .init           = init,
+  .end            = end,
+  .info           = info
 };
 
 module_info_t  info_jingle_ibb = {
@@ -84,7 +87,7 @@ module_info_t  info_jingle_ibb = {
 /* Hash-Table of all emited JingleIBB struct */
 static GHashTable *JingleIBBs = NULL;
 
-static gconstpointer check(JingleContent *cn, GError **err)
+static gconstpointer newfrommessage(JingleContent *cn, GError **err)
 {
   JingleIBB *ibb = NULL;
   LmMessageNode *node = cn->transport;
@@ -119,6 +122,28 @@ static gconstpointer check(JingleContent *cn, GError **err)
 
   g_hash_table_insert(JingleIBBs, ibb->sid, ibb);
   return (gconstpointer) ibb;
+}
+
+static JingleHandleStatus handle(JingleAction action, gconstpointer data,
+                                 LmMessageNode *node, GError **err)
+{
+  JingleIBB *jibb = (JingleIBB *)data;
+  const gchar *blocksizestr;
+  guint64 blocksize;
+
+  if (action == JINGLE_SESSION_ACCEPT) {
+    const gchar *xmlns = lm_message_node_get_attribute(node, "xmlns");
+    if (!g_strcmp0(xmlns, NS_JINGLE_TRANSPORT_IBB)) {
+      /* If the responder wishes to use a smaller block-size, the responder can
+       * specify that in the session-accept by returning a different value for
+       * the 'block-size' attribute. */
+      blocksizestr = lm_message_node_get_attribute(node, "block-size");
+      blocksize = g_ascii_strtoll(blocksizestr, NULL, 10);
+      jibb->blocksize = (blocksize < jibb->blocksize) ? blocksize : jibb->blocksize; 
+      return JINGLE_STATUS_HANDLED;
+	}
+  }
+  return JINGLE_STATUS_NOT_HANDLED;
 }
 
 LmHandlerResult jingle_ibb_handle_iq(LmMessageHandler *handler,
@@ -311,14 +336,9 @@ static void send(session_content *sc, gconstpointer data, gchar *buf,
   }
 }
 
-static void init(session_content *sc, gconstpointer data)
+static void init(session_content *sc)
 {
-  JingleIBB *jibb = (JingleIBB*)data;
-  JingleSession *sess = session_find_by_sid(sc->sid, sc->from);
-  SessionContent *sc2 = session_find_sessioncontent(sess, sc->name);
-  JingleIBB *jibb2 = (JingleIBB*)sc2->transport;
-  
-  jibb2->blocksize = (jibb->blocksize < jibb2->blocksize)?jibb->blocksize:jibb2->blocksize;
+  return;
 }
 
 static void end(session_content *sc, gconstpointer data)
