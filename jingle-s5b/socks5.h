@@ -18,7 +18,7 @@ typedef enum {
 typedef struct {
   JingleS5BModes mode;
 
-  const gchar *sid;  
+  const gchar *sid;
 
   GSocket *sock;
 

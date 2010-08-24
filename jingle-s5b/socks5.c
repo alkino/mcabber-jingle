@@ -54,6 +54,7 @@ static void end(session_content *sc, gconstpointer data);
 
 static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data);
 static GSList *get_all_local_ips();
+static gchar *gen_random_sid(void);
 static gchar *gen_random_cid(void);
 static void jingle_socks5_init(void);
 static void jingle_socks5_uninit(void);
@@ -130,6 +131,46 @@ static gint prioritycmp(gconstpointer a, gconstpointer b)
   }
 }
 
+/**
+ * @brief Parse a list of <candidate> elements
+ * @return a list of S5BCandidate
+ */
+static GSList *parse_candidates(LmMessageNode *node)
+{
+  LmMessageNode *node2;
+  GSList *list;
+
+  for (node2 = node->children; node2; node2 = node2->next) {
+    if (g_strcmp0(node->name, "candidate"))
+        continue;
+    const gchar *portstr, *prioritystr, *typestr;
+    S5BCandidate *cand = g_new0(S5BCandidate, 1);
+    cand->cid    = g_strdup(lm_message_node_get_attribute(node2, "cid"));
+    cand->host   = g_strdup(lm_message_node_get_attribute(node2, "host"));
+    cand->jid    = g_strdup(lm_message_node_get_attribute(node2, "jid"));
+    portstr      = lm_message_node_get_attribute(node2, "port");
+    prioritystr  = lm_message_node_get_attribute(node2, "priority");
+    typestr      = lm_message_node_get_attribute(node2, "type");
+
+    if (!cand->cid || !cand->host || !cand->jid || !prioritystr) {
+      g_free(cand);
+      continue;
+    }
+    cand->port     = g_ascii_strtoull(portstr, NULL, 10);
+    cand->priority = g_ascii_strtoull(prioritystr, NULL, 10);
+    cand->type     = index_in_array(typestr, jingle_s5b_types);
+
+    if (cand->type == -1) {
+      g_free(cand);
+      continue;
+    }
+
+    list = g_slist_prepend(list, cand);
+  }
+  list = g_slist_sort(list, prioritycmp);
+  return list;
+}
+
 static gconstpointer newfrommessage(JingleContent *cn, GError **err)
 {
   JingleS5B *js5b;
@@ -148,34 +189,7 @@ static gconstpointer newfrommessage(JingleContent *cn, GError **err)
     return NULL;
   }
 
-  for (node2 = node->children; node2; node2 = node2->next) {
-    if (!g_strcmp0(node->name, "candidate")) {
-      const gchar *portstr, *prioritystr, *typestr;
-      S5BCandidate *jc = g_new0(S5BCandidate, 1);
-      jc->cid      = g_strdup(lm_message_node_get_attribute(node2, "cid"));
-      jc->host     = g_strdup(lm_message_node_get_attribute(node2, "host"));
-      jc->jid      = g_strdup(lm_message_node_get_attribute(node2, "jid"));
-      portstr      = lm_message_node_get_attribute(node2, "port");
-      prioritystr  = lm_message_node_get_attribute(node2, "priority");
-      typestr      = lm_message_node_get_attribute(node2, "type");
-
-      if (!jc->cid || !jc->host || !jc->jid || !prioritystr) {
-        g_free(jc);
-        continue;
-      }
-      jc->port     = g_ascii_strtoull(portstr, NULL, 10);
-      jc->priority = g_ascii_strtoull(prioritystr, NULL, 10);
-      jc->type     = index_in_array(typestr, jingle_s5b_types);
-
-      if (jc->type == -1) {
-        g_free(jc);
-        continue;
-      }
-
-      js5b->candidates = g_slist_prepend(js5b->candidates, jc);
-    }
-    js5b->candidates = g_slist_sort(js5b->candidates, prioritycmp);
-  }
+  js5b->candidates = parse_candidates(node);
 
   return (gconstpointer) js5b;
 }
@@ -184,11 +198,15 @@ static gconstpointer new(void)
 {
   JingleS5B *js5b = g_new0(JingleS5B, 1);
   GSList *entry;
-  gint port = settings_opt_get_int("jingle_s5b_dir");
+  gint port;
+
+  js5b->mode = JINGLE_S5B_TCP;
+  js5b->sid  = gen_random_sid();
+  port = settings_opt_get_int("jingle_s5b_dir");
   if (port < 1024 && port > (guint16)~0) {
     port = g_random_int_range(1024, (guint16)~0);
   }
-  
+
   for (entry = local_candidates; entry; entry = entry->next) {
     LocalCandidate *lcand = (LocalCandidate *)entry->data;
     S5BCandidate *cand = g_new0(S5BCandidate, 1);
@@ -198,16 +216,25 @@ static gconstpointer new(void)
     cand->port     = port;
     cand->priority = lcand->priority;
 
-    js5b->candidates = g_slist_prepend(js5b->candidates, cand);
+    js5b->ourcandidates = g_slist_prepend(js5b->ourcandidates, cand);
   }
   return js5b;
+}
+
+static JingleHandleStatus
+handle_session_accept(JingleS5B *js5b, LmMessageNode *node, GError **err)
+{
+  js5b->candidates = parse_candidates(node);
+  return JINGLE_STATUS_HANDLED;
 }
 
 static JingleHandleStatus handle(JingleAction action, gconstpointer data,
                                  LmMessageNode *node, GError **err)
 {
+  JingleS5B *js5b = (JingleS5B *)data;
+
   if (action == JINGLE_SESSION_ACCEPT) {
-    return JINGLE_STATUS_HANDLED;
+    return handle_session_accept(js5b, node, err);
   }
   return JINGLE_STATUS_NOT_HANDLED;
 }
@@ -231,7 +258,7 @@ static void tomessage(gconstpointer data, LmMessageNode *node)
                                  "sid", js5->sid,
                                  "mode", jingle_s5b_modes[js5->mode],
                                  NULL);
-  for (el = js5->candidates; el; el = el->next) {
+  for (el = js5->ourcandidates; el; el = el->next) {
     js5c = (S5BCandidate*) el->data;
     node3 = lm_message_node_add_child(node2, "candidate", NULL);
     
@@ -359,17 +386,27 @@ static GSList *get_all_local_ips() {
   return addresses;
 }
 
+static gchar *random_str(guint len)
+{
+  gchar *str;
+  gchar car[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  gint i;
+  str = g_new0(gchar, 8);
+  for (i = 0; i < len; i++)
+    str[i] = car[g_random_int_range(0, sizeof(car)/sizeof(car[0]))];
+
+  str[len] = '\0';
+  return str;	
+}
+
+static gchar *gen_random_sid(void)
+{
+  return random_str(7);
+}
+
 static gchar *gen_random_cid(void)
 {
-  gchar *sid;
-  gchar car[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  int i;
-  sid = g_new0(gchar, 8);
-  for (i = 0; i < 6; i++)
-    sid[i] = car[g_random_int_range(0, sizeof(car)/sizeof(car[0]))];
-
-  sid[6] = '\0';
-  return sid;
+  return random_str(7);
 }
 
 static void jingle_socks5_init(void)

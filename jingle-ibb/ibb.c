@@ -87,6 +87,7 @@ module_info_t  info_jingle_ibb = {
 /* Hash-Table of all emited JingleIBB struct */
 static GHashTable *JingleIBBs = NULL;
 
+
 static gconstpointer newfrommessage(JingleContent *cn, GError **err)
 {
   JingleIBB *ibb = NULL;

@@ -238,14 +238,14 @@ void handle_session_accept(JingleNode *jn)
   sc2->sid  = sess->sid;
   sc2->from = (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to;
 
-  // TODO: it's really bad done!
   for (el = jn->content; el; el = el->next) {
     jc = (JingleContent*)el->data;
     sc2->name = jc->name;
     sc = session_find_sessioncontent(sess, jc->name);
+    if (sc == NULL) continue;
     session_changestate_sessioncontent(sess, jc->name,
                                        JINGLE_SESSION_STATE_ACTIVE);
-    sc->transfuncs->handle(JINGLE_SESSION_ACCEPT, sc->transport, jn->node, NULL);
+    sc->transfuncs->handle(JINGLE_SESSION_ACCEPT, sc->transport, jc->transport, NULL);
     sc->transfuncs->init(sc2);
   }
 
