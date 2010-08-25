@@ -100,12 +100,12 @@ static const gchar *jingle_s5b_modes[] = {
 typedef struct {
   GInetAddress *address;
   guint32       priority;
-} LocalCandidate;
+} LocalIP;
 
 /**
  * @brief Linked list of candidates to send on session-initiate
  */
-static GSList *local_candidates = NULL;
+static GSList *local_ips = NULL;
 
 
 static gint index_in_array(const gchar *str, const gchar **array)
@@ -138,7 +138,7 @@ static gint prioritycmp(gconstpointer a, gconstpointer b)
 static GSList *parse_candidates(LmMessageNode *node)
 {
   LmMessageNode *node2;
-  GSList *list;
+  GSList *list = NULL;
 
   for (node2 = node->children; node2; node2 = node2->next) {
     if (g_strcmp0(node->name, "candidate"))
@@ -171,10 +171,57 @@ static GSList *parse_candidates(LmMessageNode *node)
   return list;
 }
 
+static GSList *get_our_candidates(guint16 port)
+{
+  GSList *our_candidates = NULL, *entry;
+
+  for (entry = local_ips; entry; entry = entry->next) {
+    LocalIP *lcand = (LocalIP *)entry->data;
+    S5BCandidate *cand = g_new0(S5BCandidate, 1);
+    cand->cid      = gen_random_cid();
+    cand->host     = g_inet_address_to_string(lcand->address);
+    cand->jid      = g_strdup(lm_connection_get_jid(lconnection));
+    cand->port     = port;
+    cand->priority = lcand->priority;
+
+    our_candidates = g_slist_prepend(our_candidates, cand);
+  }
+  our_candidates = g_slist_sort(our_candidates, prioritycmp);
+  return our_candidates;
+}
+
+/**
+ * @brief Get a port number by settings or randomly
+ * @return A guint16 containing the port number
+ * */
+static guint16 get_port(void)
+{
+  // TODO: find a way to make sure the port is not already used
+  guint64 portstart, portend;
+  guint16 port;
+  const gchar *port_range = settings_opt_get("jingle_s5b_portrange");
+
+  if (port_range != NULL) {
+    sscanf(port_range, "%" G_GUINT64_FORMAT "-%" G_GUINT64_FORMAT, &portstart, &portend);
+
+    if ((portstart >= 1024 && portstart <= (guint16)~0) &&
+        (portend >= 1024 && portend <= (guint16)~0) && portstart <= portend) {
+      port = g_random_int_range(portstart, portend);
+    } else {
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Invalid port range specified");
+      port = g_random_int_range(1024, (guint16)~0);
+    }
+  } else {
+    port = g_random_int_range(1024, (guint16)~0);
+  }
+
+  return port;
+}
+
 static gconstpointer newfrommessage(JingleContent *cn, GError **err)
 {
   JingleS5B *js5b;
-  LmMessageNode *node = cn->transport, *node2;
+  LmMessageNode *node = cn->transport;
   const gchar *modestr;
 
   js5b = g_new0(JingleS5B, 1);
@@ -190,6 +237,7 @@ static gconstpointer newfrommessage(JingleContent *cn, GError **err)
   }
 
   js5b->candidates = parse_candidates(node);
+  js5b->ourcandidates = get_our_candidates(get_port());
 
   return (gconstpointer) js5b;
 }
@@ -197,27 +245,16 @@ static gconstpointer newfrommessage(JingleContent *cn, GError **err)
 static gconstpointer new(void)
 {
   JingleS5B *js5b = g_new0(JingleS5B, 1);
-  GSList *entry;
-  gint port;
+
 
   js5b->mode = JINGLE_S5B_TCP;
   js5b->sid  = gen_random_sid();
-  port = settings_opt_get_int("jingle_s5b_dir");
-  if (port < 1024 && port > (guint16)~0) {
-    port = g_random_int_range(1024, (guint16)~0);
-  }
+  // the user can manually specify a port range to use in for format:
+  // portstart-portend
 
-  for (entry = local_candidates; entry; entry = entry->next) {
-    LocalCandidate *lcand = (LocalCandidate *)entry->data;
-    S5BCandidate *cand = g_new0(S5BCandidate, 1);
-    cand->cid      = gen_random_cid();
-    cand->host     = g_inet_address_to_string(lcand->address);
-    cand->jid      = g_strdup(lm_connection_get_jid(lconnection));
-    cand->port     = port;
-    cand->priority = lcand->priority;
 
-    js5b->ourcandidates = g_slist_prepend(js5b->ourcandidates, cand);
-  }
+  js5b->ourcandidates = get_our_candidates(get_port());
+
   return js5b;
 }
 
@@ -338,7 +375,7 @@ static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data)
  * @brief Discover all IPs of this computer
  * @return A linked list of GInetAddress
  */
-static GSList *get_all_local_ips() {
+static GSList *get_all_local_ips(void) {
   GSList *addresses = NULL;
   GInetAddress *thisaddr;
   GSocketFamily family;
@@ -347,7 +384,7 @@ static GSList *get_all_local_ips() {
   struct sockaddr_in6 *native6;
   const guint8 *addrdata;
   guint16 ifacecounter = 0; // for lack of a better method
-  LocalCandidate *candidate;
+  LocalIP *candidate;
 
   gint rval = getifaddrs(&first);
   if (!rval)
@@ -375,7 +412,7 @@ static GSList *get_all_local_ips() {
     }/* else if (g_inset_address_get_is_site_local(thisaddr)) {
       // TODO: should we offer a way to filter the offer of LAN ips ?
     } */
-    candidate = g_new0(LocalCandidate, 1);
+    candidate = g_new0(LocalIP, 1);
     candidate->address  = thisaddr;
     candidate->priority = (1<<16)*126+ifacecounter;
     addresses = g_slist_prepend(addresses, candidate);
@@ -409,6 +446,11 @@ static gchar *gen_random_cid(void)
   return random_str(7);
 }
 
+static void free_localip(LocalIP *l) {
+  g_object_unref(l->address);
+  g_free(l);
+}
+
 static void jingle_socks5_init(void)
 {
   g_type_init();
@@ -416,12 +458,13 @@ static void jingle_socks5_init(void)
                             JINGLE_TRANSPORT_STREAMING,
                             JINGLE_TRANSPORT_PRIO_HIGH);
   xmpp_add_feature(NS_JINGLE_TRANSPORT_SOCKS5);
-  local_candidates = get_all_local_ips();
+  local_ips = get_all_local_ips();
 }
 
 static void jingle_socks5_uninit(void)
 {
   xmpp_del_feature(NS_JINGLE_TRANSPORT_SOCKS5);
   jingle_unregister_transport(NS_JINGLE_TRANSPORT_SOCKS5);
-  g_slist_foreach(local_candidates, (GFunc)g_object_unref, NULL);
+  g_slist_foreach(local_ips, (GFunc)free_localip, NULL);
+  g_slist_free(local_ips);
 }

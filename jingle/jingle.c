@@ -30,6 +30,7 @@
 #include <mcabber/logprint.h>
 #include <mcabber/xmpp_helper.h>
 #include <mcabber/events.h>
+#include <mcabber/caps.h>
 
 #include <jingle/jingle.h>
 #include <jingle/check.h>
@@ -356,8 +357,9 @@ gchar *jingle_find_compatible_res(const gchar *jid, const gchar *ns[])
   for (thisres = reslist; thisres; thisres = g_slist_next(thisres)) {
     found = TRUE;
     for (indexns = 0; ns[indexns]; indexns++) {
-	  // if (!caps_has_feature(buddy_resource_getcaps(roster_usr->data, thisres->data), ns[indexns]))
-	   //  found = FALSE;
+      gchar *tmp = buddy_resource_getcaps(roster_usr->data, thisres->data);
+      if (!caps_has_feature(tmp, (gchar *)ns[indexns]))
+        found = FALSE;
 	 }
 	 if (!found) continue;
 

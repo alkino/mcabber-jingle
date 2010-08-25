@@ -419,6 +419,8 @@ static void jingle_ibb_init(void)
 static void jingle_ibb_uninit(void)
 {
   lm_message_handler_invalidate(jingle_ibb_handler);
+  hk_del_handler(HOOK_POST_CONNECT, connect_hid);
+  hk_del_handler(HOOK_PRE_DISCONNECT, disconn_hid);
   lm_message_handler_unref(jingle_ibb_handler);
   xmpp_del_feature(NS_JINGLE_TRANSPORT_IBB);
   jingle_unregister_transport(NS_JINGLE_TRANSPORT_IBB);

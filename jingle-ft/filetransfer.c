@@ -447,8 +447,8 @@ static void _jft_send(char **args)
     }
     ressource = jingle_find_compatible_res(CURRENT_JID, namespaces);
     if (ressource == NULL) {
-      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Cannot send file,"
-                                   " because there is no ressource available");
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Cannot send file, because this buddy"
+                                   " has no compatible ressource available");
       return;
     }
 
@@ -476,7 +476,7 @@ static void do_sendfile(char *arg)
   else if (!g_strcmp0(args[0], "flush"))
     _jft_flush(args);
   else
-    scr_LogPrint(LPRINT_LOGNORM, "/jft: %s is not a correct option.", args[1]);
+    scr_LogPrint(LPRINT_LOGNORM, "/jft: %s is not a correct option.", args[0]);
 
   free_arg_lst(args);
 }

@@ -125,7 +125,7 @@ static void jingle_handle_ack_iq_si(JingleAckType acktype, LmMessage *mess,
   }
 
   if (lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_RESULT)
-    return;
+    return; // TODO: put a timeout on the session-accept
   if (lm_message_get_sub_type(mess) == LM_MESSAGE_SUB_TYPE_ERROR) {
     node = lm_message_get_node(mess);
     node = lm_message_node_get_child(node,"error");
