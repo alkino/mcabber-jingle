@@ -61,7 +61,7 @@ static int _next_index(void);
 static void _free(JingleFT *jft);
 static gboolean _check_hash(const gchar *hash1, GChecksum *md5);
 static gboolean _is_md5_hash(const gchar *hash);
-static void _jft_send(char **args);
+static void _jft_send(char **args, JingleFT *jft);
 static void _jft_info(char **args);
 static void _jft_flush(char **args);
 static JingleFT* _new(const gchar *name);
@@ -422,11 +422,11 @@ static JingleFT* _new(const gchar *name)
   return jft;
 }
 
-static void _jft_send(char **args)
+static void _jft_send(char **args, JingleFT *jft2)
 {
-  JingleFT *jft;
+  JingleFT *jft = jft2;
 
-  if (!args[1]) {
+  if (jft == NULL && !args[1]) {
     scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: give me a name!");
     return;
   }
@@ -434,7 +434,7 @@ static void _jft_send(char **args)
   scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Trying to send %s",
                args[1]);
 
-  if ((jft = _new(args[1])) == NULL)
+  if (jft == NULL && (jft = _new(args[1])) == NULL)
     return;
   
   {
@@ -465,16 +465,54 @@ static void _jft_send(char **args)
   }
 }
 
+static void _jft_retry(char **args)
+{
+  GSList *el;
+  JingleFT *jft;
+  JingleFTInfo *jftinf;
+  gint index = g_ascii_strtoll(args[1], NULL, 10);
+  for (el = info_list; el; el = el->next) {
+    jftinf = el->data;
+    if (jftinf->index == index);
+      break;
+  }
+  
+  if (!args[1]) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: give me a number!");
+    return;  
+  }
+  
+
+  
+  if (el == NULL) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: give me a correct number!");
+    return;  
+  }
+  
+  jft = jftinf->jft;
+  jft->hash = NULL;
+  jft->size = 0;
+  jft->transmit = 0;
+  jft->outfile = NULL;
+  jft->state = JINGLE_FT_PENDING;
+  jft->desc = NULL;
+  jft->md5 = NULL;
+  
+  _jft_send(args, jft);
+}
+
 static void do_sendfile(char *arg)
 {
   char **args = split_arg(arg, 3, 0);
 
   if (!g_strcmp0(args[0], "send"))
-    _jft_send(args);
+    _jft_send(args, NULL);
   else if (!g_strcmp0(args[0], "info"))
     _jft_info(args);
   else if (!g_strcmp0(args[0], "flush"))
     _jft_flush(args);
+  else if (!g_strcmp0(args[0], "retry"))
+    _jft_retry(args);
   else
     scr_LogPrint(LPRINT_LOGNORM, "/jft: %s is not a correct option.", args[0]);
 
@@ -486,7 +524,8 @@ static void _free(JingleFT *jft)
   g_free(jft->hash);
   g_free(jft->name);
   g_free(jft->desc);
-  g_io_channel_unref(jft->outfile);
+  if (jft->outfile != NULL)
+    g_io_channel_unref(jft->outfile);
   if (jft->dir == JINGLE_FT_INCOMING)
     g_checksum_free(jft->md5);
   g_free(jft);

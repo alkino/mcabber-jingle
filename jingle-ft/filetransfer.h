@@ -116,7 +116,7 @@ typedef struct {
   /**
    * An index. Not use now, but will in the futur to cancel a transfer.
    */
-  int index;
+  gint index;
   
   /**
    * The link to the JingleFT in the session.
