@@ -71,7 +71,7 @@ typedef JingleHandleStatus (*JingleTransportHandle) (JingleAction action, gconst
 typedef void (*JingleTransportToMessage) (gconstpointer data, LmMessageNode *node);
 typedef gconstpointer (*JingleTransportNew) (void);
 typedef void (*JingleTransportSend) (session_content *sc, gconstpointer data, gchar *buf, gsize size);
-typedef void (*JingleTransportInit) (session_content *sc);
+typedef void (*JingleTransportInit) (session_content *sc, gconstpointer data);
 typedef void (*JingleTransportEnd) (session_content *sc, gconstpointer data);
 typedef gchar* (*JingleTransportInfo) (gconstpointer data);
 

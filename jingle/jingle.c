@@ -496,11 +496,11 @@ void handle_trans_next(session_content *sc2) {
 gchar *jingle_generate_sid(void)
 {
   gchar *sid;
-  gchar car[] = "azertyuiopqsdfghjklmwxcvbn1234567890AZERTYUIOPQSDFGHJKLMWXCVBN";
-  int i;
+  gchar car[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  gint i;
   sid = g_new0(gchar, 11);
   for (i = 0; i < 10; i++)
-    sid[i] = car[g_random_int_range(0, sizeof(car)/sizeof(car[0]))];
+    sid[i] = car[g_random_int_range(0, sizeof(car)/sizeof(car[0])-1)];
 
   sid[10] = '\0';
   

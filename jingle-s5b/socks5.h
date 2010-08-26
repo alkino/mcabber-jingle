@@ -1,13 +1,17 @@
 #ifndef __JINGLESOCKS5_H__
 #define __JINGLESOCKS5_H__ 1
 
+#include <glib.h>
+#include <gio/gio.h>
+
 #define NS_JINGLE_TRANSPORT_SOCKS5 "urn:xmpp:jingle:transports:s5b:1"
 
+
 typedef enum {
-  JINGLE_S5B_ASSISTED,
   JINGLE_S5B_DIRECT,
-  JINGLE_S5B_PROXY,
-  JINGLE_S5B_TUNNEL
+  JINGLE_S5B_ASSISTED,
+  JINGLE_S5B_TUNNEL,
+  JINGLE_S5B_PROXY
 } JingleS5BType;
 
 typedef enum {
@@ -20,7 +24,9 @@ typedef struct {
 
   const gchar *sid;
 
-  GSocket *sock;
+  GSocketConnection *sock;
+
+  GSocketListener *listener;
 
   /**
    * This is the list of the other client's candidates.
@@ -37,7 +43,7 @@ typedef struct {
 typedef struct {
   const gchar *cid;
 
-  const gchar *host;
+  GInetAddress *host;
 
   const gchar *jid;
 
@@ -46,6 +52,8 @@ typedef struct {
   guint64 priority;
 
   JingleS5BType type;
+
+  GSocket *sock;
 } S5BCandidate;
 
 #endif

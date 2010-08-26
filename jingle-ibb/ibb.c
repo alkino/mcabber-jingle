@@ -46,7 +46,7 @@ static JingleHandleStatus handle(JingleAction action, gconstpointer data,
 static void tomessage(gconstpointer data, LmMessageNode *node);
 static gconstpointer new(void);
 static void send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
-static void init(session_content *sc);
+static void init(session_content *sc, gconstpointer data);
 static void end(session_content *sc, gconstpointer data);
 static gchar *info(gconstpointer data);
 
@@ -336,7 +336,7 @@ static void send(session_content *sc, gconstpointer data, gchar *buf,
   }
 }
 
-static void init(session_content *sc)
+static void init(session_content *sc, gconstpointer data)
 {
   return;
 }

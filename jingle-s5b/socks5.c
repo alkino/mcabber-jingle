@@ -49,9 +49,12 @@ static JingleHandleStatus handle(JingleAction action, gconstpointer data,
 static void tomessage(gconstpointer data, LmMessageNode *node);
 static gconstpointer new(void);
 // static void _send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
-static void init(session_content *sc);
+static void init(session_content *sc, gconstpointer data);
 static void end(session_content *sc, gconstpointer data);
+static gchar *info(gconstpointer data);
 
+static void
+handle_listener_accept(GObject *_listener, GAsyncResult *res, gpointer userdata);
 static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data);
 static GSList *get_all_local_ips();
 static gchar *gen_random_sid(void);
@@ -69,7 +72,8 @@ static JingleTransportFuncs funcs = {
   .new            = new,
   .send           = NULL,
   .init           = init,
-  .end            = end
+  .end            = end,
+  .info           = info
 };
 
 module_info_t  info_jingle_s5b = {
@@ -84,10 +88,10 @@ module_info_t  info_jingle_s5b = {
 };
 
 static const gchar *jingle_s5b_types[] = {
-  "assisted",
   "direct",
-  "proxy",
+  "assisted",
   "tunnel",
+  "proxy",
   NULL
 };
 
@@ -100,6 +104,7 @@ static const gchar *jingle_s5b_modes[] = {
 typedef struct {
   GInetAddress *address;
   guint32       priority;
+  JingleS5BType type;
 } LocalIP;
 
 /**
@@ -143,24 +148,25 @@ static GSList *parse_candidates(LmMessageNode *node)
   for (node2 = node->children; node2; node2 = node2->next) {
     if (g_strcmp0(node->name, "candidate"))
         continue;
-    const gchar *portstr, *prioritystr, *typestr;
+    const gchar *hoststr, *portstr, *prioritystr, *typestr;
     S5BCandidate *cand = g_new0(S5BCandidate, 1);
     cand->cid    = g_strdup(lm_message_node_get_attribute(node2, "cid"));
-    cand->host   = g_strdup(lm_message_node_get_attribute(node2, "host"));
     cand->jid    = g_strdup(lm_message_node_get_attribute(node2, "jid"));
+    hoststr      = lm_message_node_get_attribute(node2, "host");
     portstr      = lm_message_node_get_attribute(node2, "port");
     prioritystr  = lm_message_node_get_attribute(node2, "priority");
     typestr      = lm_message_node_get_attribute(node2, "type");
 
-    if (!cand->cid || !cand->host || !cand->jid || !prioritystr) {
+    if (!cand->cid || !hoststr || !cand->jid || !prioritystr) {
       g_free(cand);
       continue;
     }
+    cand->host     = g_inet_address_new_from_string(hoststr);
     cand->port     = g_ascii_strtoull(portstr, NULL, 10);
     cand->priority = g_ascii_strtoull(prioritystr, NULL, 10);
     cand->type     = index_in_array(typestr, jingle_s5b_types);
 
-    if (cand->type == -1) {
+    if (cand->type == -1 || cand->host == NULL) {
       g_free(cand);
       continue;
     }
@@ -179,7 +185,7 @@ static GSList *get_our_candidates(guint16 port)
     LocalIP *lcand = (LocalIP *)entry->data;
     S5BCandidate *cand = g_new0(S5BCandidate, 1);
     cand->cid      = gen_random_cid();
-    cand->host     = g_inet_address_to_string(lcand->address);
+    cand->host     = g_object_ref(lcand->address);
     cand->jid      = g_strdup(lm_connection_get_jid(lconnection));
     cand->port     = port;
     cand->priority = lcand->priority;
@@ -303,7 +309,7 @@ static void tomessage(gconstpointer data, LmMessageNode *node)
     priority = g_strdup_printf("%" G_GUINT64_FORMAT, js5c->priority);
     
     lm_message_node_set_attributes(node3, "cid", js5c->cid,
-                                   "host", js5c->host,
+                                   "host", g_inet_address_to_string(js5c->host),
                                    "jid", js5c->jid,
                                    "port", port,
                                    "priority", priority,
@@ -314,45 +320,95 @@ static void tomessage(gconstpointer data, LmMessageNode *node)
   }
 }
 
-static void init(session_content *sc)
+static void init(session_content *sc, gconstpointer data)
 {
-  JingleS5B *js5 = NULL;
-  GInetAddress *addr;
+  JingleS5B *js5b = (JingleS5B *)data;
   GSocketAddress *saddr;
-  GSource *socksource;
+  //GSource *socksource;
+  guint numlistening = 0; // number of addresses we are listening to
+  GSList *entry;
   GError *err = NULL;
-  g_assert(js5->sock == NULL);
 
-  addr = g_inet_address_new_from_string("127.0.0.1");
-  js5->sock = g_socket_new(g_inet_address_get_family(addr), G_SOCKET_TYPE_STREAM,
-                           G_SOCKET_PROTOCOL_TCP, &err);
-  if (js5->sock == NULL) {
-    scr_LogPrint(LPRINT_LOGNORM, "Jingle SOCKS5: Error while creating a new socket: %s",
-                 err->message != NULL ? err->message : "(no message)");
-    return; // TODO: we need a way to return errors...
+  // First, we listen on all ips
+  js5b->listener = g_socket_listener_new();
+  for (entry = js5b->ourcandidates; entry; entry = entry->next) {
+    S5BCandidate *cand = (S5BCandidate *)entry->data;
+
+    cand->sock = g_socket_new(g_inet_address_get_family(cand->host),
+                              G_SOCKET_TYPE_STREAM,
+                              G_SOCKET_PROTOCOL_TCP, &err);
+    if (cand->sock == NULL) {
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Error while creating a new socket: %s",
+                   err->message != NULL ? err->message : "(no message)");
+      continue;
+    }
+    g_socket_set_blocking(cand->sock, FALSE);
+
+    saddr = g_inet_socket_address_new(cand->host, cand->port);
+    if (!g_socket_bind(cand->sock, saddr, TRUE, &err)) {
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Unable to bind a socket on %s port %u: %s",
+                   g_inet_address_to_string(cand->host),
+                   cand->port,
+                   err->message != NULL ? err->message : "(no message)");
+      goto cleancontinue;
+    }
+    g_object_unref(saddr);
+
+    if (!g_socket_listen(cand->sock, &err)) {
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Unable to listen on %s port %u: %s",
+                   g_inet_address_to_string(cand->host),
+                   cand->port,
+                   err->message != NULL ? err->message : "(no message)");
+      goto cleancontinue;
+    }
+
+    if (!g_socket_listener_add_socket(js5b->listener, cand->sock, NULL, &err)) {
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Error while  to the host: %s",
+                   err->message != NULL ? err->message : "(no message)");
+      goto cleancontinue;
+	}
+
+	++numlistening;
+
+cleancontinue:
+      g_object_unref(saddr);
+      g_object_unref(cand->sock);
   }
-  g_socket_set_blocking(js5->sock, FALSE);
-  socksource = g_socket_create_source(js5->sock, ~0, NULL);
 
-  g_source_set_callback(socksource, (GSourceFunc)handle_sock_io, NULL, NULL);
-  g_source_attach(socksource, NULL);
-  g_source_unref(socksource);
-
-  saddr = g_inet_socket_address_new(addr, 31337);
-  if (!g_socket_connect(js5->sock, saddr, NULL, &err)) {
-    scr_LogPrint(LPRINT_LOGNORM, "Jingle SOCKS5: Error while connecting to the host: %s",
-                 err->message != NULL ? err->message : "(no message)");
-    return;
+  if (numlistening > 0) {
+    g_socket_listener_accept_async(js5b->listener, NULL, handle_listener_accept, NULL);
+  } else {
+      g_object_unref(js5b->listener);
   }
 
+  // Then, we start connecting to the other entity's candidates, if any.
+}
+
+static gchar *info(gconstpointer data)
+{
+  //JingleS5B *js5b = (JingleS5B *)data;
+  gchar *info = g_strdup_printf("S5B");
+  return info;
 }
 
 static void end(session_content *sc, gconstpointer data) {
   return;
 }
 
+
 /**
- * Handle any event on a sock
+ * @brief Handle incoming connections
+ */
+static void
+handle_listener_accept(GObject *_listener, GAsyncResult *res, gpointer userdata)
+{
+  GError *err = NULL;
+  GSocketConnection *conn;
+  conn = g_socket_listener_accept_finish((GSocketListener *) _listener, res, NULL, &err);
+}
+
+/**
+ * @brief Handle any event on a sock
  */
 static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data)
 {
@@ -387,7 +443,7 @@ static GSList *get_all_local_ips(void) {
   LocalIP *candidate;
 
   gint rval = getifaddrs(&first);
-  if (!rval)
+  if (rval != 0)
     return NULL;
 
   for (ifaddr = first; ifaddr; ifaddr = ifaddr->ifa_next) {
@@ -415,6 +471,7 @@ static GSList *get_all_local_ips(void) {
     candidate = g_new0(LocalIP, 1);
     candidate->address  = thisaddr;
     candidate->priority = (1<<16)*126+ifacecounter;
+    candidate->type     = JINGLE_S5B_DIRECT;
     addresses = g_slist_prepend(addresses, candidate);
     ++ifacecounter;
   }
@@ -430,7 +487,7 @@ static gchar *random_str(guint len)
   gint i;
   str = g_new0(gchar, 8);
   for (i = 0; i < len; i++)
-    str[i] = car[g_random_int_range(0, sizeof(car)/sizeof(car[0]))];
+    str[i] = car[g_random_int_range(0, sizeof(car)/sizeof(car[0])-1)];
 
   str[len] = '\0';
   return str;	

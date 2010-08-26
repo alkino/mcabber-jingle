@@ -246,7 +246,7 @@ void handle_session_accept(JingleNode *jn)
     session_changestate_sessioncontent(sess, jc->name,
                                        JINGLE_SESSION_STATE_ACTIVE);
     sc->transfuncs->handle(JINGLE_SESSION_ACCEPT, sc->transport, jc->transport, NULL);
-    sc->transfuncs->init(sc2);
+    sc->transfuncs->init(sc2, sc->transport);
   }
 
   // We delete content who haven't been accepted
