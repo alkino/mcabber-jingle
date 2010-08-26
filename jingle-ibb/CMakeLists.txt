@@ -1,5 +1,3 @@
 add_library(jingle-ibb MODULE ibb.c ibb.h)
-set_target_properties(jingle-ibb PROPERTIES COMPILE_FLAGS "-Wall -O2 -g")
-include_directories(${CMAKE_SOURCE_DIR})
-target_link_libraries(jingle-ibb ${GLIB_LIBRARIES} ${LM_LIBRARIES})
+include_directories(${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
 install(TARGETS jingle-ibb DESTINATION lib/mcabber)

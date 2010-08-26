@@ -252,12 +252,8 @@ static gconstpointer new(void)
 {
   JingleS5B *js5b = g_new0(JingleS5B, 1);
 
-
   js5b->mode = JINGLE_S5B_TCP;
   js5b->sid  = gen_random_sid();
-  // the user can manually specify a port range to use in for format:
-  // portstart-portend
-
 
   js5b->ourcandidates = get_our_candidates(get_port());
 
@@ -352,7 +348,6 @@ static void init(session_content *sc, gconstpointer data)
                    err->message != NULL ? err->message : "(no message)");
       goto cleancontinue;
     }
-    g_object_unref(saddr);
 
     if (!g_socket_listen(cand->sock, &err)) {
       scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Unable to listen on %s port %u: %s",
@@ -363,11 +358,15 @@ static void init(session_content *sc, gconstpointer data)
     }
 
     if (!g_socket_listener_add_socket(js5b->listener, cand->sock, NULL, &err)) {
-      scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Error while  to the host: %s",
+      scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Unable to add our socket to the"
+                   " GSocketListener: %s",
                    err->message != NULL ? err->message : "(no message)");
       goto cleancontinue;
 	}
 
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Listening on %s:%u",
+                 g_inet_address_to_string(cand->host),
+                 cand->port);
 	++numlistening;
 
 cleancontinue:

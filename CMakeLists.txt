@@ -17,6 +17,11 @@ cmake_minimum_required(VERSION 2.6)
 project(mcabber-jingle C) 
 set(PROJECT_VERSION "0.0.1")
 
+set(CMAKE_C_FLAGS_DEBUG "-Wall -O0 -g")
+set(CMAKE_C_FLAGS_RELEASE "-O2")
+set(CMAKE_C_FLAGS_MINSIZEREL "-Os -DNDEBUG")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-Wall -O2 -g")
+
 ## User settable options
 #option(USE_LIBNAME "Option Description")
 #if(USE_LIBNAME)
@@ -34,7 +39,7 @@ link_directories(${GLIB_LIBRARY_DIRS} ${LM_LIBRARY_DIRS} ${MCABBER_LIBRARY_DIRS}
 
 ## Compiler setup
 configure_file(config.h.in config.h)
-include_directories(SYSTEM ${GLIB_INCLUDE_DIRS} ${MCABBER_INCLUDE_DIRS})
+include_directories(SYSTEM ${GLIB_INCLUDE_DIRS} ${LM_INCLUDE_DIRS} ${MCABBER_INCLUDE_DIRS})
 
 ## Target definitions
 add_subdirectory(jingle)
