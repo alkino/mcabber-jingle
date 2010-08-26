@@ -509,7 +509,18 @@ static void free_localip(LocalIP *l) {
 
 static void jingle_socks5_init(void)
 {
-  g_type_init();
+  // ugly hack to fix the segfault when quitting:
+  // mcabber doesn't load gthread or gobject but they are required by gio,
+  // and cannot be unloaded once they are loaded or a segfault occur.
+  // We dlopen gio with global | nodelete flags. This will also load gobject
+  // and gthread as dependencies. g_type_init will init gobject/gthread (and
+  // set threads_got_initialized to true).
+  if (g_threads_got_initialized == FALSE) {
+    void *dlopen(const char *filename, int flag);
+    // RTLD_LAZY | RTLD_GLOBAL | RTLD_NODELETE
+    dlopen("libgio-2.0.so", 0x00001 | 0x00100 | 0x01000);
+    g_type_init();
+  }
   jingle_register_transport(NS_JINGLE_TRANSPORT_SOCKS5, &funcs,
                             JINGLE_TRANSPORT_STREAMING,
                             JINGLE_TRANSPORT_PRIO_HIGH);

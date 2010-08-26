@@ -191,6 +191,6 @@ void jingle_unregister_transport(const gchar *xmlns)
   TransportHandlerEntry *entry = jingle_find_transport(xmlns);
   if (entry) {
     jingle_free_transport(entry);
-    jingle_transport_handlers = g_slist_remove(jingle_app_handlers, entry);
+    jingle_transport_handlers = g_slist_remove(jingle_transport_handlers, entry);
   }
 }
