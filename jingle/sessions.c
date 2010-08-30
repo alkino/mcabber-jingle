@@ -405,7 +405,7 @@ void new_session_with_apps(const gchar *recipientjid, const gchar **names,
   JingleSession *sess = session_new(sid, myjid, recipientjid, JINGLE_SESSION_OUTGOING);
   const gchar **el1 = ns;
   gconstpointer *data1 = datas;
-  int i;
+  gint i;
   
   for (i = 0; names[i]; ++i) {
     session_add_content(sess, names[i], JINGLE_SESSION_STATE_PENDING);

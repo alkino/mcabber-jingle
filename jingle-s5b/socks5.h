@@ -24,18 +24,23 @@ typedef struct {
 
   const gchar *sid;
 
-  GSocketConnection *sock;
+  GSocketConnection *connection;
+
+  GCancellable *cancelconnect;
 
   GSocketListener *listener;
 
+  GSocketClient *client;
+
   /**
-   * This is the list of the other client's candidates.
+   * @brief This is the list of the other client's candidates
+   * 
+   * It should always be priority ordered.
    */
   GSList *candidates;
 
   /**
-   * This is our list of candidates, the one we sent during a
-   * session-initiate or session-accept.
+   * @brief This is our list of candidates
    */
   GSList *ourcandidates;
 } JingleS5B;
@@ -52,8 +57,6 @@ typedef struct {
   guint64 priority;
 
   JingleS5BType type;
-
-  GSocket *sock;
 } S5BCandidate;
 
 #endif

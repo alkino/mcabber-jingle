@@ -109,7 +109,7 @@ gint cmp_forbid(gconstpointer a, gconstpointer b)
  * Determine which transport is better suited for a given app.
  */
 const gchar *jingle_transport_for_app(const gchar *appxmlns,
-                                               GSList **forbid)
+                                      GSList **forbid)
 {
   AppHandlerEntry *app = jingle_find_app(appxmlns);
   GSList *entry;

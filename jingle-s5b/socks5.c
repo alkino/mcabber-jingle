@@ -48,13 +48,17 @@ static JingleHandleStatus handle(JingleAction action, gconstpointer data,
                                  LmMessageNode *node, GError **err);
 static void tomessage(gconstpointer data, LmMessageNode *node);
 static gconstpointer new(void);
-// static void _send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
+static void _send(session_content *sc, gconstpointer data, gchar *buf, gsize size);
 static void init(session_content *sc, gconstpointer data);
 static void end(session_content *sc, gconstpointer data);
 static gchar *info(gconstpointer data);
 
+static void connect_candidate(JingleS5B *js5b, S5BCandidate *cand);
+static void connect_next_candidate(JingleS5B *js5b, S5BCandidate *cand);
 static void
-handle_listener_accept(GObject *_listener, GAsyncResult *res, gpointer userdata);
+handle_listener_accept(GObject *_listener, GAsyncResult *res, gpointer data);
+static void
+handle_client_connect(GObject *_client, GAsyncResult *res, gpointer data);
 static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data);
 static GSList *get_all_local_ips();
 static gchar *gen_random_sid(void);
@@ -70,7 +74,7 @@ static JingleTransportFuncs funcs = {
   .handle         = handle,
   .tomessage      = tomessage,
   .new            = new,
-  .send           = NULL,
+  .send           = _send,
   .init           = init,
   .end            = end,
   .info           = info
@@ -205,7 +209,7 @@ static guint16 get_port(void)
   // TODO: find a way to make sure the port is not already used
   guint64 portstart, portend;
   guint16 port;
-  const gchar *port_range = settings_opt_get("jingle_s5b_portrange");
+  const gchar *port_range = settings_opt_get("js5b_portrange");
 
   if (port_range != NULL) {
     sscanf(port_range, "%" G_GUINT64_FORMAT "-%" G_GUINT64_FORMAT, &portstart, &portend);
@@ -320,47 +324,47 @@ static void init(session_content *sc, gconstpointer data)
 {
   JingleS5B *js5b = (JingleS5B *)data;
   GSocketAddress *saddr;
-  //GSource *socksource;
   guint numlistening = 0; // number of addresses we are listening to
   GSList *entry;
   GError *err = NULL;
+  GSocket *sock;
 
   // First, we listen on all ips
   js5b->listener = g_socket_listener_new();
   for (entry = js5b->ourcandidates; entry; entry = entry->next) {
     S5BCandidate *cand = (S5BCandidate *)entry->data;
 
-    cand->sock = g_socket_new(g_inet_address_get_family(cand->host),
-                              G_SOCKET_TYPE_STREAM,
-                              G_SOCKET_PROTOCOL_TCP, &err);
-    if (cand->sock == NULL) {
+    sock = g_socket_new(g_inet_address_get_family(cand->host),
+                        G_SOCKET_TYPE_STREAM,
+                        G_SOCKET_PROTOCOL_TCP, &err);
+    if (sock == NULL) {
       scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Error while creating a new socket: %s",
-                   err->message != NULL ? err->message : "(no message)");
+                   err->message ? err->message : "(no message)");
       continue;
     }
-    g_socket_set_blocking(cand->sock, FALSE);
+    g_socket_set_blocking(sock, FALSE);
 
     saddr = g_inet_socket_address_new(cand->host, cand->port);
-    if (!g_socket_bind(cand->sock, saddr, TRUE, &err)) {
+    if (!g_socket_bind(sock, saddr, TRUE, &err)) {
       scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Unable to bind a socket on %s port %u: %s",
                    g_inet_address_to_string(cand->host),
                    cand->port,
-                   err->message != NULL ? err->message : "(no message)");
+                   err->message ? err->message : "(no message)");
       goto cleancontinue;
     }
 
-    if (!g_socket_listen(cand->sock, &err)) {
+    if (!g_socket_listen(sock, &err)) {
       scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Unable to listen on %s port %u: %s",
                    g_inet_address_to_string(cand->host),
                    cand->port,
-                   err->message != NULL ? err->message : "(no message)");
+                   err->message ? err->message : "(no message)");
       goto cleancontinue;
     }
 
-    if (!g_socket_listener_add_socket(js5b->listener, cand->sock, NULL, &err)) {
+    if (!g_socket_listener_add_socket(js5b->listener, sock, NULL, &err)) {
       scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Unable to add our socket to the"
                    " GSocketListener: %s",
-                   err->message != NULL ? err->message : "(no message)");
+                   err->message ? err->message : "(no message)");
       goto cleancontinue;
 	}
 
@@ -370,8 +374,9 @@ static void init(session_content *sc, gconstpointer data)
 	++numlistening;
 
 cleancontinue:
+      if (err != NULL) g_clear_error(&err);
       g_object_unref(saddr);
-      g_object_unref(cand->sock);
+      g_object_unref(sock);
   }
 
   if (numlistening > 0) {
@@ -381,6 +386,67 @@ cleancontinue:
   }
 
   // Then, we start connecting to the other entity's candidates, if any.
+  if (js5b->candidates) {
+    js5b->client = g_socket_client_new();
+    S5BCandidate *cand = (S5BCandidate *)js5b->candidates->data;
+    connect_candidate(js5b, cand);
+  }
+}
+
+/**
+ * @brief Cancel an ongoing connection after 5 seconds
+ * @param data  A GPtrArray
+ * 
+ * "A client SHOULD NOT wait for a TCP timeout on connect.
+ * If it is unable to connect to any candidate within 5 seconds
+ * it SHOULD send a candidate-error to the other party."
+ */
+static gboolean connect_cancel_timeout(gpointer data)
+{
+  GPtrArray *args = (GPtrArray *)data;
+  JingleS5B *js5b = g_ptr_array_index(args, 0);
+  //S5BCandidate *cand = g_ptr_array_index(args, 1);
+  g_ptr_array_unref(args);
+
+  g_cancellable_cancel(js5b->cancelconnect);
+  return FALSE;
+}
+
+static void connect_candidate(JingleS5B *js5b, S5BCandidate *cand)
+{
+  GSocketAddress *saddr;
+  GPtrArray *args;
+  guint eventid;
+
+  args = g_ptr_array_sized_new(2);
+  g_ptr_array_add(args, js5b);
+  g_ptr_array_add(args, cand);
+
+  saddr = g_inet_socket_address_new(cand->host, cand->port);
+  js5b->cancelconnect = g_cancellable_new();
+
+  eventid = g_timeout_add_seconds(5, connect_cancel_timeout, g_ptr_array_ref(args));
+  g_ptr_array_add(args, GUINT_TO_POINTER(eventid));
+  g_socket_client_connect_async(js5b->client, G_SOCKET_CONNECTABLE(saddr),
+                                js5b->cancelconnect, handle_client_connect, args);
+  g_object_unref(saddr);
+}
+
+/**
+ * Convenience function that find the next candidate to try and
+ * call connect_candidate
+ */
+static void connect_next_candidate(JingleS5B *js5b, S5BCandidate *cand)
+{
+  GSList *link = g_slist_find(js5b->candidates, cand);
+  if (js5b->cancelconnect != NULL)
+    g_object_unref(js5b->cancelconnect);
+  g_assert(link != NULL);
+  if (link->next == NULL) {
+    // there is no next candidate to try.
+  }
+  connect_candidate(js5b, (S5BCandidate *)link->next->data);
+  return;
 }
 
 static gchar *info(gconstpointer data)
@@ -394,16 +460,65 @@ static void end(session_content *sc, gconstpointer data) {
   return;
 }
 
-
 /**
  * @brief Handle incoming connections
  */
 static void
-handle_listener_accept(GObject *_listener, GAsyncResult *res, gpointer userdata)
+handle_listener_accept(GObject *_listener, GAsyncResult *res, gpointer data)
 {
   GError *err = NULL;
   GSocketConnection *conn;
-  conn = g_socket_listener_accept_finish((GSocketListener *) _listener, res, NULL, &err);
+  //scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Got Incoming Connection");
+  conn = g_socket_listener_accept_finish(G_SOCKET_LISTENER(_listener), res, NULL, &err);
+}
+
+/**
+ * @brief Handle outgoing connections
+ */
+static void
+handle_client_connect(GObject *_client, GAsyncResult *res, gpointer data)
+{
+  GError *err = NULL;
+  GSocketConnection *conn;
+  GPtrArray *args;
+  JingleS5B *js5b;
+  S5BCandidate *cand;
+  //scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Got Outgoing Connection");
+  
+  args = (GPtrArray *)data;
+  js5b = g_ptr_array_index(args, 0);
+  cand = g_ptr_array_index(args, 1);
+  g_ptr_array_unref(args);
+
+  conn = g_socket_client_connect_finish(G_SOCKET_CLIENT(_client), res, &err);
+
+  if (!g_error_matches(err, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+    // if we did not received a CANCELLED error, then the time limit was not
+    // reached and we need to clean up the GSource and unref args a second time.
+    guint eventid = GPOINTER_TO_UINT(g_ptr_array_index(args, 2));
+    GSource *s = g_main_context_find_source_by_id(NULL, eventid);
+    g_source_destroy(s);
+    g_ptr_array_unref(args);
+    connect_next_candidate(js5b, cand);
+    // we need to send a candidate-error in case we cannot connect.
+    return;
+  }
+
+  if (err != NULL) {
+    if (err->domain == G_IO_ERROR)
+      scr_LogPrint(LPRINT_DEBUG, "Jingle S5B: IO Error (%s)",
+                   err->message ? err->message : "no message");
+    else
+      scr_LogPrint(LPRINT_DEBUG, "Jingle S5B: %s Error (%s)",
+                   g_quark_to_string (err->domain),
+                   err->message ? err->message : "no message");
+
+    g_error_free(err);
+    connect_next_candidate(js5b, cand);
+    return;
+  }
+  js5b->connection = conn;
+  // we have a valid connection
 }
 
 /**
@@ -426,6 +541,11 @@ static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data)
   }
 }
 
+static void _send(session_content *sc, gconstpointer data, gchar *buf, gsize size)
+{
+  return;
+}
+
 /**
  * @brief Discover all IPs of this computer
  * @return A linked list of GInetAddress
@@ -440,14 +560,33 @@ static GSList *get_all_local_ips(void) {
   const guint8 *addrdata;
   guint16 ifacecounter = 0; // for lack of a better method
   LocalIP *candidate;
+  gchar **ifblacklist;
+  guint ifblkcnt;
 
   gint rval = getifaddrs(&first);
-  if (rval != 0)
+  if (rval != 0) {
+    scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Unable to retreive local ip addresses");
     return NULL;
+  }
+
+  if (settings_opt_get("js5b_iface_blacklist") != NULL) {
+    ifblacklist = g_strsplit(settings_opt_get("js5b_iface_blacklist"), ",", 0);
+  } else {
+    ifblacklist = (gchar*[]){NULL};
+  }
 
   for (ifaddr = first; ifaddr; ifaddr = ifaddr->ifa_next) {
+    gboolean continueloop = FALSE;
     if (!(ifaddr->ifa_flags & IFF_UP) || ifaddr->ifa_flags & IFF_LOOPBACK)
       continue;
+
+    for (ifblkcnt = 0; ifblacklist[ifblkcnt]; ifblkcnt++)
+      if (!g_strcmp0(ifaddr->ifa_name, ifblacklist[ifblkcnt])) {
+        continueloop = TRUE;
+        break;
+      }
+    
+    if (continueloop) continue;
 
     if (ifaddr->ifa_addr->sa_family == AF_INET) {
       native = (struct sockaddr_in *)ifaddr->ifa_addr;
