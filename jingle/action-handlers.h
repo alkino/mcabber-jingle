@@ -13,5 +13,6 @@ void handle_session_accept(JingleNode *jn);
 void handle_session_info(JingleNode *jn);
 void handle_session_initiate(JingleNode *jn);
 void handle_session_terminate(JingleNode *jn);
+void handle_transport_info(JingleNode *jn);
 
 #endif

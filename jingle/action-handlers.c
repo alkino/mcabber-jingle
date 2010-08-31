@@ -215,7 +215,7 @@ void handle_session_accept(JingleNode *jn)
   JingleContent *jc;
   SessionContent *sc;
   session_content *sc2 = g_new0(session_content, 1);
-  GError *err;
+  GError *err = NULL;
   GSList *el;
   const gchar *from = lm_message_get_from(jn->message);
   
@@ -286,4 +286,30 @@ void handle_session_terminate(JingleNode *jn)
   }
   session_delete(sess);
   jingle_ack_iq(jn->message);
+}
+
+void handle_transport_info(JingleNode *jn)
+{
+  JingleSession *sess;
+  SessionContent *sc;
+  JingleContent *jc;
+
+  if ((sess = session_find(jn)) == NULL) {
+    jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
+    return;
+  }
+
+  if (jn->content == NULL) {
+    jingle_send_iq_error(jn->message, "modify", "bad-request", NULL);
+    return;
+  }
+  jc = (JingleContent*) jn->content->data;
+
+  sc = session_find_sessioncontent(sess, jc->name);
+  if (sc == NULL) {
+    jingle_send_iq_error(jn->message, "modify", "bad-request", NULL);
+    return;
+  }
+
+  sc->appfuncs->handle(JINGLE_TRANSPORT_INFO, sc->transport, jc->transport, NULL);
 }

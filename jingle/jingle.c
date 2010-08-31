@@ -73,7 +73,7 @@ struct JingleActionList jingle_action_list[] = {
   { "session-initiate",  handle_session_initiate },
   { "session-terminate", handle_session_terminate },
   { "transport-accept",  NULL },
-  { "transport-info",    NULL },
+  { "transport-info",    handle_transport_info },
   { "transport-reject",  NULL },
   { "transport-replace", NULL },
 };

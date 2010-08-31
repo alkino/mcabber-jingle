@@ -264,20 +264,27 @@ static gconstpointer new(void)
   return js5b;
 }
 
-static JingleHandleStatus
-handle_session_accept(JingleS5B *js5b, LmMessageNode *node, GError **err)
-{
-  js5b->candidates = parse_candidates(node);
-  return JINGLE_STATUS_HANDLED;
-}
-
 static JingleHandleStatus handle(JingleAction action, gconstpointer data,
                                  LmMessageNode *node, GError **err)
 {
   JingleS5B *js5b = (JingleS5B *)data;
 
   if (action == JINGLE_SESSION_ACCEPT) {
-    return handle_session_accept(js5b, node, err);
+    js5b->candidates = parse_candidates(node);
+    return JINGLE_STATUS_HANDLED;
+  } else if (action == JINGLE_TRANSPORT_INFO) {
+    LmMessageNode *errorn, *usedn;
+    if (g_strcmp0(lm_message_node_get_attribute(node, "sid"), js5b->sid))
+      return JINGLE_STATUS_HANDLED; // huh.. not the same socks5 sid ?
+
+    errorn = lm_message_node_get_child(node, "candidate-error");
+    usedn = lm_message_node_get_child(node, "candidate-used");
+    if (errorn != FALSE) {
+      //got_candidate_error
+    } else if (usedn != FALSE) {
+      //got_candidate_used
+    }
+    return JINGLE_STATUS_HANDLED;
   }
   return JINGLE_STATUS_NOT_HANDLED;
 }
@@ -394,6 +401,19 @@ cleancontinue:
 }
 
 /**
+ * @brief Called when a connection was established
+ * 
+ * This function free/unref everything created by init like
+ * the GSocketListener and GClientSocket objects.
+ */
+static void free_after_connection(JingleS5B *js5b)
+{
+  g_socket_listener_close(js5b->listener);
+  g_object_unref(js5b->listener);
+  g_object_unref(js5b->client);
+}
+
+/**
  * @brief Cancel an ongoing connection after 5 seconds
  * @param data  A GPtrArray
  * 
@@ -409,6 +429,7 @@ static gboolean connect_cancel_timeout(gpointer data)
   g_ptr_array_unref(args);
 
   g_cancellable_cancel(js5b->cancelconnect);
+  // we need to send a candidate-error in case we cannot connect.
   return FALSE;
 }
 
@@ -500,7 +521,6 @@ handle_client_connect(GObject *_client, GAsyncResult *res, gpointer data)
     g_source_destroy(s);
     g_ptr_array_unref(args);
     connect_next_candidate(js5b, cand);
-    // we need to send a candidate-error in case we cannot connect.
     return;
   }
 
@@ -517,8 +537,8 @@ handle_client_connect(GObject *_client, GAsyncResult *res, gpointer data)
     connect_next_candidate(js5b, cand);
     return;
   }
-  js5b->connection = conn;
-  // we have a valid connection
+  js5b->connection = conn; // we have a valid connection
+  // TODO: send transport-info activated IQ
 }
 
 /**
