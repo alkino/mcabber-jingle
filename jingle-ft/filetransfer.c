@@ -215,8 +215,8 @@ static JingleHandleStatus handle(JingleAction action, gconstpointer data,
         && !g_strcmp0(node->name, "hash")) {
       ((JingleFT *)data)->hash = g_strdup(lm_message_node_get_value(node));
       return JINGLE_STATUS_HANDLED;
-	}
-	return JINGLE_STATUS_NOT_HANDLED;
+    }
+    return JINGLE_STATUS_NOT_HANDLED;
   }
   return JINGLE_STATUS_NOT_HANDLED;
 }

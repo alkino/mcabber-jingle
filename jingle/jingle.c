@@ -198,7 +198,7 @@ gboolean jingle_ack_timeout_checker(gpointer user_data)
 LmMessageHandler *jingle_new_ack_handler(JingleAckHandle *ah)
 {
   if(ack_timeout_checker == 0)
-	  ack_timeout_checker = g_timeout_add_seconds(3, jingle_ack_timeout_checker, NULL);
+      ack_timeout_checker = g_timeout_add_seconds(3, jingle_ack_timeout_checker, NULL);
   
   ah->_inserted = time(NULL);
   ah->_handler = lm_message_handler_new(jingle_handle_ack_iq,
@@ -360,8 +360,8 @@ gchar *jingle_find_compatible_res(const gchar *jid, const gchar *ns[])
       gchar *tmp = buddy_resource_getcaps(roster_usr->data, thisres->data);
       if (!caps_has_feature(tmp, (gchar *)ns[indexns]))
         found = FALSE;
-	 }
-	 if (!found) continue;
+      }
+      if (!found) continue;
 
     choosenres = g_strdup(thisres->data);
     g_slist_foreach(reslist, (GFunc)g_free, NULL);

@@ -41,7 +41,7 @@
 #include <jingle/check.h>
 #include <jingle/register.h>
 
-#include "socks5.h"
+#include "s5b.h"
 
 static gconstpointer newfrommessage(JingleContent *cn, GError **err);
 static JingleHandleStatus handle(JingleAction action, gconstpointer data,
@@ -373,12 +373,12 @@ static void init(session_content *sc, gconstpointer data)
                    " GSocketListener: %s",
                    err->message ? err->message : "(no message)");
       goto cleancontinue;
-	}
+    }
 
     scr_LogPrint(LPRINT_LOGNORM, "Jingle S5B: Listening on %s:%u",
                  g_inet_address_to_string(cand->host),
                  cand->port);
-	++numlistening;
+    ++numlistening;
 
 cleancontinue:
       if (err != NULL) g_clear_error(&err);
@@ -648,7 +648,7 @@ static gchar *random_str(guint len)
     str[i] = car[g_random_int_range(0, sizeof(car)/sizeof(car[0])-1)];
 
   str[len] = '\0';
-  return str;	
+  return str;
 }
 
 static gchar *gen_random_sid(void)

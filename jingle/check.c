@@ -130,12 +130,12 @@ static JingleContent *check_content(LmMessageNode *node, GError **err)
     if(tmp < 0) {
       g_set_error(err, JINGLE_CHECK_ERROR, JINGLE_CHECK_ERROR_BADVALUE,
                   "the creator attribute is invalid");
-	}
+    }
     cn->creator = (JingleCreator)tmp;
   }
   
   if (sendersstr == NULL) {
-	  cn->senders = JINGLE_SENDERS_BOTH;
+      cn->senders = JINGLE_SENDERS_BOTH;
   } else {
     tmp2 = index_in_array(sendersstr, jingle_content_senders);
     if (tmp2 < 0) {

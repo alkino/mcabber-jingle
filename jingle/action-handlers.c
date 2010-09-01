@@ -199,7 +199,7 @@ void handle_session_info(JingleNode *jn)
                              jn->node->children, NULL)) {
       jingle_ack_iq(jn->message);
       return;
-	}
+    }
   }
   /* "If the party that receives an informational message
    * does not understand the payload, it MUST return a
