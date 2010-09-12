@@ -1,4 +1,4 @@
-add_library(jingle-s5b MODULE s5b.c s5b.h)
+add_library(jingle-s5b MODULE s5b.c s5b.h socks5-proto.c socks5-proto.h)
 pkg_check_modules(GIO REQUIRED gio-2.0)
 link_directories(${GIO_LIBRARY_DIRS})
 include_directories(SYSTEM ${GIO_SOURCE_DIR})

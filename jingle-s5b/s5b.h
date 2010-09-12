@@ -1,5 +1,5 @@
-#ifndef __JINGLESOCKS5_H__
-#define __JINGLESOCKS5_H__ 1
+#ifndef __JINGLES5B_H__
+#define __JINGLES5B_H__ 1
 
 #include <glib.h>
 #include <gio/gio.h>

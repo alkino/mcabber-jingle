@@ -1,5 +1,5 @@
 /*
- * socks5.c
+ * s5b.c
  *
  * Copyrigth (C) 2010 Nicolas Cornu <nicolas.cornu@ensi-bourges.fr>
  *
@@ -539,26 +539,6 @@ handle_client_connect(GObject *_client, GAsyncResult *res, gpointer data)
   }
   js5b->connection = conn; // we have a valid connection
   // TODO: send transport-info activated IQ
-}
-
-/**
- * @brief Handle any event on a sock
- */
-static void handle_sock_io(GSocket *sock, GIOCondition cond, gpointer data)
-{
-  switch (cond) {
-    case G_IO_IN:
-      break;
-    case G_IO_OUT:
-      break;
-    case G_IO_ERR:
-      break;
-    case G_IO_HUP:
-      break;
-    default:
-      ;
-      // ?!
-  }
 }
 
 static void _send(session_content *sc, gconstpointer data, gchar *buf, gsize size)
