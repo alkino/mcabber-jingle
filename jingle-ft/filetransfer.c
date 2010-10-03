@@ -443,12 +443,15 @@ static void _jft_send(char **args, JingleFT *jft2)
 
     if (CURRENT_JID == NULL) { // CURRENT_JID = the jid of the user which has focus
       scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Please, choose a valid JID in the roster");
+      jft->state = JINGLE_FT_ERROR;
       return;
     }
     ressource = jingle_find_compatible_res(CURRENT_JID, namespaces);
     if (ressource == NULL) {
       scr_LogPrint(LPRINT_LOGNORM, "Jingle File Transfer: Cannot send file, because this buddy"
                                    " has no compatible ressource available");
+
+      jft->state = JINGLE_FT_ERROR;
       return;
     }
 
@@ -806,3 +809,4 @@ static void jingle_ft_uninit(void)
   if (jft_cid)
     compl_del_category(jft_cid);
 }
+/* vim: set expandtab cindent cinoptions=>2\:2(0 sw=2 ts=2:  For Vim users... */
