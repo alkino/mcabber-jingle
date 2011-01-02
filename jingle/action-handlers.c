@@ -50,7 +50,7 @@ void handle_session_initiate(JingleNode *jn)
   const gchar *xmlns;
   JingleAppFuncs *appfuncs;
   JingleTransportFuncs *transfuncs;
-  
+
   // Make sure the request come from an user in our roster
   disp = jidtodisp(lm_message_get_from(jn->message));
   if (!roster_find(disp, jidsearch, 0)) {
@@ -59,7 +59,7 @@ void handle_session_initiate(JingleNode *jn)
     g_free(disp);
     return;
   }
-  
+
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
@@ -74,7 +74,7 @@ void handle_session_initiate(JingleNode *jn)
     g_free(disp);
     return;
   }
-  
+
   /* When sending a session-initiate at least one <content/> element MUST have
    * a disposition of "session"); if this rule is violated, the responder MUST
    * return a <bad-request/> error to the initiator.
@@ -89,7 +89,7 @@ void handle_session_initiate(JingleNode *jn)
     g_free(disp);
     return;  
   }
-  
+
   // if a session with the same sid already exists
   if (session_find(jn) != NULL) {
     jingle_send_iq_error(jn->message, "cancel", "unexpected-request", "out-of-order");
@@ -101,19 +101,19 @@ void handle_session_initiate(JingleNode *jn)
 
   // We create a session
   sess = session_new_from_jinglenode(jn);
-  
+
   for (child = jn->content; child; child = child->next) {
     SessionContent *sc;
     cn = (JingleContent *)(child->data);
-    
+
     xmlns = lm_message_node_get_attribute(cn->description, "xmlns");
     appfuncs = jingle_get_appfuncs(xmlns);
     if (appfuncs == NULL) continue;
-    
+
     xmlns = lm_message_node_get_attribute(cn->transport, "xmlns");
     transfuncs = jingle_get_transportfuncs(xmlns);
     if (transfuncs == NULL) continue;
-    
+
     sc = session_add_content_from_jinglecontent(sess, cn,
                                                 JINGLE_SESSION_STATE_PENDING,
                                                 &err);
@@ -128,15 +128,15 @@ void handle_session_initiate(JingleNode *jn)
     session_delete(sess);
     return;
   }
-  
+
   // Wait that user accept the jingle
   sbuf = g_strdup_printf("Received an invitation for a jingle session from <%s>",
-                  lm_message_get_from(jn->message));
+                         lm_message_get_from(jn->message));
 
   scr_WriteIncomingMessage(disp, sbuf, 0, HBB_PREFIX_INFO, 0);
   scr_LogPrint(LPRINT_LOGNORM, "%s", sbuf);
   g_free(sbuf);
-  
+
   for (child = sess->content; child; child = child->next) {
     SessionContent *sc = (SessionContent *)child->data;
     gchar *app_info = sc->appfuncs->info(sc->description);
@@ -148,7 +148,7 @@ void handle_session_initiate(JingleNode *jn)
     g_free(trans_info);
     g_free(sbuf);
   }
-  
+
   {
     const char *id;
     char *desc = g_strdup_printf("<%s> invites you to do a jingle session",
@@ -218,21 +218,21 @@ void handle_session_accept(JingleNode *jn)
   GError *err = NULL;
   GSList *el;
   const gchar *from = lm_message_get_from(jn->message);
-  
+
   // We're looking if the session exist
   sess = session_find_by_sid(jn->sid, from);
   if (sess == NULL) {
     jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
     return;
   }
- 
+
   if (!check_contents(jn, &err)) {
     scr_log_print(LPRINT_DEBUG, "jingle: One of the content element was invalid (%s)",
                   err->message);
     jingle_send_iq_error(jn->message, "cancel", "bad-request", NULL);
     return;
   }
-  
+
   jingle_ack_iq(jn->message);
 
   sc2->sid  = sess->sid;
@@ -248,22 +248,20 @@ void handle_session_accept(JingleNode *jn)
     sc->transfuncs->handle(JINGLE_SESSION_ACCEPT, sc->transport, jc->transport, NULL);
     sc->transfuncs->init(sc2, sc->transport);
   }
+}
 
-  // We delete content who haven't been accepted
-  for (el = sess->content; el; el = el->next) {
-    sc = (SessionContent*) el->data;
-    if (sc->state == JINGLE_SESSION_STATE_PENDING) {
-      scr_log_print(LPRINT_DEBUG, "Delete %s!", sc->name);
-      session_remove_sessioncontent(sess, sc->name);
-    }
-  }
+void handle_transport_initialize(int correct, session_content *sc2)
+{
+  JingleSession *sess = session_find_by_sid(sc2->sid, sc2->from);
+  SessionContent *sc = session_find_sessioncontent(sess, sc2->name);
 
-  // Go go go! We start jobs!
-  for (el = sess->content; el; el = el->next) {
-    sc = (SessionContent*)el->data;
-    sc2->name = sc->name;
-    sc->appfuncs->start(sc2);
+  if(!correct) {
+    scr_log_print(LPRINT_DEBUG, "Delete %s!", sc->name);
+    session_remove_sessioncontent(sess, sc->name);
+    gfree(sc2);
+    return;
   }
+  sc->appfuncs->start(sc2);
 }
 
 void handle_session_terminate(JingleNode *jn)
@@ -271,16 +269,16 @@ void handle_session_terminate(JingleNode *jn)
   JingleSession *sess;
   GSList *el;
   SessionContent *sc;
-  
+
   if ((sess = session_find(jn)) == NULL) {
     jingle_send_iq_error(jn->message, "cancel", "item-not-found", "unknown-session");
     return;
   }
-  
+
   for (el = sess->content; el; el = el->next) {
     sc = (SessionContent*)el->data;
     if (!g_strcmp0(lm_message_get_from(jn->message),
-             (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to))
+                   (sess->origin == JINGLE_SESSION_INCOMING) ? sess->from : sess->to))
       sc->appfuncs->stop(sc->description);
     session_remove_sessioncontent(sess, sc->name);
   }
