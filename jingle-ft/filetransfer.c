@@ -789,7 +789,7 @@ static void jingle_ft_init(void)
 {
   jingle_register_app(NS_JINGLE_APP_FT, &funcs, JINGLE_TRANSPORT_STREAMING);
   xmpp_add_feature(NS_JINGLE_APP_FT);
-  jft_cid = compl_new_category();
+  jft_cid = compl_new_category(0);
   if (jft_cid) {
     compl_add_category_word(jft_cid, "send");
     //compl_add_category_word(jft_cid, "request");
