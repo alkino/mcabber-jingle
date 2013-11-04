@@ -358,7 +358,7 @@ gchar *jingle_find_compatible_res(const gchar *jid, const gchar *ns[])
     found = TRUE;
     for (indexns = 0; ns[indexns]; indexns++) {
       gchar *tmp = buddy_resource_getcaps(roster_usr->data, thisres->data);
-      if (!caps_has_feature(tmp, (gchar *)ns[indexns]))
+      if (!caps_has_feature(tmp, (gchar *)ns[indexns], NULL))
         found = FALSE;
       }
       if (!found) continue;
